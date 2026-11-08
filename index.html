@@ -31,6 +31,26 @@
   <div id="loadingBanner">島の準備をしています…</div>
   <div class="overlay" id="panelOverlay" hidden><section class="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"><div class="panel-head"><h2 id="panelTitle">持ち物</h2><button id="panelClose" aria-label="閉じる">✕</button></div><div id="panelContent"></div></section></div>
   <div class="overlay" id="welcomeOverlay" hidden><section class="panel welcome" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle"><div class="welcome-icon">🏝️</div><h2 id="welcomeTitle">こもれび島へようこそ！</h2><p>ここは、あなただけの小さな島。木の実を集めたり、お店で売ったり、野菜を育てたり。ゆっくり暮らしてみましょう。</p><div class="tips"><strong>操作方法</strong><span>🎮 左下の矢印で移動</span><span>✨ 近くに寄って「調べる」</span><span>↶ ↷ でカメラを回転</span></div><button class="primary" id="startBtn">島の暮らしをはじめる →</button></section></div>
+
+  <div class="fish-overlay" id="fishOverlay" data-stage="ready" hidden>
+    <section class="fish-dialog" role="dialog" aria-modal="true" aria-labelledby="fishTitle" tabindex="-1">
+      <header class="fish-header"><div><small>こもれび島のおさかな池</small><h2 id="fishTitle">🎣 魚釣り</h2></div><button id="fishClose" aria-label="魚釣りをやめる">✕</button></header>
+      <div class="fish-scene" aria-hidden="true">
+        <div class="fish-sky">☁️ <span>☀️</span></div><div class="fish-hill"></div>
+        <div class="fish-water"><div class="fish-wave"></div><div class="fish-wave second"></div></div>
+        <div class="fish-bank"></div><div class="fish-angler">🧑🏻</div>
+        <div class="fish-rod"></div><div class="fish-line"></div>
+        <div class="fish-ripple"></div><div class="fish-float"></div>
+        <div class="fish-shadow">🐟</div><div class="fish-splash">💦</div>
+        <div class="fish-prize">🐟</div><div class="fish-now">いまだ！！</div>
+      </div>
+      <p class="fish-message" id="fishMessage" role="status" aria-live="polite">竿を投げて、魚が来るのを待とう！</p>
+      <div id="fishTimer" class="fish-timer" hidden><div class="fish-timer-fill"></div></div>
+      <button class="fish-main" id="fishMain">🎣 竿を投げる</button>
+      <button class="fish-back" id="fishBack">島にもどる</button>
+      <p class="fish-instructions">浮きが沈んで「いまだ！」が出たら、すぐタップ！</p>
+    </section>
+  </div>
   <div id="errorMessage" hidden></div>
 </div>
 <script src="game.js" defer></script>
