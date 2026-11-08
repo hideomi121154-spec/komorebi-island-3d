@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#e1f6e6">
+  <meta name="description" content="こもれび島 3D — 島で歩く、集める、育てる。オリジナルの小さな生活ゲーム。">
+  <title>こもれび島 3D | 小さな島の暮らし</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <div id="poster" aria-hidden="true">
+    <div class="poster-sky"></div><div class="poster-water"></div><div class="poster-island"></div>
+    <div class="poster-house"><span>🏡</span></div><div class="poster-tree p1">🌳</div><div class="poster-tree p2">🌲</div><div class="poster-tree p3">🌳</div><div class="poster-player">🧑🏻</div>
+    <div class="poster-copy">🌿 こもれび島 3D<small>島で、あたらしい毎日を。</small></div>
+    <div class="poster-note">この画面で島が動かない場合は、<br>ZIPをWebサイトとして公開してSafariで開いてください。</div>
+  </div>
+  <canvas id="gameCanvas" aria-label="3Dのこもれび島"></canvas>
+  <div class="top-hud">
+    <div class="brand"><span class="brand-leaf">✿</span><div><strong>こもれび島 <em>3D</em></strong><small>小さな島の暮らし</small></div></div>
+    <div class="top-right"><span class="pill" id="dayPill">☀️ 1日目</span><span class="pill gold" id="coinPill">🪙 120</span></div>
+  </div>
+  <div id="statusBar"><span id="missionShort">🌱 木の実を3個集めよう</span><span id="saveStatus">● セーブ済</span></div>
+  <div class="edge-buttons"><button id="rotateLeft" aria-label="カメラを左回転">↶</button><button id="rotateRight" aria-label="カメラを右回転">↷</button></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="bottom-ui">
+    <div class="dpad" aria-label="移動コントローラー"><button class="up" data-dir="up" aria-label="前に移動">▲</button><button class="left" data-dir="left" aria-label="左に移動">◀</button><button class="center" id="cameraReset" aria-label="カメラを戻す">⌂</button><button class="right" data-dir="right" aria-label="右に移動">▶</button><button class="down" data-dir="down" aria-label="後ろに移動">▼</button></div>
+    <div class="actions"><div class="hint" id="interactHint">あたりを探検しよう！</div><button class="act-main" id="actionBtn">✨ 調べる</button><div class="small-actions"><button id="bagBtn">🎒 持ち物</button><button id="questBtn">📋 おねがい</button><button id="nextDayBtn">🌙 翌日へ</button></div></div>
+  </div>
+  <div id="loadingBanner">島の準備をしています…</div>
+  <div class="overlay" id="panelOverlay" hidden><section class="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"><div class="panel-head"><h2 id="panelTitle">持ち物</h2><button id="panelClose" aria-label="閉じる">✕</button></div><div id="panelContent"></div></section></div>
+  <div class="overlay" id="welcomeOverlay" hidden><section class="panel welcome" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle"><div class="welcome-icon">🏝️</div><h2 id="welcomeTitle">こもれび島へようこそ！</h2><p>ここは、あなただけの小さな島。木の実を集めたり、お店で売ったり、野菜を育てたり。ゆっくり暮らしてみましょう。</p><div class="tips"><strong>操作方法</strong><span>🎮 左下の矢印で移動</span><span>✨ 近くに寄って「調べる」</span><span>↶ ↷ でカメラを回転</span></div><button class="primary" id="startBtn">島の暮らしをはじめる →</button></section></div>
+  <div id="errorMessage" hidden></div>
+</div>
+<script src="game.js" defer></script>
+</body>
+</html>

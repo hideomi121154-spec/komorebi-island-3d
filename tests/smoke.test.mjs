@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Script } from 'node:vm';
+const d=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const html=readFileSync(resolve(d,'index.html'),'utf8');
+const css=readFileSync(resolve(d,'styles.css'),'utf8');
+const js=readFileSync(resolve(d,'game.js'),'utf8');
+test('HTML links to split game files',()=>{assert.match(html,/href="styles\.css"/);assert.match(html,/src="game\.js"/);assert.match(html,/id="gameCanvas"/);assert.match(html,/id="startBtn"/);});
+test('JavaScript syntax parses',()=>assert.doesNotThrow(()=>new Script(js)));
+test('Core systems are present',()=>{for(const k of ['readSave','save','initializeGL','drawSoftware','buildStatic','interact','nextDay'])assert.ok(js.includes(k),k);assert.match(css,/#gameCanvas/);});
