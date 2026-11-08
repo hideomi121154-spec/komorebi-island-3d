@@ -5,11 +5,12 @@
 - [x] 専用のGitHub公開リポジトリを用意
 - [x] ソース・設計書・引継ぎファイルの移行
 - [x] 静的スモークテストとCIの定義
-- [ ] GitHub Actions実行成功を確認
+- [x] GitHub Actions実行成功を確認
 
 ## Phase 1: iPhoneで遊べるWebサイト
-- [ ] GitHub Pages公開設定とHTTPS URL
+- [x] GitHub Pages公開設定とHTTPS URL
 - [ ] 実機Safariで画面と操作とデータ保存を確認
+- [ ] 3Dワールド内の釣り演出をiPhone実機で評価
 - [ ] プレイを妨げるバグの修正
 
 ## Phase 2: 楽しい生活ゲームへ
