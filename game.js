@@ -15,48 +15,53 @@ let state=readSave();
 const input={up:false,down:false,left:false,right:false};
 let panelType='',paused=false,gameReady=false,nearest=null,toaster=null,saveTimer=null,tick=0;
 
-const fishing={stage:'idle',token:0,timer:null,deadline:0,focusReturn:null};
+const fishing={stage:'idle',token:0,timer:null,deadline:0,stageAt:0,focusReturn:null};
 const BITE_WINDOW_MS=1600;
 function scheduleFishing(callback,delay){
   clearTimeout(fishing.timer);
   const token=fishing.token;
-  fishing.timer=setTimeout(()=>{if(token!==fishing.token||$('fishOverlay').hidden)return;fishing.timer=null;callback()},delay);
+  fishing.timer=setTimeout(()=>{if(token!==fishing.token||fishing.stage==='idle')return;fishing.timer=null;callback()},delay);
 }
 function fishStage(stage,message,label,disabled=false){
-  fishing.stage=stage;
-  $('fishOverlay').dataset.stage=stage;
+  fishing.stage=stage;fishing.stageAt=performance.now();
+  $('fishHud').dataset.stage=stage;
   $('fishMessage').textContent=message;
-  $('fishMain').textContent=label;
-  $('fishMain').disabled=disabled;
+  $('actionBtn').textContent=label;
+  $('actionBtn').disabled=disabled;
   $('fishTimer').hidden=stage!=='bite';
+  $('interactHint').textContent=stage==='bite'?'💦 いま！ 引き上げて！':stage==='caught'?'🐟 魚を釣り上げた！':'🌊 池の浮きを見てね';
 }
 function startFishing(){
   if(paused)return;
   paused=true;fishing.focusReturn=document.activeElement;
   for(const dir of Object.keys(input))input[dir]=false;
   document.querySelectorAll('[data-dir]').forEach(el=>el.classList.remove('pressed'));
-  clearTimeout(fishing.timer);fishing.token++;fishing.timer=null;
-  $('fishOverlay').hidden=false;
-  fishStage('ready','竿を投げて、魚が来るのを待とう！','🎣 竿を投げる');
-  $('fishMain').focus({preventScroll:true});
+  fishing.token++;clearTimeout(fishing.timer);fishing.timer=null;fishing.deadline=0;
+  playerFacing=Math.atan2(-7-state.x,6-state.z);
+  $('fishHud').hidden=false;
+  document.querySelector('.bottom-ui').classList.add('fishing-mode');
+  fishStage('ready','池に向かって竿を投げよう！','🎣 竿を投げる');
+  $('actionBtn').focus({preventScroll:true});
 }
 function stopFishing(){
   if(fishing.stage==='idle')return;
   fishing.token++;clearTimeout(fishing.timer);fishing.timer=null;fishing.deadline=0;
-  fishing.stage='idle';$('fishOverlay').hidden=true;paused=false;
+  fishing.stage='idle';$('fishHud').hidden=true;
+  document.querySelector('.bottom-ui').classList.remove('fishing-mode');
+  paused=false;$('actionBtn').disabled=false;
   if(fishing.focusReturn?.focus)fishing.focusReturn.focus({preventScroll:true});
   fishing.focusReturn=null;setContext();
 }
 function castFishing(){
   fishing.token++;clearTimeout(fishing.timer);fishing.deadline=0;
-  fishStage('cast','しゅっ！ 浮きを水面に投げるよ','投げているよ…',true);
+  fishStage('cast','しゅっ！ 池に向かって投げた！','🎣 投げているよ…',true);
   scheduleFishing(()=>{
-    fishStage('wait','浮きが沈むまで待とう。あせらずに！','🎣 引き上げる');
+    fishStage('wait','浮きが沈むまで待とう…','🌊 浮きを見守る');
     scheduleFishing(()=>{
       fishing.deadline=performance.now()+BITE_WINDOW_MS;
-      fishStage('bite','💦 つん！ 魚が食いついた！ いまだ！','✨ いま！ 引き上げる');
+      fishStage('bite','💦 食いついた！ いまだ！','✨ いま！ 引き上げる');
       if(typeof navigator.vibrate==='function')navigator.vibrate(80);
-      scheduleFishing(()=>missFishing('🐟 魚が逃げてしまった！'),BITE_WINDOW_MS);
+      scheduleFishing(()=>missFishing('🐟 あっ、魚に逃げられた！'),BITE_WINDOW_MS);
     },1500+Math.random()*2000);
   },900);
 }
@@ -66,11 +71,11 @@ function missFishing(message){
 }
 function fishAction(){
   if(fishing.stage==='ready'||fishing.stage==='caught'||fishing.stage==='miss'){castFishing();return}
-  if(fishing.stage==='wait'){missFishing('💦 ちょっと早かった！ 浮きが沈むまで待ってね');return}
+  if(fishing.stage==='wait'){missFishing('💦 早すぎた！ 魚が食いつくのを待とう');return}
   if(fishing.stage==='bite'){
-    if(performance.now()>fishing.deadline){missFishing('🐟 間に合わなかった！');return}
+    if(performance.now()>fishing.deadline){missFishing('🐟 タイミングが遅かった！');return}
     fishing.deadline=0;clearTimeout(fishing.timer);fishing.timer=null;
-    fishStage('reel','ぐぐっ…！ 魚を釣り上げているよ！','引き上げ中…',true);
+    fishStage('reel','ぐぐっ！ 魚を釣り上げているよ！','🎣 釣り上げ中…',true);
     scheduleFishing(()=>{
       give('fish',1);save();updateHud();
       fishStage('caught','🎉 やった！ 魚を1匹釣った！','🎣 もう一匹釣る');
@@ -166,6 +171,80 @@ function buildAvatar(b,x,z,yaw,bob=0,npc=false){b.setTransform(x,-.035+bob,z,yaw
  if(npc){for(let s of[-1,1]){const a=[s*.39,2.11,-.02],c=[s*.56,2.59,.0],d=[s*.11,2.20,.0];b.tri(a,c,d,hair);b.tri(a,d,c,hair)}b.sphere(0,1.28,.42,.23,.20,.08,'#fce6b0',5,7)}
  else{b.sphere(0,2.18,-.05,.48,.18,.47,'#f9d384',5,10);b.cylinder(0,2.2,.2,.46,.08,10,'#e2b574');b.box(0,.93,-.42,.74,.70,.22,'#a68b62')}
  b.clearTransform()}
+
+function fishingSegment(b,a,c,r,col){
+  const vx=c[0]-a[0],vz=c[2]-a[2],length=Math.hypot(vx,vz)||1;
+  const nx=Math.abs(vz/length)>.05?vz/length:1;
+  const nz=Math.abs(vz/length)>.05?-vx/length:0;
+  b.quad([a[0]+nx*r,a[1],a[2]+nz*r],[c[0]+nx*r,c[1],c[2]+nz*r],
+         [c[0]-nx*r,c[1],c[2]-nz*r],[a[0]-nx*r,a[1],a[2]-nz*r],col);
+  b.quad([a[0],a[1]+r,a[2]],[c[0],c[1]+r,c[2]],
+         [c[0],c[1]-r,c[2]],[a[0],a[1]-r,a[2]],col);
+}
+function fishingRing(b,x,z,r,col){
+  const width=.036,y=.085;
+  for(let i=0;i<16;i++){
+    const a=i*Math.PI/8,c=(i+1)*Math.PI/8;
+    b.quad([x+Math.cos(a)*r,y,z+Math.sin(a)*r],
+      [x+Math.cos(c)*r,y,z+Math.sin(c)*r],
+      [x+Math.cos(c)*(r+width),y,z+Math.sin(c)*(r+width)],
+      [x+Math.cos(a)*(r+width),y,z+Math.sin(a)*(r+width)],col);
+  }
+}
+function buildFishingGeometry(b,now){
+  if(fishing.stage==='idle')return;
+  const age=Math.max(0,now-fishing.stageAt);
+  const dx=-7-state.x,dz=6-state.z;
+  const d=Math.hypot(dx,dz)||1,fx=dx/d,fz=dz/d;
+  // The bobber lands safely inside the pond; keep it in the original 3D scene.
+  const tx=-7-fx*.78,tz=6-fz*.65;
+  const hand=[state.x+fx*.34,1.25,state.z+fz*.34];
+  const progress=fishing.stage==='cast'?clamp(age/900,0,1):1;
+  const ease=1-Math.pow(1-progress,3);
+  const tip=[hand[0]+fx*(.5+1.12*ease),2.65+Math.sin(ease*Math.PI)*.64,hand[2]+fz*(.5+1.12*ease)];
+  fishingSegment(b,hand,tip,.055,'#b98754');
+  let bx=hand[0]+(tx-hand[0])*ease,bz=hand[2]+(tz-hand[2])*ease;
+  let by=.19+(fishing.stage==='cast'?Math.sin(progress*Math.PI)*1.7:Math.sin(now*.008)*.035);
+  if(fishing.stage==='ready'){bx=hand[0];bz=hand[2];by=.4}
+  if(fishing.stage==='bite')by=.11+Math.sin(now*.055)*.045;
+  let reel=fishing.stage==='reel'?clamp(age/900,0,1):fishing.stage==='caught'?1:0;
+  if(reel){bx=tx+(hand[0]-tx)*reel*.82;bz=tz+(hand[2]-tz)*reel*.82;by=.18+Math.sin(reel*Math.PI)*2.25+reel*.93}
+  fishingSegment(b,tip,[bx,by,bz],.014,'#fff2cf');
+  b.sphere(bx,by,bz,.14,.16,.14,'#f7e6cb',5,8);
+  b.sphere(bx,by+.09,bz,.14,.11,.14,'#f17e65',5,8);
+  if(!['ready','cast','caught'].includes(fishing.stage)){
+    for(let i=0;i<2;i++){
+      const radius=.26+(((now*.0008+i*.5)%1)*.68);
+      fishingRing(b,tx,tz,radius,fishing.stage==='bite'?'#fff4b6':'#d6f6ed');
+    }
+  }
+  if(fishing.stage==='wait'){
+    const drift=Math.sin(now*.0022)*.67;
+    b.sphere(tx+drift,.13,tz+.25,.36,.08,.19,'#4899ad',5,8);
+    b.tri([tx+drift-.24,.15,tz+.26],[tx+drift-.55,.16,tz+.46],
+      [tx+drift-.55,.16,tz+.08],'#408ca6');
+  }
+  if(fishing.stage==='bite'||fishing.stage==='miss'){
+    for(let i=0;i<7;i++){
+      const a=i*Math.PI*2/7;
+      const rise=fishing.stage==='miss'?Math.max(0,.65-age*.001):.32+.17*Math.sin(now*.013+i);
+      b.sphere(tx+Math.cos(a)*.38,.18+rise,tz+Math.sin(a)*.38,.07,.10,.07,'#e6f9e8',4,5);
+    }
+  }
+  if(fishing.stage==='reel'||fishing.stage==='caught'){
+    const y=by+.16+(fishing.stage==='caught'?.1*Math.sin(now*.008):0);
+    b.sphere(bx,y,bz,.42,.20,.23,'#e5a66d',6,10);
+    b.sphere(bx+fx*.34,y+.055,bz+fz*.34,.12,.115,.12,'#eecb88',5,7);
+    b.tri([bx-fx*.36,y,bz-fz*.36],
+      [bx-fx*.7-fz*.23,y+.2,bz-fz*.7+fx*.23],
+      [bx-fx*.7+fz*.23,y-.16,bz-fz*.7-fx*.23],'#bd886b');
+    for(let i=0;i<4;i++){
+      const a=i*Math.PI/2+now*.001;
+      b.sphere(bx+Math.cos(a)*.55,y+.33+Math.sin(now*.006+i)*.12,bz+Math.sin(a)*.55,.065,.09,.065,'#fff0b2',4,5);
+    }
+  }
+}
+
 function buildDynamic(now){const b=new MeshBuilder();let bounce=(Math.sin(now*.011)*.045);buildAvatar(b,state.x,state.z,playerFacing,bounce,false);buildAvatar(b,1.9,.9,Math.sin(now*.00031)*.65,Math.sin(now*.002)*.02,true);
  trees.forEach((t,i)=>{if(t.type!=='fruit'||state.harvested.includes(i))return;for(let j=0;j<3;j++){let a=(j*2.35)+i;let x=t.x+Math.cos(a)*.80,y=2.05+.30*Math.sin(j*2.1),z=t.z+Math.sin(a)*.77;b.sphere(x,y,z,.22,.24,.22,'#ed8c72',5,7);b.leaf(x,y+.23,z,.13,'#79bc78')}});
  shells.forEach((s,i)=>{if(state.shells.includes(i))return;b.sphere(s.x,.08,s.z,.27,.17,.26,'#fff0d5',5,7);b.sphere(s.x+.12,.20,s.z,.09,.09,.09,'#fae0b3',4,5)});
@@ -173,6 +252,7 @@ function buildDynamic(now){const b=new MeshBuilder();let bounce=(Math.sin(now*.0
  if(state.furniture>0)buildBench(b,-7.75,-1.65);
  if(state.houseLevel>=2){b.sphere(-8.15,.76,-5.2,.38,.45,.38,'#f7cba5',5,7);b.cylinder(-8.1,.24,-5.2,.23,.4,8,'#9e8667')}
  if(nearest){let t=now*.003;const x=nearest.x,z=nearest.z;let py=2.6+.15*Math.sin(t);b.sphere(x,py,z,.18,.23,.18,'#fff3a7',4,6);b.sphere(x,py,z,.09,.12,.09,'#ffe08d',4,6)}
+ buildFishingGeometry(b,now);
  return b.toFloat()}
 let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0;
 let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,worldBuffer=null,dynamicBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z};
@@ -219,9 +299,11 @@ function drawSoftware(now,eye,aspect){
 function resize(){const dpr=ctx2d?1:Math.min(window.devicePixelRatio||1,1.7),width=Math.floor(canvas.clientWidth*dpr),height=Math.floor(canvas.clientHeight*dpr);if(canvas.width!==width||canvas.height!==height){canvas.width=Math.max(1,width);canvas.height=Math.max(1,height)}if(gl)gl.viewport(0,0,canvas.width,canvas.height)}
 let playerFacing=Math.PI,previous=0,npcGiftToday=false;
 function render(now){if(!gameReady)return;const dt=Math.min(.07,(now-previous)/1000||0);previous=now;tick+=dt;const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&(sx||sy)){let n=Math.hypot(sx,sy);sx/=n;sy/=n;const c=Math.cos(state.angle),s=Math.sin(state.angle);let dx=(sx*c+sy*s)*speed*dt,dz=(-sx*s+sy*c)*speed*dt;const canWalk=(x,z)=>{const shore=x*x/152+z*z/105;if(shore>1)return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;for(const t of trees)if(dist(x,z,t.x,t.z)<.56)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
- camFocus.x+=(state.x-camFocus.x)*Math.min(1,dt*6);camFocus.z+=(state.z-camFocus.z)*Math.min(1,dt*6);
+ const fishingActive=fishing.stage!=='idle';
+  const focusX=fishingActive?(state.x-7)*.5:state.x, focusZ=fishingActive?(state.z+6)*.5:state.z;
+  camFocus.x+=(focusX-camFocus.x)*Math.min(1,dt*(fishingActive?3.6:6));camFocus.z+=(focusZ-camFocus.z)*Math.min(1,dt*(fishingActive?3.6:6));
  let next=findNearby();if(next?.id!==nearest?.id){nearest=next;setContext()}
- resize();const aspect=canvas.width/canvas.height,distance=aspect<.70?26.0:20.5,eye=[camFocus.x+Math.sin(state.angle)*distance,14.6,camFocus.z+Math.cos(state.angle)*distance];if(ctx2d){drawSoftware(now,eye,aspect);requestAnimationFrame(render);return;}let nightTint=(state.day%6===0)?.18:0;gl.clearColor(.69-nightTint*.2,.87-nightTint*.15,.91-nightTint*.05,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(uView,false,lookAt(eye,[camFocus.x,0,camFocus.z],[0,1,0]));gl.uniformMatrix4fv(uProj,false,perspective(48*Math.PI/180,aspect,.1,130));gl.uniform3f(uFog,.67,.84,.84);gl.uniform1f(uLight,nightTint);bindGeometry(worldBuffer);gl.drawArrays(gl.TRIANGLES,0,worldVerts);
+ resize();const aspect=canvas.width/canvas.height,distance=fishingActive?(aspect<.70?14.4:12.1):(aspect<.70?26.0:20.5),eye=[camFocus.x+Math.sin(state.angle)*distance,fishingActive?9.2:14.6,camFocus.z+Math.cos(state.angle)*distance];if(ctx2d){drawSoftware(now,eye,aspect);requestAnimationFrame(render);return;}let nightTint=(state.day%6===0)?.18:0;gl.clearColor(.69-nightTint*.2,.87-nightTint*.15,.91-nightTint*.05,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(uView,false,lookAt(eye,[camFocus.x,0,camFocus.z],[0,1,0]));gl.uniformMatrix4fv(uProj,false,perspective(48*Math.PI/180,aspect,.1,130));gl.uniform3f(uFog,.67,.84,.84);gl.uniform1f(uLight,nightTint);bindGeometry(worldBuffer);gl.drawArrays(gl.TRIANGLES,0,worldVerts);
  const d=buildDynamic(now);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,d,gl.DYNAMIC_DRAW);bindGeometry(dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,d.length/9);
  requestAnimationFrame(render)}
 let lastAutoSave=0;
@@ -229,7 +311,7 @@ function showToast(msg){const el=$('toast');el.textContent=msg;el.classList.add(
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state));$('saveStatus').textContent='● セーブ済'}catch{$('saveStatus').textContent='⚠ 保存できません'}}
 function updateHud(){ $('dayPill').textContent='☀️ '+state.day+'日目';$('coinPill').textContent='🪙 '+state.coins;
  let msg='🎉 おねがい達成！';if(!state.claimed[0])msg='🍎 木の実を3個集めよう '+Math.min(3,state.questBerries)+'/3';else if(!state.claimed[1])msg='🏪 お店で何か売ってみよう';else if(!state.claimed[2])msg='🥕 畑でにんじんを育てよう';$('missionShort').textContent=msg}
-function setContext(){const t=nearest;$('interactHint').textContent=t?t.icon+' '+t.name+' が近くにあるよ':'🌱 島を自由に探検しよう';$('actionBtn').textContent=t?'✨ '+(t.id==='shop'?'お店に入る':t.id==='npc'?'話しかける':t.id==='home'?'家を見る':t.id==='pond'?'釣りをする':t.id.startsWith('plot')?'畑を調べる':t.id.startsWith('shell')?'拾う':'採集する'):'✨ 調べる'}
+function setContext(){if(fishing.stage!=='idle')return;const t=nearest;$('interactHint').textContent=t?t.icon+' '+t.name+' が近くにあるよ':'🌱 島を自由に探検しよう';$('actionBtn').textContent=t?'✨ '+(t.id==='shop'?'お店に入る':t.id==='npc'?'話しかける':t.id==='home'?'家を見る':t.id==='pond'?'釣りをする':t.id.startsWith('plot')?'畑を調べる':t.id.startsWith('shell')?'拾う':'採集する'):'✨ 調べる'}
 function give(id,amount){state.inventory[id]=(state.inventory[id]||0)+amount}
 function price(id){return Math.max(1,Math.round(basePrice[id]*(.86+(state.day*37+id.length*13)%29/100)))}
 function maybeQuest(){if(!state.claimed[0]&&state.questBerries>=3){state.claimed[0]=true;state.coins+=70;showToast('🎉 おねがい達成！ 70コインをゲット');return}if(state.claimed[0]&&!state.claimed[1]&&state.questSold){state.claimed[1]=true;state.coins+=80;showToast('🎉 商売の達人！ 80コインをゲット');return}if(state.claimed[1]&&!state.claimed[2]&&state.questGrown){state.claimed[2]=true;state.coins+=100;showToast('🎉 初めての収穫！ 100コインをゲット')}}
@@ -258,10 +340,10 @@ function closePanel(){$('panelOverlay').hidden=true;paused=false;panelType='';se
 function exportSave(){const data=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const url=URL.createObjectURL(data),a=document.createElement('a');a.href=url;a.download='komorebi-save-day'+state.day+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);showToast('セーブデータを書き出したよ')}
 function bindControls(){const dirs=document.querySelectorAll('[data-dir]');dirs.forEach(btn=>{const dir=btn.dataset.dir;btn.addEventListener('pointerdown',e=>{e.preventDefault();input[dir]=true;btn.classList.add('pressed');try{btn.setPointerCapture(e.pointerId)}catch{}});const release=e=>{input[dir]=false;btn.classList.remove('pressed')};btn.addEventListener('pointerup',release);btn.addEventListener('pointercancel',release);btn.addEventListener('lostpointercapture',release)});
  const codes={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};
- document.addEventListener('keydown',e=>{if(!$('fishOverlay').hidden){if(e.code==='Escape'){e.preventDefault();stopFishing()}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)fishAction()}else if(codes[e.code])e.preventDefault();return}if(codes[e.code]){e.preventDefault();input[codes[e.code]]=true}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)interact()}else if(e.code==='Escape'&&!$('panelOverlay').hidden)closePanel()});document.addEventListener('keyup',e=>{if(codes[e.code]){e.preventDefault();input[codes[e.code]]=false}});window.addEventListener('blur',()=>Object.keys(input).forEach(d=>input[d]=false));
- $('rotateLeft').addEventListener('click',()=>{state.angle-=Math.PI/4;save()});$('rotateRight').addEventListener('click',()=>{state.angle+=Math.PI/4;save()});$('cameraReset').addEventListener('click',()=>{state.angle=0;save();showToast('📷 カメラを戻したよ')});$('actionBtn').addEventListener('click',interact);$('bagBtn').addEventListener('click',()=>openPanel('bag'));$('questBtn').addEventListener('click',()=>openPanel('quests'));$('nextDayBtn').addEventListener('click',nextDay);$('panelClose').addEventListener('click',closePanel);$('panelOverlay').addEventListener('click',e=>{if(e.target===$('panelOverlay'))closePanel()});
+ document.addEventListener('keydown',e=>{if(fishing.stage!=='idle'){if(e.code==='Escape'){e.preventDefault();stopFishing()}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)fishAction()}else if(codes[e.code])e.preventDefault();return}if(codes[e.code]){e.preventDefault();input[codes[e.code]]=true}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)interact()}else if(e.code==='Escape'&&!$('panelOverlay').hidden)closePanel()});document.addEventListener('keyup',e=>{if(codes[e.code]){e.preventDefault();input[codes[e.code]]=false}});window.addEventListener('blur',()=>Object.keys(input).forEach(d=>input[d]=false));
+ $('rotateLeft').addEventListener('click',()=>{state.angle-=Math.PI/4;save()});$('rotateRight').addEventListener('click',()=>{state.angle+=Math.PI/4;save()});$('cameraReset').addEventListener('click',()=>{state.angle=0;save();showToast('📷 カメラを戻したよ')});$('actionBtn').addEventListener('click',()=>{if(fishing.stage==='idle')interact();else fishAction()});$('bagBtn').addEventListener('click',()=>openPanel('bag'));$('questBtn').addEventListener('click',()=>openPanel('quests'));$('nextDayBtn').addEventListener('click',nextDay);$('panelClose').addEventListener('click',closePanel);$('panelOverlay').addEventListener('click',e=>{if(e.target===$('panelOverlay'))closePanel()});
  let drag=null;canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,angle:state.angle,pointerId:e.pointerId};try{canvas.setPointerCapture(e.pointerId)}catch{}});canvas.addEventListener('pointermove',e=>{if(!drag||drag.pointerId!==e.pointerId)return;state.angle=drag.angle+(e.clientX-drag.x)*.0055});canvas.addEventListener('pointerup',()=>{if(drag)save();drag=null});canvas.addEventListener('pointercancel',()=>drag=null);
- $('fishMain').addEventListener('click',fishAction);$('fishClose').addEventListener('click',stopFishing);$('fishBack').addEventListener('click',stopFishing);
+ $('fishBack').addEventListener('click',stopFishing);
  $('startBtn').addEventListener('click',()=>{$('welcomeOverlay').hidden=true;paused=false;state.welcomeSeen=true;save();showToast('🌿 島を探検しよう！')});document.addEventListener('visibilitychange',()=>{if(document.hidden){if(fishing.stage!=='idle')stopFishing();save()}});window.addEventListener('pagehide',save);
 }
 function start(){try{initializeGL();bindControls();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),moveTo:(x,z)=>{state.x=x;state.z=z;setContext()},interact,nextDay,openPanel,price,vertices:worldVerts,getFishingStage:()=>fishing.stage,fishAction,stopFishing};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
