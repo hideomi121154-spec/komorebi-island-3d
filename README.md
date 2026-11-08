@@ -4,16 +4,17 @@
 
 ## プレイ
 
-このリポジトリの **GitHub Pages** を有効にすると、次のURLで遊べます。
+公開済みの **GitHub Pages** で、次のURLから遊べます。
 
 https://hideomi121154-spec.github.io/komorebi-island-3d/
 
-**注意：Pagesを有効化するまではプレイできません。** `Settings → Pages → Build and deployment → Deploy from a branch → main → /(root) → Save` を設定し、表示される公開URLをSafariで開いてください。GitHubのCode画面はゲーム実行画面ではありません。
+GitHubのコード閲覧画面では実行されないため、上の公開URLをSafariで開いてください。
 
 ## 操作
 
 - iPhone・Android：画面の十字キーで移動し、「調べる」を押す。カメラ回転ボタンも使用可能。
 - PC：WASD／矢印キーで移動、E／Spaceで調べる。
+- 釣り：池で「釣りをする」を選択し、**島の3D画面のまま**竿を投げて、浮きが沈んだらタイミングよく引き上げる。
 - セーブ：同じブラウザのlocalStorageに保存。公開先URLの変更やSafariのデータ削除で失う可能性があるので、ゲーム内のJSONバックアップも利用してください。
 
 ## 開発
