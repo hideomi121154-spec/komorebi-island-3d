@@ -20,3 +20,29 @@
 .bottom-ui.fishing-mode .act-main:disabled{opacity:.8;cursor:default}
 @media(max-height:700px){.fish-hud{top:calc(env(safe-area-inset-top) + 93px);width:min(calc(100vw - 104px),340px);padding:7px 9px}.fish-hud p{margin:3px 0}.bottom-ui.fishing-mode .act-main{min-height:50px}}
 @media(prefers-reduced-motion:reduce){.fish-hud *{animation-duration:.01ms!important}}
+
+/* Real walkable interiors: the same 3D canvas remains visible; dialogue is a compact bottom sheet. */
+.room-hud[hidden],.room-dialogue[hidden]{display:none}
+.room-hud{position:absolute;z-index:4;top:calc(env(safe-area-inset-top) + 133px);left:50%;transform:translateX(-50%);padding:9px 14px;border:2px solid #fffc;border-radius:18px;background:#fff8e8e8;box-shadow:0 8px 26px #325c4d34;text-align:center;min-width:215px;max-width:70vw;pointer-events:none}
+.room-hud span{display:block;font-size:14px;font-weight:950;color:#4a7462}.room-hud .room-hud-help{font-size:10px;font-weight:700;color:#8a9473;padding-top:2px}
+.room-dialogue{position:absolute;z-index:12;left:50%;bottom:calc(env(safe-area-inset-bottom) + 12px);transform:translateX(-50%);width:min(93vw,500px);max-height:min(47dvh,440px);padding:13px 16px 15px;background:#fffdf2f5;border:3px solid #fff0d2;border-radius:25px;box-shadow:0 15px 58px #1b3b3977;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
+.room-dialogue-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #e2e5d4;padding-bottom:8px;margin-bottom:10px}
+.room-dialogue-heading h2{font-size:17px;color:#4a6f61;margin:0}.room-dialogue-heading button{width:35px;height:35px;border-radius:50%;background:#e7f2e9;color:#4e7668;font-size:19px}
+.room-dialogue p{line-height:1.6;color:#517368;font-size:13px;margin:8px 0}
+.room-dialogue-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.room-dialogue-actions button,.room-choice{padding:10px 12px;min-height:40px;background:#7eb694;color:#fffdf5;font-weight:800;font-size:13px;border-radius:13px;border:1px solid #fff;touch-action:manipulation;box-shadow:0 3px 0 #4d866e44}
+.room-dialogue-actions button:last-child{background:#e7eee5;color:#51746a}
+.room-choice:disabled{opacity:.47}
+.room-offer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px dashed #d9e1d2;line-height:1.45;font-size:13px}
+.room-offer strong{font-size:13px;color:#365f53}.room-offer small{display:block;font-size:11px;color:#779687}
+.room-offer .room-choice{flex-shrink:0;min-height:35px;padding:8px 9px;font-size:12px}
+.room-dialogue .room-note{background:#f1f5e8;border-radius:11px;padding:9px;font-size:12px}
+.bottom-ui.room-dialoguing{display:none}
+.scene-veil{position:absolute;z-index:26;inset:0;background:#263d3d;opacity:0;pointer-events:none;transition:opacity .3s ease-in-out;display:grid;place-items:center}
+.scene-veil.active{opacity:1;pointer-events:auto}
+.scene-veil div{color:#fff5df;text-align:center;font-size:20px;font-weight:900;letter-spacing:.05em;transform:translateY(12px);transition:transform .3s}
+.scene-veil.active div{transform:translateY(0)}
+@media(max-height:670px){.room-hud{top:calc(env(safe-area-inset-top) + 92px)}.room-dialogue{max-height:58dvh;padding:10px}.room-offer{padding:4px 0}}
+@media(prefers-reduced-motion:reduce){.scene-veil,.scene-veil div{transition:none}}
+
+#app.indoors .edge-buttons{display:none}

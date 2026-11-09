@@ -27,3 +27,15 @@ test('In-world 3D fishing replaces the full-screen dialog',()=>{
  assert.match(css,/bottom-ui\.fishing-mode/);
  assert.match(css,/fish-hud\[data-stage="bite"\]/);
 });
+
+test('Walkable interior resources are linked and wired',()=>{
+ assert.match(html,/src="rooms3d\.js"/);
+ assert.match(html,/id="roomDialogue"/);
+ assert.match(html,/id="roomHud"/);
+ assert.match(html,/id="sceneVeil"/);
+ assert.match(js,/function enterRoom\(/);
+ assert.match(js,/function leaveRoom\(/);
+ assert.match(js,/function interactInside\(/);
+ assert.match(js,/const roomTargets=/);
+ assert.match(css,/room-dialogue\[hidden\]/);
+});
