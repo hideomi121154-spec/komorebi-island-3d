@@ -46,3 +46,19 @@
 @media(prefers-reduced-motion:reduce){.scene-veil,.scene-veil div{transition:none}}
 
 #app.indoors .edge-buttons{display:none}
+
+
+/* Speech follows a real 3D NPC. Dialogue choices stay at the bottom; item lists remain separate. */
+.speech-bubble[hidden]{display:none}
+.speech-bubble{position:absolute;z-index:11;left:50%;top:46%;width:min(76vw,308px);max-width:calc(100vw - 30px);transform:translate(-50%,-100%);pointer-events:none;padding:13px 16px 15px;border:3px solid #fff8e5;border-radius:23px 23px 21px 21px;background:#fffdf4f5;box-shadow:0 10px 27px #304d4160;filter:drop-shadow(0 4px 2px #38554516);text-align:left;animation:speechPop .2s ease-out both}
+.speech-bubble::after{content:"";position:absolute;left:var(--speech-tail-x,50%);bottom:-17px;transform:translateX(-50%);width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:17px solid #fffdf4;filter:drop-shadow(0 2px 0 #d8ddc2)}
+.speech-name{display:inline-block;padding:3px 8px;border-radius:12px;background:#e2f0e2;color:#466d5f;font-size:12px;font-weight:900;letter-spacing:.01em}
+.speech-text{margin:8px 0 0;color:#365e52;font-size:clamp(14px,3.7vw,17px);font-weight:800;line-height:1.55;overflow-wrap:anywhere}
+.room-dialogue.npc-choice-mode{max-height:none;max-width:min(94vw,395px);width:auto;overflow:visible;border:0;background:transparent;box-shadow:none;padding:0 5px;bottom:calc(env(safe-area-inset-bottom) + 20px)}
+.room-dialogue.npc-choice-mode .room-dialogue-heading,.room-dialogue.npc-choice-mode #roomDialogBody{display:none}
+.room-dialogue.npc-choice-mode .room-dialogue-actions{margin:0;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:8px;background:#fffdf2da;border:2px solid #ffffffc9;border-radius:19px;box-shadow:0 7px 19px #315d4d29;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+.room-dialogue.npc-choice-mode .room-dialogue-actions button{border-radius:14px;min-height:45px;padding:10px 11px;font-size:clamp(11px,3vw,13px);white-space:nowrap;box-shadow:0 3px 0 #668d7260}
+.room-dialogue.npc-choice-mode .room-dialogue-actions button:last-child{background:#dbe9e0;color:#446b60}
+@keyframes speechPop{from{opacity:0;transform:translate(-50%,-91%) scale(.93)}to{opacity:1;transform:translate(-50%,-100%) scale(1)}}
+@media(max-height:680px){.speech-bubble{padding:8px 12px 10px}.speech-text{margin-top:4px;font-size:13px}.room-dialogue.npc-choice-mode{bottom:calc(env(safe-area-inset-bottom) + 8px)}}
+@media(prefers-reduced-motion:reduce){.speech-bubble{animation:none}}
