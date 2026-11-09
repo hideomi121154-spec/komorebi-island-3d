@@ -347,10 +347,10 @@ function drawSoftware(now,eye,aspect){
  if(now-lastSoftwareDraw<83)return;
  lastSoftwareDraw=now;
  const W=canvas.width,H=canvas.height,ctx=ctx2d;
- const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#b6e4f2');sky.addColorStop(.61,'#e7f0d2');sky.addColorStop(1,'#a4d8d0');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
- const view=lookAt(eye,[camFocus.x,0,camFocus.z],[0,1,0]);
- const perspectiveX=1/Math.tan(24*Math.PI/180)/aspect;
- const perspectiveY=1/Math.tan(24*Math.PI/180);
+ const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,indoor.room?'#e3e8dc':'#b6e4f2');sky.addColorStop(.61,indoor.room?'#f6e8cb':'#e7f0d2');sky.addColorStop(1,indoor.room?'#d8c1a1':'#a4d8d0');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+ const view=lookAt(eye,indoor.room?[0,.95,-.35]:[camFocus.x,0,camFocus.z],[0,1,0]);
+ const perspectiveX=1/Math.tan((indoor.room?26:24)*Math.PI/180)/aspect;
+ const perspectiveY=1/Math.tan((indoor.room?26:24)*Math.PI/180);
  const triangles=[];
  function process(data,start=0,end=data.length){for(let i=start;i<end;i+=27){
   let tri=[],depth=0,skip=false;
@@ -369,6 +369,8 @@ function drawSoftware(now,eye,aspect){
   triangles.push({depth:depth/3,tri,c:'rgb('+rgb.join(',')+')'});
  }}
  const paint=()=>{triangles.sort((a,b)=>b.depth-a.depth);for(let v of triangles){const t=v.tri;ctx.beginPath();ctx.moveTo(t[0],t[1]);ctx.lineTo(t[2],t[3]);ctx.lineTo(t[4],t[5]);ctx.closePath();ctx.fillStyle=v.c;ctx.fill();}triangles.length=0};
+ // Same 3D projection for indoor scenes when WebGL is unavailable.
+ if(indoor.room){process(indoor.mesh,0,indoor.floor*9);paint();process(indoor.mesh,indoor.floor*9);process(buildDynamic(now));paint();return}
  // Terrain is always behind objects: avoids the painter's-algorithm wedge artifact.
  process(softwareWorld,0,softwareSeaCount*9);paint();
  process(softwareWorld,softwareSeaCount*9,softwareSandCount*9);paint();
@@ -378,12 +380,26 @@ function drawSoftware(now,eye,aspect){
 }
 function resize(){const dpr=ctx2d?1:Math.min(window.devicePixelRatio||1,1.7),width=Math.floor(canvas.clientWidth*dpr),height=Math.floor(canvas.clientHeight*dpr);if(canvas.width!==width||canvas.height!==height){canvas.width=Math.max(1,width);canvas.height=Math.max(1,height)}if(gl)gl.viewport(0,0,canvas.width,canvas.height)}
 let playerFacing=Math.PI,previous=0,npcGiftToday=false;
-function render(now){if(!gameReady)return;const dt=Math.min(.07,(now-previous)/1000||0);previous=now;tick+=dt;const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&(sx||sy)){let n=Math.hypot(sx,sy);sx/=n;sy/=n;const c=Math.cos(state.angle),s=Math.sin(state.angle);let dx=(sx*c+sy*s)*speed*dt,dz=(-sx*s+sy*c)*speed*dt;const canWalk=(x,z)=>{const shore=x*x/152+z*z/105;if(shore>1)return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;for(const t of trees)if(dist(x,z,t.x,t.z)<.56)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
- const fishingActive=fishing.stage!=='idle';
+function render(now){if(!gameReady)return;const dt=Math.min(.07,(now-previous)/1000||0);previous=now;tick+=dt;const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&(sx||sy)){let n=Math.hypot(sx,sy);sx/=n;sy/=n;const c=Math.cos(state.angle),s=Math.sin(state.angle);let dx=(indoor.room?sx:(sx*c+sy*s))*speed*dt,dz=(indoor.room?sy:(-sx*s+sy*c))*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);const shore=x*x/152+z*z/105;if(shore>1)return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;for(const t of trees)if(dist(x,z,t.x,t.z)<.56)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
+ const fishingActive=fishing.stage!=='idle',roomActive=!!indoor.room;
   const focusX=fishingActive?(state.x-7)*.5:state.x, focusZ=fishingActive?(state.z+6)*.5:state.z;
-  camFocus.x+=(focusX-camFocus.x)*Math.min(1,dt*(fishingActive?3.6:6));camFocus.z+=(focusZ-camFocus.z)*Math.min(1,dt*(fishingActive?3.6:6));
+  if(!roomActive){camFocus.x+=(focusX-camFocus.x)*Math.min(1,dt*(fishingActive?3.6:6));camFocus.z+=(focusZ-camFocus.z)*Math.min(1,dt*(fishingActive?3.6:6));}
  let next=findNearby();if(next?.id!==nearest?.id){nearest=next;setContext()}
- resize();const aspect=canvas.width/canvas.height,distance=fishingActive?(aspect<.70?14.4:12.1):(aspect<.70?26.0:20.5),eye=[camFocus.x+Math.sin(state.angle)*distance,fishingActive?9.2:14.6,camFocus.z+Math.cos(state.angle)*distance];if(ctx2d){drawSoftware(now,eye,aspect);requestAnimationFrame(render);return;}let nightTint=(state.day%6===0)?.18:0;gl.clearColor(.69-nightTint*.2,.87-nightTint*.15,.91-nightTint*.05,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(uView,false,lookAt(eye,[camFocus.x,0,camFocus.z],[0,1,0]));gl.uniformMatrix4fv(uProj,false,perspective(48*Math.PI/180,aspect,.1,130));gl.uniform3f(uFog,.67,.84,.84);gl.uniform1f(uLight,nightTint);bindGeometry(worldBuffer);gl.drawArrays(gl.TRIANGLES,0,worldVerts);
+ resize();
+ const aspect=canvas.width/canvas.height;
+ const distance=fishingActive?(aspect<.70?14.4:12.1):(aspect<.70?26.0:20.5);
+ const eye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):[camFocus.x+Math.sin(state.angle)*distance,fishingActive?9.2:14.6,camFocus.z+Math.cos(state.angle)*distance];
+ const center=roomActive?[0,.95,-.35]:[camFocus.x,0,camFocus.z];
+ if(ctx2d){drawSoftware(now,eye,aspect);requestAnimationFrame(render);return;}
+ const nightTint=(state.day%6===0)?.18:0;
+ gl.clearColor(roomActive?.84:.69-nightTint*.2,roomActive?.86:.87-nightTint*.15,roomActive?.81:.91-nightTint*.05,1);
+ gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+ gl.uniformMatrix4fv(uView,false,lookAt(eye,center,[0,1,0]));
+ gl.uniformMatrix4fv(uProj,false,perspective((roomActive?52:48)*Math.PI/180,aspect,.1,130));
+ gl.uniform3f(uFog,.67,.84,.84);
+ gl.uniform1f(uLight,nightTint);
+ bindGeometry(roomActive?indoor.buffer:worldBuffer);
+ gl.drawArrays(gl.TRIANGLES,0,roomActive?indoor.count:worldVerts);
  const d=buildDynamic(now);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,d,gl.DYNAMIC_DRAW);bindGeometry(dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,d.length/9);
  requestAnimationFrame(render)}
 let lastAutoSave=0;
