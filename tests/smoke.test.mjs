@@ -39,3 +39,11 @@ test('Walkable interior resources are linked and wired',()=>{
  assert.match(js,/const roomTargets=/);
  assert.match(css,/room-dialogue\[hidden\]/);
 });
+
+test('Farm watering is wired into the same 3D island',()=>{
+ assert.match(html,/src="watering3d\.js"/);
+ for(const fn of ['beginWatering','finishWatering','plotActionLabel','cropGrowth'])
+  assert.ok(js.includes('function '+fn+'('),fn);
+ assert.match(js,/window\.KomorebiWatering\?\.draw/);
+ assert.match(js,/wateredDay===state\.day/);
+});
