@@ -17,5 +17,7 @@ jobs:
           node-version: '22'
       - name: Check JavaScript syntax
         run: node --check game.js
+      - name: Check interior 3D module syntax
+        run: node --check rooms3d.js
       - name: Run smoke tests
         run: node --test tests/*.test.mjs
