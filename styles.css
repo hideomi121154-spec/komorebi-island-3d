@@ -44,3 +44,5 @@
 .scene-veil.active div{transform:translateY(0)}
 @media(max-height:670px){.room-hud{top:calc(env(safe-area-inset-top) + 92px)}.room-dialogue{max-height:58dvh;padding:10px}.room-offer{padding:4px 0}}
 @media(prefers-reduced-motion:reduce){.scene-veil,.scene-veil div{transition:none}}
+
+#app.indoors .edge-buttons{display:none}
