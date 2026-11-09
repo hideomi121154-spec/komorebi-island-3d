@@ -42,6 +42,11 @@
   <div class="room-hud" id="roomHud" hidden>
     <span id="roomName">🏠 家の中</span><span class="room-hud-help">歩いて家具や店員に近づこう</span>
   </div>
+  <!-- Speech text appears above the actual 3D character; choices and commerce remain in the compact panel. -->
+  <div class="speech-bubble" id="speechBubble" role="status" aria-live="polite" aria-atomic="true" hidden>
+    <div class="speech-name" id="speechName">🐱 店員さん</div>
+    <p class="speech-text" id="speechText"></p>
+  </div>
   <div class="room-dialogue" id="roomDialogue" role="dialog" aria-modal="true" aria-labelledby="roomDialogTitle" hidden>
     <div class="room-dialogue-heading"><h2 id="roomDialogTitle">お話ししよう</h2><button id="roomDialogClose" aria-label="会話を閉じる">✕</button></div>
     <div id="roomDialogBody"></div>
