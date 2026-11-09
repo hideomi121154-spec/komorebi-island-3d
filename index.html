@@ -38,6 +38,16 @@
     <p id="fishMessage" role="status" aria-live="polite">池に向かって竿を投げよう！</p>
     <div id="fishTimer" class="fish-timer" hidden><div class="fish-timer-fill"></div></div>
   </div>
+  <!-- The island remains a 3D game. House and shop are rendered as walkable 3D rooms. -->
+  <div class="room-hud" id="roomHud" hidden>
+    <span id="roomName">🏠 家の中</span><span class="room-hud-help">歩いて家具や店員に近づこう</span>
+  </div>
+  <div class="room-dialogue" id="roomDialogue" role="dialog" aria-modal="true" aria-labelledby="roomDialogTitle" hidden>
+    <div class="room-dialogue-heading"><h2 id="roomDialogTitle">お話ししよう</h2><button id="roomDialogClose" aria-label="会話を閉じる">✕</button></div>
+    <div id="roomDialogBody"></div>
+    <div id="roomDialogActions" class="room-dialogue-actions"></div>
+  </div>
+  <div class="scene-veil" id="sceneVeil" aria-hidden="true"><div id="sceneVeilLabel">🚪 お部屋へ入ります…</div></div>
   <div id="errorMessage" hidden></div>
 </div>
 <script src="game.js" defer></script>
