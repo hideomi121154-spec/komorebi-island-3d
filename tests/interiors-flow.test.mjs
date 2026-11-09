@@ -17,9 +17,9 @@ function createGame(){
   const events=new Map();
   const classes=new Set();
   const elem={
-   id,hidden:true,disabled:false,dataset:{},textContent:'',className:'',children:[],
+   id,hidden:true,disabled:false,dataset:{},textContent:'',className:'',children:[],style:{setProperty(name,value){this[name]=value}},offsetWidth:270,offsetHeight:94,
    clientWidth:390,clientHeight:790,
-   classList:{add(name){classes.add(name)},remove(name){classes.delete(name)},contains(name){return classes.has(name)}},
+   classList:{add(name){classes.add(name)},remove(name){classes.delete(name)},contains(name){return classes.has(name)},toggle(name,force){if(force===undefined? !classes.has(name):force){classes.add(name);return true}classes.delete(name);return false}},
    appendChild(child){this.children.push(child);return child},
    append(...children){this.children.push(...children)},
    replaceChildren(...children){this.children=[...children]},
@@ -90,7 +90,13 @@ test('Enter shop, converse with clerk, buy seed and leave the 3D room',()=>{
  api.moveTo(0,-.5);api.interact();
  assert.equal(el('roomDialogue').hidden,false);
  assert.match(el('roomDialogTitle').textContent,/店員/);
+ assert.equal(el('speechBubble').hidden,false);
+ assert.equal(el('speechName').textContent,'🐱 店員さん');
+ assert.match(el('speechText').textContent,/いらっしゃいませ/);
+ assert.equal(el('roomDialogue').classList.contains('npc-choice-mode'),true);
  press('roomDialogActions','お買い物');
+ assert.equal(el('speechBubble').hidden,true,'speech should disappear while browsing products');
+ assert.equal(el('roomDialogue').classList.contains('npc-choice-mode'),false);
  const seedOffer=el('roomDialogBody').children.find(x=>x.children?.[0]?.children?.[0]?.textContent.includes('にんじんの種'));
  assert.ok(seedOffer);
  seedOffer.children[1]._events.get('click')();
@@ -101,6 +107,7 @@ test('Enter shop, converse with clerk, buy seed and leave the 3D room',()=>{
  assert.equal(persisted.z,-2.40);
  press('roomDialogActions','閉じる');
  assert.equal(el('roomDialogue').hidden,true);
+ assert.equal(api.getSpeechActor(),null);
  leave();
  assert.equal(el('app').classList.contains('indoors'),false);
  assert.equal(api.getState().x,6);
@@ -145,4 +152,43 @@ test('3D cutaway geometry contains room floor and furniture',()=>{
  // The actual room mesh is built by the factory when entering.
  roomWorld.enter('shop');
  assert.equal(roomWorld.api.getRoom(),'shop');
+});
+
+test('Speech follows the shopkeeper head and choices return after buying',()=>{
+ const {api,enter,press,el}=createGame();
+ enter('shop');
+ api.moveTo(0,-.5);api.interact();
+ assert.equal(api.getSpeechActor(),'clerk');
+ api.updateSpeechPosition([0,12.3,20.7],[0,.95,-.35],390/790,52*Math.PI/180);
+ const bubble=el('speechBubble');
+ assert.match(bubble.style.left,/^\d+px$/);
+ assert.match(bubble.style.top,/^\d+px$/);
+ assert.match(bubble.style['--speech-tail-x'],/^\d+px$/);
+ assert.equal(bubble.style.visibility,'visible');
+ press('roomDialogActions','お買い物');
+ assert.equal(api.getSpeechActor(),null);
+ press('roomDialogActions','店員さんに戻る');
+ assert.equal(api.getSpeechActor(),'clerk');
+ assert.equal(bubble.hidden,false);
+ press('roomDialogActions','また来ます');
+ assert.equal(bubble.hidden,true);
+ assert.equal(el('roomHud').hidden,false);
+});
+
+test('Mimi gives a seed and talks in an outdoor speech bubble instead of a fullscreen panel',()=>{
+ const {api,el,press}=createGame();
+ api.moveTo(1.9,.9);api.interact();
+ assert.equal(api.getSpeechActor(),'mimi');
+ assert.equal(el('speechBubble').hidden,false);
+ assert.match(el('speechText').textContent,/にんじんの種/);
+ assert.equal(el('panelOverlay').hidden,true);
+ assert.equal(api.getState().inventory.seed,3);
+ api.updateSpeechPosition([0,14.6,21],[0,0,0],390/790,48*Math.PI/180);
+ assert.match(el('speechBubble').style.left,/^\d+px$/);
+ press('roomDialogActions','ありがとう');
+ assert.equal(api.getSpeechActor(),null);
+ assert.equal(el('speechBubble').hidden,true);
+ api.interact();
+ assert.match(el('speechText').textContent,/また会えたね/);
+ assert.equal(api.getState().inventory.seed,3,'only one present per day');
 });

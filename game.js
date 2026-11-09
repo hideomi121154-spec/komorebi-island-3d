@@ -390,6 +390,7 @@ function render(now){if(!gameReady)return;if(indoor.walkIn&&!indoor.room){const 
  const distance=fishingActive?(aspect<.70?14.4:12.1):(aspect<.70?26.0:20.5);
  const eye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):[camFocus.x+Math.sin(state.angle)*distance,fishingActive?9.2:14.6,camFocus.z+Math.cos(state.angle)*distance];
  const center=roomActive?[0,.95,-.35]:[camFocus.x,0,camFocus.z];
+ updateSpeechPosition(eye,center,aspect,(roomActive?52:48)*Math.PI/180);
  if(ctx2d){drawSoftware(now,eye,aspect);requestAnimationFrame(render);return;}
  const nightTint=(state.day%6===0)?.18:0;
  gl.clearColor(roomActive?.84:.69-nightTint*.2,roomActive?.86:.87-nightTint*.15,roomActive?.81:.91-nightTint*.05,1);
@@ -416,9 +417,53 @@ function interact(){if(paused)return;if(indoor.room){interactInside();return}con
  else if(id.startsWith('shell')){const i=Number(id.slice(5));state.shells.push(i);give('shell',1);showToast('🐚 貝がらを拾った！')}
  else if(id.startsWith('plot')){let i=Number(id.slice(4));let f=state.farm[i];if(!f){if(state.inventory.seed<=0){showToast('🌱 種がないよ。お店で買おう！');return}state.inventory.seed--;state.farm[i]={day:state.day};showToast('🌱 にんじんの種を植えた！ 2日後に収穫できるよ')}else if(state.day-f.day>=2){state.farm[i]=null;give('carrot',3);state.questGrown=true;maybeQuest();showToast('🥕 にんじんを3個収穫した！')}else showToast('🌱 あと'+(2-(state.day-f.day))+'日で収穫できそう！')}
  else if(id==='pond'){startFishing()}
- else if(id==='npc'){const first=state.talkedDay!==state.day;npcGiftToday=first;state.talkedDay=state.day;if(first){give('seed',1);save()}openPanel('npc')}
+ else if(id==='npc'){const first=state.talkedDay!==state.day;npcGiftToday=first;state.talkedDay=state.day;if(first){give('seed',1);save()}openRoomDialogue('mimi')}
  else if(id==='shop')enterRoom('shop');else if(id==='home')enterRoom('home');
  updateHud();save();setContext()}
+
+
+// NPC speech follows the same camera projection as the 3D island (including Canvas2D fallback).
+const speech={actor:null};
+const speechAnchors={clerk:[0,2.97,-3.24],mimi:[1.9,2.95,.9]};
+function showSpeech(actor,name,message){
+ if(!speechAnchors[actor])return;
+ speech.actor=actor;
+ $('speechName').textContent=name;
+ $('speechText').textContent=message;
+ $('speechBubble').hidden=false;
+ $('speechBubble').style.visibility='visible';
+ if(indoor.room)$('roomHud').hidden=true;
+}
+function hideSpeech(){
+ speech.actor=null;
+ $('speechBubble').hidden=true;
+ if(indoor.room)$('roomHud').hidden=false;
+}
+function updateSpeechPosition(eye,center,aspect,fov){
+ if(!speech.actor||$('speechBubble').hidden)return;
+ const target=speechAnchors[speech.actor],bubble=$('speechBubble');
+ const view=lookAt(eye,center,[0,1,0]);
+ const x=view[0]*target[0]+view[4]*target[1]+view[8]*target[2]+view[12];
+ const y=view[1]*target[0]+view[5]*target[1]+view[9]*target[2]+view[13];
+ const depth=-(view[2]*target[0]+view[6]*target[1]+view[10]*target[2]+view[14]);
+ if(depth<=.2){bubble.style.visibility='hidden';return}
+ const width=canvas.clientWidth||canvas.width||1,height=canvas.clientHeight||canvas.height||1;
+ const projection=1/Math.tan(fov/2);
+ const px=(.5+(x/depth)*projection/aspect*.5)*width;
+ const py=(.5-(y/depth)*projection*.5)*height;
+ if(!Number.isFinite(px)||!Number.isFinite(py)){bubble.style.visibility='hidden';return}
+ bubble.style.visibility='visible';
+ const bubbleWidth=bubble.offsetWidth||Math.min(width*.76,308);
+ const half=Math.min(width/2,bubbleWidth/2+12);
+ const bubbleX=clamp(px,half,width-half);
+ const size=bubble.offsetHeight||105;
+ const minY=Math.min(height-30,142+size);
+ const maxY=Math.max(minY,height-160);
+ bubble.style.left=Math.round(bubbleX)+'px';
+ bubble.style.top=Math.round(clamp(py-12,minY,maxY))+'px';
+ const tail=clamp(px-bubbleX+bubbleWidth/2,16,bubbleWidth-16);
+ bubble.style.setProperty('--speech-tail-x',Math.round(tail)+'px');
+}
 
 function makeRoomAction(label,handler){
  const btn=document.createElement('button');
@@ -443,12 +488,14 @@ function makeRoomOffer(icon,name,detail,label,handler,disabled=false){
 function closeRoomDialogue(){
  if($('roomDialogue').hidden)return;
  $('roomDialogue').hidden=true;
+ $('roomDialogue').classList.remove('npc-choice-mode');
+ hideSpeech();
  document.querySelector('.bottom-ui').classList.remove('room-dialoguing');
  paused=false;setContext();
  $('actionBtn').focus({preventScroll:true});
 }
 function openRoomDialogue(mode){
- if(!indoor.room||indoor.transition)return;
+ if((!indoor.room&&mode!=='mimi')||indoor.transition)return;
  paused=true;
  for(const dir of Object.keys(input))input[dir]=false;
  $('roomDialogue').hidden=false;
@@ -458,14 +505,23 @@ function openRoomDialogue(mode){
 function renderRoomDialogue(mode){
  const head=$('roomDialogTitle'),content=$('roomDialogBody'),actions=$('roomDialogActions');
  content.replaceChildren();actions.replaceChildren();
+ const speechMode=mode==='welcome'||mode==='mimi';
+ $('roomDialogue').classList.toggle('npc-choice-mode',speechMode);
+ if(!speechMode)hideSpeech();
  const write=txt=>{const p=document.createElement('p');p.textContent=txt;content.appendChild(p)};
  const refresh=()=>{save();updateHud();renderRoomDialogue(mode)};
  if(mode==='welcome'){
   head.textContent='🐱 店員さん';
-  write('「いらっしゃいませ！ ようこそ、こもれび商店へ。何をお探しですか？」');
+  showSpeech('clerk','🐱 店員さん','いらっしゃいませ！ 今日は何をしますか？');
   makeRoomAction('🛍️ お買い物',()=>renderRoomDialogue('buy'));
   makeRoomAction('🪙 買取をお願い',()=>renderRoomDialogue('sell'));
   makeRoomAction('また来ます',closeRoomDialogue);
+  }else if(mode==='mimi'){
+  head.textContent='🐱 ミミとのおしゃべり';
+  showSpeech('mimi','🐱 ミミ',npcGiftToday
+   ?'こんにちは！ 今日もいい日だね。にんじんの種を1個あげるよ！'
+   :'また会えたね！ お庭のにんじんは育っているかな？');
+  makeRoomAction('😊 ありがとう！',closeRoomDialogue);
  }else if(mode==='buy'){
   head.textContent='🛍️ 商品を買う';
   write('「今日も新鮮な種が入荷していますよ！」');
@@ -546,7 +602,7 @@ function bindControls(){const dirs=document.querySelectorAll('[data-dir]');dirs.
  $('fishBack').addEventListener('click',stopFishing);$('roomDialogClose').addEventListener('click',closeRoomDialogue);
  $('startBtn').addEventListener('click',()=>{$('welcomeOverlay').hidden=true;paused=false;state.welcomeSeen=true;save();showToast('🌿 島を探検しよう！')});document.addEventListener('visibilitychange',()=>{if(document.hidden){if(fishing.stage!=='idle')stopFishing();save()}});window.addEventListener('pagehide',save);
 }
-function start(){try{initializeGL();bindControls();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),moveTo:(x,z)=>{state.x=x;state.z=z;setContext()},interact,nextDay,openPanel,price,vertices:worldVerts,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby()};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
+function start(){try{initializeGL();bindControls();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),moveTo:(x,z)=>{state.x=x;state.z=z;setContext()},interact,nextDay,openPanel,price,vertices:worldVerts,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getSpeechActor:()=>speech.actor,updateSpeechPosition};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 
