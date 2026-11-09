@@ -241,7 +241,7 @@ function buildStatic(){const b=new MeshBuilder();
  b.cylinder(-2.4,.18,1.7,.62,.36,9,'#b18b61');b.cylinder(-2.4,.37,1.7,.53,.035,9,'#efcd95');
  return b.toFloat()}
 function buildAvatar(b,x,z,yaw,bob=0,npc=false){b.setTransform(x,-.035+bob,z,yaw);
- const tunic=npc?'#e9a5a2':'#66b8a3',hair=npc?'#d7a17b':'#63483f',face=npc?'#fbdfc6':'#f6d8ba';
+ const tunic=npc?'#e9a5a2':(['#66b8a3','#df987d','#a694ca'][state.outfit||0]||'#66b8a3'),hair=npc?'#d7a17b':'#63483f',face=npc?'#fbdfc6':'#f6d8ba';
  for(let side of[-1,1]){b.box(side*.19,.34,0,.26,.63,.31,npc?'#f3d5b4':'#a9b7d6');b.sphere(side*.19,.09,.085,.22,.16,.25,'#f4e9ca',4,7)}
  b.sphere(0,.94,0,.53,.66,.37,tunic,6,10);
  b.sphere(0,1.68,.075,.48,.48,.45,face,7,10);
@@ -404,21 +404,125 @@ function render(now){if(!gameReady)return;const dt=Math.min(.07,(now-previous)/1
  requestAnimationFrame(render)}
 let lastAutoSave=0;
 function showToast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toaster);toaster=setTimeout(()=>el.classList.remove('show'),2900)}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state));$('saveStatus').textContent='● セーブ済'}catch{$('saveStatus').textContent='⚠ 保存できません'}}
+function save(){try{const snapshot=indoor.room&&indoor.original?{...state,x:indoor.original.x,z:indoor.original.z,angle:indoor.original.angle}:state;localStorage.setItem(KEY,JSON.stringify(snapshot));$('saveStatus').textContent='● セーブ済'}catch{$('saveStatus').textContent='⚠ 保存できません'}}
 function updateHud(){ $('dayPill').textContent='☀️ '+state.day+'日目';$('coinPill').textContent='🪙 '+state.coins;
  let msg='🎉 おねがい達成！';if(!state.claimed[0])msg='🍎 木の実を3個集めよう '+Math.min(3,state.questBerries)+'/3';else if(!state.claimed[1])msg='🏪 お店で何か売ってみよう';else if(!state.claimed[2])msg='🥕 畑でにんじんを育てよう';$('missionShort').textContent=msg}
-function setContext(){if(fishing.stage!=='idle')return;const t=nearest;$('interactHint').textContent=t?t.icon+' '+t.name+' が近くにあるよ':'🌱 島を自由に探検しよう';$('actionBtn').textContent=t?'✨ '+(t.id==='shop'?'お店に入る':t.id==='npc'?'話しかける':t.id==='home'?'家を見る':t.id==='pond'?'釣りをする':t.id.startsWith('plot')?'畑を調べる':t.id.startsWith('shell')?'拾う':'採集する'):'✨ 調べる'}
+function setContext(){if(fishing.stage!=='idle'||indoor.transition)return;const t=nearest;if(indoor.room){const names={exit:'島に出る',clerk:'店員さんと話す',seeds:'商品を見る',goods:'買取をお願い',bed:'ベッドで休む',dresser:'着替える',table:'作業テーブルを見る'};$('interactHint').textContent=t?t.icon+' '+t.name+' に近づいたよ':'🏠 室内を歩いて探検しよう';$('actionBtn').textContent=t?'✨ '+names[t.id]:'✨ 調べる';return}$('interactHint').textContent=t?t.icon+' '+t.name+' が近くにあるよ':'🌱 島を自由に探検しよう';$('actionBtn').textContent=t?'✨ '+(t.id==='shop'?'お店に入る':t.id==='npc'?'話しかける':t.id==='home'?'家に入る':t.id==='pond'?'釣りをする':t.id.startsWith('plot')?'畑を調べる':t.id.startsWith('shell')?'拾う':'採集する'):'✨ 調べる'}
 function give(id,amount){state.inventory[id]=(state.inventory[id]||0)+amount}
 function price(id){return Math.max(1,Math.round(basePrice[id]*(.86+(state.day*37+id.length*13)%29/100)))}
 function maybeQuest(){if(!state.claimed[0]&&state.questBerries>=3){state.claimed[0]=true;state.coins+=70;showToast('🎉 おねがい達成！ 70コインをゲット');return}if(state.claimed[0]&&!state.claimed[1]&&state.questSold){state.claimed[1]=true;state.coins+=80;showToast('🎉 商売の達人！ 80コインをゲット');return}if(state.claimed[1]&&!state.claimed[2]&&state.questGrown){state.claimed[2]=true;state.coins+=100;showToast('🎉 初めての収穫！ 100コインをゲット')}}
-function interact(){if(paused)return;const t=findNearby();if(!t){showToast('🌿 気になる場所に近づいて「調べる」を押そう');return}const id=t.id;
+function interact(){if(paused)return;if(indoor.room){interactInside();return}const t=findNearby();if(!t){showToast('🌿 気になる場所に近づいて「調べる」を押そう');return}const id=t.id;
  if(id.startsWith('tree')){const i=Number(id.slice(4));if(state.harvested.includes(i)){showToast('🌳 今日はもう採集したよ');return}state.harvested.push(i);if(trees[i].type==='pine'){give('wood',2);showToast('🪵 木材を2個手に入れた！')}else{give('berry',2);give('wood',1);state.questBerries+=2;showToast('🍎 木の実2個と木材1個を手に入れた！')}maybeQuest()}
  else if(id.startsWith('shell')){const i=Number(id.slice(5));state.shells.push(i);give('shell',1);showToast('🐚 貝がらを拾った！')}
  else if(id.startsWith('plot')){let i=Number(id.slice(4));let f=state.farm[i];if(!f){if(state.inventory.seed<=0){showToast('🌱 種がないよ。お店で買おう！');return}state.inventory.seed--;state.farm[i]={day:state.day};showToast('🌱 にんじんの種を植えた！ 2日後に収穫できるよ')}else if(state.day-f.day>=2){state.farm[i]=null;give('carrot',3);state.questGrown=true;maybeQuest();showToast('🥕 にんじんを3個収穫した！')}else showToast('🌱 あと'+(2-(state.day-f.day))+'日で収穫できそう！')}
  else if(id==='pond'){startFishing()}
  else if(id==='npc'){const first=state.talkedDay!==state.day;npcGiftToday=first;state.talkedDay=state.day;if(first){give('seed',1);save()}openPanel('npc')}
- else if(id==='shop')openPanel('shop');else if(id==='home')openPanel('home');
+ else if(id==='shop')enterRoom('shop');else if(id==='home')enterRoom('home');
  updateHud();save();setContext()}
+
+function makeRoomAction(label,handler){
+ const btn=document.createElement('button');
+ btn.textContent=label;
+ btn.addEventListener('click',handler);
+ $('roomDialogActions').appendChild(btn);
+ return btn;
+}
+function makeRoomOffer(icon,name,detail,label,handler,disabled=false){
+ const row=document.createElement('div');row.className='room-offer';
+ const left=document.createElement('div');
+ const strong=document.createElement('strong');strong.textContent=icon+' '+name;
+ const small=document.createElement('small');small.textContent=detail;
+ left.append(strong,small);row.appendChild(left);
+ if(label){
+  const button=document.createElement('button');button.className='room-choice';
+  button.textContent=label;button.disabled=disabled;
+  button.addEventListener('click',handler);row.appendChild(button);
+ }
+ $('roomDialogBody').appendChild(row);
+}
+function closeRoomDialogue(){
+ if($('roomDialogue').hidden)return;
+ $('roomDialogue').hidden=true;
+ document.querySelector('.bottom-ui').classList.remove('room-dialoguing');
+ paused=false;setContext();
+ $('actionBtn').focus({preventScroll:true});
+}
+function openRoomDialogue(mode){
+ if(!indoor.room||indoor.transition)return;
+ paused=true;
+ for(const dir of Object.keys(input))input[dir]=false;
+ $('roomDialogue').hidden=false;
+ document.querySelector('.bottom-ui').classList.add('room-dialoguing');
+ renderRoomDialogue(mode);
+}
+function renderRoomDialogue(mode){
+ const head=$('roomDialogTitle'),content=$('roomDialogBody'),actions=$('roomDialogActions');
+ content.replaceChildren();actions.replaceChildren();
+ const write=txt=>{const p=document.createElement('p');p.textContent=txt;content.appendChild(p)};
+ const refresh=()=>{save();updateHud();renderRoomDialogue(mode)};
+ if(mode==='welcome'){
+  head.textContent='🐱 店員さん';
+  write('「いらっしゃいませ！ ようこそ、こもれび商店へ。何をお探しですか？」');
+  makeRoomAction('🛍️ お買い物',()=>renderRoomDialogue('buy'));
+  makeRoomAction('🪙 買取をお願い',()=>renderRoomDialogue('sell'));
+  makeRoomAction('また来ます',closeRoomDialogue);
+ }else if(mode==='buy'){
+  head.textContent='🛍️ 商品を買う';
+  write('「今日も新鮮な種が入荷していますよ！」');
+  makeRoomOffer('🌱','にんじんの種','30コイン','買う',()=>{
+   if(state.coins<30)return;state.coins-=30;give('seed',1);refresh();showToast('🌱 種を買いました！');
+  },state.coins<30);
+  makeRoomOffer('🪑','お庭のベンチ','160コイン・家の前に設置','買う',()=>{
+   if(state.coins<160||state.furniture>0)return;
+   state.coins-=160;state.furniture=1;refresh();showToast('🪑 ベンチを買いました！');
+  },state.coins<160||state.furniture>0);
+  makeRoomAction('⬅ 店員さんに戻る',()=>renderRoomDialogue('welcome'));
+  makeRoomAction('閉じる',closeRoomDialogue);
+ }else if(mode==='sell'){
+  head.textContent='🧺 持ち物を売る';
+  write('「査定しますね！ 今日の買取価格はこちらです。」');
+  for(const id of ['berry','wood','shell','fish','carrot']){
+   const count=state.inventory[id]||0,p=price(id);
+   makeRoomOffer(itemIcons[id],itemLabels[id]+' ×'+count,'1個 '+p+'コイン','1個売る',()=>{
+    if(state.inventory[id]<=0)return;
+    state.inventory[id]--;state.coins+=p;state.questSold=true;maybeQuest();
+    refresh();showToast('🪙 '+p+'コインで売れました！');
+   },count===0);
+  }
+  makeRoomAction('⬅ 店員さんに戻る',()=>renderRoomDialogue('welcome'));
+  makeRoomAction('閉じる',closeRoomDialogue);
+ }else if(mode==='bed'){
+  head.textContent='🛏️ ふかふかのベッド';
+  write('「今日もよくがんばったね。ここで眠ると、次の日の朝になります。」');
+  makeRoomAction('🌙 眠って翌日へ',()=>{closeRoomDialogue();nextDay();showToast('🌅 おうちでぐっすり眠ったよ！')});
+  makeRoomAction('まだ起きている',closeRoomDialogue);
+ }else if(mode==='dresser'){
+  head.textContent='👕 服を着替える';
+  write('「どの服を着ようかな？」 お気に入りの色を選ぼう。');
+  const colors=[['🌿 ミント',0],['🍑 コーラル',1],['🪻 ラベンダー',2]];
+  for(const [name,index] of colors)makeRoomAction(name,()=>{
+   state.outfit=index;refresh();showToast('👕 '+name+'色の服に着替えたよ！');
+  });
+  makeRoomAction('閉じる',closeRoomDialogue);
+ }else if(mode==='table'){
+  head.textContent='🔨 作業テーブル';
+  write('「島のおうちをもっと素敵にしよう！ 現在のおうちレベル：'+state.houseLevel+'」');
+  makeRoomOffer('🏠','おうちを増築する','400コイン・部屋にソファを追加','増築',()=>{
+   if(state.houseLevel>=2||state.coins<400)return;
+   state.coins-=400;state.houseLevel=2;
+   loadRoom('home');refresh();showToast('🏡 おうちが大きくなったよ！');
+  },state.houseLevel>=2||state.coins<400);
+  makeRoomAction('閉じる',closeRoomDialogue);
+ }
+}
+function interactInside(){
+ const t=findNearby();
+ if(!t){showToast('🏡 室内を歩いて、気になる家具や店員に近づこう');return}
+ if(t.id==='exit'){leaveRoom();return}
+ const modes={clerk:'welcome',seeds:'buy',goods:'sell',bed:'bed',dresser:'dresser',table:'table'};
+ if(modes[t.id])openRoomDialogue(modes[t.id]);
+}
+
 function nextDay(){if(paused)return;state.day++;state.harvested=[];state.shells=[];state.talkedDay=0;save();updateHud();showToast('🌅 '+state.day+'日目の朝！ 木の実と貝がらが復活したよ')}
 function row(icon,title,detail,button,handler,disabled=false){const el=document.createElement('div');el.className='item-row';const sym=document.createElement('span');sym.className='item-symbol';sym.textContent=icon;const center=document.createElement('div');center.className='details';const strong=document.createElement('strong');strong.textContent=title;const small=document.createElement('small');small.textContent=detail;center.append(strong,small);el.append(sym,center);if(button){const btn=document.createElement('button');btn.textContent=button;btn.disabled=disabled;btn.addEventListener('click',handler);el.append(btn)}return el}
 function paragraph(parent,text,cls){let p=document.createElement('p');p.textContent=text;if(cls)p.className=cls;parent.appendChild(p);return p}
@@ -436,13 +540,13 @@ function closePanel(){$('panelOverlay').hidden=true;paused=false;panelType='';se
 function exportSave(){const data=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const url=URL.createObjectURL(data),a=document.createElement('a');a.href=url;a.download='komorebi-save-day'+state.day+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);showToast('セーブデータを書き出したよ')}
 function bindControls(){const dirs=document.querySelectorAll('[data-dir]');dirs.forEach(btn=>{const dir=btn.dataset.dir;btn.addEventListener('pointerdown',e=>{e.preventDefault();input[dir]=true;btn.classList.add('pressed');try{btn.setPointerCapture(e.pointerId)}catch{}});const release=e=>{input[dir]=false;btn.classList.remove('pressed')};btn.addEventListener('pointerup',release);btn.addEventListener('pointercancel',release);btn.addEventListener('lostpointercapture',release)});
  const codes={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};
- document.addEventListener('keydown',e=>{if(fishing.stage!=='idle'){if(e.code==='Escape'){e.preventDefault();stopFishing()}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)fishAction()}else if(codes[e.code])e.preventDefault();return}if(codes[e.code]){e.preventDefault();input[codes[e.code]]=true}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)interact()}else if(e.code==='Escape'&&!$('panelOverlay').hidden)closePanel()});document.addEventListener('keyup',e=>{if(codes[e.code]){e.preventDefault();input[codes[e.code]]=false}});window.addEventListener('blur',()=>Object.keys(input).forEach(d=>input[d]=false));
+ document.addEventListener('keydown',e=>{if(fishing.stage!=='idle'){if(e.code==='Escape'){e.preventDefault();stopFishing()}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)fishAction()}else if(codes[e.code])e.preventDefault();return}if(codes[e.code]){e.preventDefault();input[codes[e.code]]=true}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)interact()}else if(e.code==='Escape'){if(!$('roomDialogue').hidden)closeRoomDialogue();else if(!$('panelOverlay').hidden)closePanel();else if(indoor.room)leaveRoom()}});document.addEventListener('keyup',e=>{if(codes[e.code]){e.preventDefault();input[codes[e.code]]=false}});window.addEventListener('blur',()=>Object.keys(input).forEach(d=>input[d]=false));
  $('rotateLeft').addEventListener('click',()=>{state.angle-=Math.PI/4;save()});$('rotateRight').addEventListener('click',()=>{state.angle+=Math.PI/4;save()});$('cameraReset').addEventListener('click',()=>{state.angle=0;save();showToast('📷 カメラを戻したよ')});$('actionBtn').addEventListener('click',()=>{if(fishing.stage==='idle')interact();else fishAction()});$('bagBtn').addEventListener('click',()=>openPanel('bag'));$('questBtn').addEventListener('click',()=>openPanel('quests'));$('nextDayBtn').addEventListener('click',nextDay);$('panelClose').addEventListener('click',closePanel);$('panelOverlay').addEventListener('click',e=>{if(e.target===$('panelOverlay'))closePanel()});
  let drag=null;canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,angle:state.angle,pointerId:e.pointerId};try{canvas.setPointerCapture(e.pointerId)}catch{}});canvas.addEventListener('pointermove',e=>{if(!drag||drag.pointerId!==e.pointerId)return;state.angle=drag.angle+(e.clientX-drag.x)*.0055});canvas.addEventListener('pointerup',()=>{if(drag)save();drag=null});canvas.addEventListener('pointercancel',()=>drag=null);
- $('fishBack').addEventListener('click',stopFishing);
+ $('fishBack').addEventListener('click',stopFishing);$('roomDialogClose').addEventListener('click',closeRoomDialogue);
  $('startBtn').addEventListener('click',()=>{$('welcomeOverlay').hidden=true;paused=false;state.welcomeSeen=true;save();showToast('🌿 島を探検しよう！')});document.addEventListener('visibilitychange',()=>{if(document.hidden){if(fishing.stage!=='idle')stopFishing();save()}});window.addEventListener('pagehide',save);
 }
-function start(){try{initializeGL();bindControls();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),moveTo:(x,z)=>{state.x=x;state.z=z;setContext()},interact,nextDay,openPanel,price,vertices:worldVerts,getFishingStage:()=>fishing.stage,fishAction,stopFishing};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
+function start(){try{initializeGL();bindControls();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),moveTo:(x,z)=>{state.x=x;state.z=z;setContext()},interact,nextDay,openPanel,price,vertices:worldVerts,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby()};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 
