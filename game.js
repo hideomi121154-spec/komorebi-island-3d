@@ -83,6 +83,86 @@ function fishAction(){
   }
 }
 
+
+// House and store are actual navigable 3D rooms in the same WebGL canvas.
+const indoor={room:null,original:null,mesh:null,count:0,floor:0,buffer:null,transition:false,sequence:0};
+const roomTargets={
+ home:[
+  {id:'exit',x:0,z:3.62,r:1.4,icon:'🚪',name:'玄関'},
+  {id:'bed',x:-3.10,z:-1.10,r:1.6,icon:'🛏️',name:'ベッド'},
+  {id:'dresser',x:3.15,z:-1.28,r:1.6,icon:'🧺',name:'収納棚'},
+  {id:'table',x:0,z:-.14,r:1.55,icon:'🔨',name:'作業テーブル'}
+ ],
+ shop:[
+  {id:'exit',x:0,z:3.62,r:1.4,icon:'🚪',name:'出口'},
+  {id:'clerk',x:0,z:-1.06,r:1.8,icon:'🐱',name:'店員さん'},
+  {id:'seeds',x:-3.05,z:-.4,r:1.5,icon:'🌱',name:'種の棚'},
+  {id:'goods',x:3.10,z:-.4,r:1.5,icon:'🧺',name:'買取カウンター'}
+ ]
+};
+function roomWalkable(x,z){
+ if(Math.abs(x)>4.56||z>3.86||z< -3.68)return false;
+ if(indoor.room==='shop'){
+  if(Math.abs(x)<2.24&&z< -1.31&&z> -2.71)return false;
+  if(Math.abs(x)>3.60&&z< -.73&&z> -3.44)return false;
+ }else if(indoor.room==='home'){
+  if(x< -2.35&&z< -1.55&&z> -3.25)return false;
+  if(x>2.70&&z< -1.85&&z> -3.61)return false;
+  if(Math.abs(x)<.95&&z< -.02&&z> -1.60)return false;
+ }
+ return true;
+}
+function loadRoom(room){
+ if(!window.KomorebiRooms?.build)throw Error('rooms3d.js is missing');
+ const built=window.KomorebiRooms.build(room,MeshBuilder,state);
+ indoor.mesh=built.mesh;indoor.count=built.mesh.length/9;indoor.floor=built.floorCount;
+ if(gl){
+  if(!indoor.buffer)indoor.buffer=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,indoor.buffer);
+  gl.bufferData(gl.ARRAY_BUFFER,built.mesh,gl.STATIC_DRAW);
+ }
+}
+function enterRoom(room){
+ if(paused||indoor.room||indoor.transition||!['home','shop'].includes(room))return;
+ paused=true;indoor.transition=true;
+ const serial=++indoor.sequence;
+ indoor.original={x:state.x,z:state.z,angle:state.angle};
+ for(const dir of Object.keys(input))input[dir]=false;
+ $('sceneVeilLabel').textContent=room==='shop'?'🚪 お店の中へ…':'🚪 おうちの中へ…';
+ $('sceneVeil').classList.add('active');
+ setTimeout(()=>{
+  if(serial!==indoor.sequence)return;
+  indoor.room=room;state.x=0;state.z=2.88;state.angle=0;playerFacing=Math.PI;
+  loadRoom(room);camFocus.x=0;camFocus.z=-.35;
+  $('roomName').textContent=room==='shop'?'🏪 こもれび商店':'🏡 わたしの家';
+  $('roomHud').hidden=false;
+  nearest=findNearby();indoor.transition=false;paused=false;setContext();save();
+  setTimeout(()=>{if(serial===indoor.sequence)$('sceneVeil').classList.remove('active')},75);
+ },390);
+}
+function leaveRoom(){
+ if(!indoor.room||indoor.transition)return;
+ if(!$('roomDialogue').hidden)closeRoomDialogue();
+ paused=true;indoor.transition=true;const serial=++indoor.sequence;
+ $('sceneVeilLabel').textContent='🚪 島へ出ます…';$('sceneVeil').classList.add('active');
+ setTimeout(()=>{
+  if(serial!==indoor.sequence)return;
+  const p=indoor.original||{x:0,z:3,angle:0};
+  indoor.room=null;state.x=p.x;state.z=p.z;state.angle=p.angle;
+  indoor.original=null;camFocus.x=state.x;camFocus.z=state.z;
+  $('roomHud').hidden=true;nearest=findNearby();
+  indoor.transition=false;paused=false;setContext();save();
+  setTimeout(()=>{if(serial===indoor.sequence)$('sceneVeil').classList.remove('active')},75);
+ },390);
+}
+function drawRoomActors(b,now){
+ buildAvatar(b,state.x,state.z,playerFacing,Math.sin(now*.009)*.035,false);
+ if(indoor.room==='shop')buildAvatar(b,0,-3.24,Math.sin(now*.001)*.09,.018*Math.sin(now*.003),true);
+ for(const t of roomTargets[indoor.room]||[])
+  b.sphere(t.x,2.2+Math.sin(now*.004)*.10,t.z,.13,.17,.13,t.id==='exit'?'#bdeedb':'#ffe1a5',4,7);
+ if(nearest)b.sphere(nearest.x,2.54+Math.sin(now*.003)*.13,nearest.z,.16,.20,.16,'#fff4be',4,7);
+}
+
 const randSeed=(seed)=>()=>{seed=(Math.imul(seed,1664525)+1013904223)|0;return (seed>>>0)/4294967296};
 const rnd=randSeed(37489);
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
@@ -115,9 +195,9 @@ const trees=[
 ];
 const shells=[{x:-11.2,z:4.6},{x:-8.6,z:-1.2},{x:8.8,z:8.8},{x:11.4,z:4.5}];
 const farmPlots=[{x:5.0,z:6.0},{x:6.6,z:6.0},{x:8.2,z:6.0}];
-const things=[{id:'home',x:-6,z:-5,r:3.35,icon:'🏡',name:'わたしの家'}, {id:'shop',x:6,z:-5,r:3.35,icon:'🏪',name:'こもれび商店'}, {id:'npc',x:1.9,z:.9,r:2.2,icon:'🐱',name:'住民のミミ'}, {id:'pond',x:-7,z:6,r:3.5,icon:'🎣',name:'おさかな池'}, ...farmPlots.map((p,i)=>({id:'plot'+i,x:p.x,z:p.z,r:1.55,icon:'🥕',name:'畑 '+(i+1)})),...trees.map((p,i)=>({id:'tree'+i,x:p.x,z:p.z,r:1.85,icon:'🌳',name:p.type==='pine'?'木材のとれる木':'実のなる木'})),...shells.map((p,i)=>({id:'shell'+i,x:p.x,z:p.z,r:1.5,icon:'🐚',name:'貝がら'}))];
+const things=[{id:'home',x:-6,z:-2.4,r:2.05,icon:'🏡',name:'わたしの家の入口'}, {id:'shop',x:6,z:-2.4,r:2.05,icon:'🏪',name:'こもれび商店の入口'}, {id:'npc',x:1.9,z:.9,r:2.2,icon:'🐱',name:'住民のミミ'}, {id:'pond',x:-7,z:6,r:3.5,icon:'🎣',name:'おさかな池'}, ...farmPlots.map((p,i)=>({id:'plot'+i,x:p.x,z:p.z,r:1.55,icon:'🥕',name:'畑 '+(i+1)})),...trees.map((p,i)=>({id:'tree'+i,x:p.x,z:p.z,r:1.85,icon:'🌳',name:p.type==='pine'?'木材のとれる木':'実のなる木'})),...shells.map((p,i)=>({id:'shell'+i,x:p.x,z:p.z,r:1.5,icon:'🐚',name:'貝がら'}))];
 function hasResource(t){if(t.id.startsWith('tree'))return !state.harvested.includes(Number(t.id.slice(4)));if(t.id.startsWith('shell'))return !state.shells.includes(Number(t.id.slice(5)));return true}
-function findNearby(){let selected=null,best=1.2;for(const o of things){if(!hasResource(o))continue;const d=dist(state.x,state.z,o.x,o.z)/o.r;if(d<best){best=d;selected=o}}return selected}
+function findNearby(){let selected=null,best=1.2;for(const o of indoor.room?roomTargets[indoor.room]:things){if(!hasResource(o))continue;const d=dist(state.x,state.z,o.x,o.z)/o.r;if(d<best){best=d;selected=o}}return selected}
 function buildHouse(b,x,z,shop=false){const walls=shop?'#ffdcaa':'#fce5b9',roof=shop?'#72a5a2':'#e58c80';const w=shop?4.4:3.7,d=shop?3.45:3.4;b.box(x,.98,z,w,1.88,d,walls);b.roof(x,1.91,z,w,d,1.64,roof);b.box(x,.74,z+d/2+.035,1.0,1.49,.095,shop?'#6b958b':'#a37b57');b.box(x,.8,z+d/2+.1,.68,.89,.12,shop?'#d0e8de':'#bd9b73');b.sphere(x+.31,1.07,z+d/2+.22,.07,.07,.07,'#f8d183');for(const xoff of[-w*.33,w*.33]){b.box(x+xoff,1.20,z+d/2+.075,.7,.68,.12,'#fffef2');b.box(x+xoff,1.20,z+d/2+.15,.48,.47,.06,'#8dc8d0');b.box(x+xoff,1.20,z+d/2+.188,.08,.48,.05,'#fffdf2')}
  b.box(x,2.95,z,shop?2.0:1.1,.52,.23,shop?'#ffefca':'#f4e5c4');if(shop){b.box(x,3.03,z+d*.05,1.95,.39,.05,'#e79c68');b.box(x,.18,z+d/2+1.0,4.9,.14,1.5,'#e6c693')} else {b.cylinder(x+1.15,3.2,z-.8,.25,1.3,8,'#d7baa0');b.box(x+1.15,3.8,z-.8,.58,.16,.58,'#bd8984')}
  for(let i=0;i<3;i++){b.box(x,0.10+(i*.13),z+d/2+.35+i*.36,1.5,.15,.43,'#d2ae86')}
@@ -245,7 +325,7 @@ function buildFishingGeometry(b,now){
   }
 }
 
-function buildDynamic(now){const b=new MeshBuilder();let bounce=(Math.sin(now*.011)*.045);buildAvatar(b,state.x,state.z,playerFacing,bounce,false);buildAvatar(b,1.9,.9,Math.sin(now*.00031)*.65,Math.sin(now*.002)*.02,true);
+function buildDynamic(now){const b=new MeshBuilder();if(indoor.room){drawRoomActors(b,now);return b.toFloat()}let bounce=(Math.sin(now*.011)*.045);buildAvatar(b,state.x,state.z,playerFacing,bounce,false);buildAvatar(b,1.9,.9,Math.sin(now*.00031)*.65,Math.sin(now*.002)*.02,true);
  trees.forEach((t,i)=>{if(t.type!=='fruit'||state.harvested.includes(i))return;for(let j=0;j<3;j++){let a=(j*2.35)+i;let x=t.x+Math.cos(a)*.80,y=2.05+.30*Math.sin(j*2.1),z=t.z+Math.sin(a)*.77;b.sphere(x,y,z,.22,.24,.22,'#ed8c72',5,7);b.leaf(x,y+.23,z,.13,'#79bc78')}});
  shells.forEach((s,i)=>{if(state.shells.includes(i))return;b.sphere(s.x,.08,s.z,.27,.17,.26,'#fff0d5',5,7);b.sphere(s.x+.12,.20,s.z,.09,.09,.09,'#fae0b3',4,5)});
  farmPlots.forEach((p,i)=>{let f=state.farm[i];if(!f)return;const age=state.day-f.day;const height=age>=2?.62:age>=1?.32:.16;const tone=age>=2?'#76aa5c':'#6ca96b';for(let a=0;a<3;a++){let x=p.x-.33+a*.33;b.cylinder(x,.29+height*.3,p.z,.035,height*.7,5,'#6ba564');b.sphere(x,.32+height*.7,p.z,.12+.12*age/2,.15+.09*age/2,.16+.08*age/2,tone,4,6);if(age>=2)b.sphere(x,.36,p.z,.14,.22,.14,'#e88c50',5,6)}});
