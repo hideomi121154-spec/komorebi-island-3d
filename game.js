@@ -85,7 +85,7 @@ function fishAction(){
 
 
 // House and store are actual navigable 3D rooms in the same WebGL canvas.
-const indoor={room:null,original:null,mesh:null,count:0,floor:0,buffer:null,transition:false,sequence:0};
+const indoor={room:null,original:null,mesh:null,count:0,floor:0,buffer:null,transition:false,sequence:0,walkIn:null};
 const roomTargets={
  home:[
   {id:'exit',x:0,z:3.62,r:1.4,icon:'🚪',name:'玄関'},
@@ -126,16 +126,16 @@ function enterRoom(room){
  if(paused||indoor.room||indoor.transition||!['home','shop'].includes(room))return;
  paused=true;indoor.transition=true;
  const serial=++indoor.sequence;
- indoor.original={x:state.x,z:state.z,angle:state.angle};
+ indoor.original={x:state.x,z:state.z,angle:state.angle};indoor.walkIn={x:state.x,z:state.z,toX:room==='home'?-6:6,toZ:-3.12,start:performance.now()};
  for(const dir of Object.keys(input))input[dir]=false;
  $('sceneVeilLabel').textContent=room==='shop'?'🚪 お店の中へ…':'🚪 おうちの中へ…';
  $('sceneVeil').classList.add('active');
  setTimeout(()=>{
   if(serial!==indoor.sequence)return;
-  indoor.room=room;state.x=0;state.z=2.88;state.angle=0;playerFacing=Math.PI;
+  indoor.room=room;indoor.walkIn=null;state.x=0;state.z=2.88;state.angle=0;playerFacing=Math.PI;
   loadRoom(room);camFocus.x=0;camFocus.z=-.35;
   $('roomName').textContent=room==='shop'?'🏪 こもれび商店':'🏡 わたしの家';
-  $('roomHud').hidden=false;
+  $('roomHud').hidden=false;$('app').classList.add('indoors');
   nearest=findNearby();indoor.transition=false;paused=false;setContext();save();
   setTimeout(()=>{if(serial===indoor.sequence)$('sceneVeil').classList.remove('active')},75);
  },390);
@@ -150,7 +150,7 @@ function leaveRoom(){
   const p=indoor.original||{x:0,z:3,angle:0};
   indoor.room=null;state.x=p.x;state.z=p.z;state.angle=p.angle;
   indoor.original=null;camFocus.x=state.x;camFocus.z=state.z;
-  $('roomHud').hidden=true;nearest=findNearby();
+  $('roomHud').hidden=true;$('app').classList.remove('indoors');nearest=findNearby();
   indoor.transition=false;paused=false;setContext();save();
   setTimeout(()=>{if(serial===indoor.sequence)$('sceneVeil').classList.remove('active')},75);
  },390);
@@ -380,7 +380,7 @@ function drawSoftware(now,eye,aspect){
 }
 function resize(){const dpr=ctx2d?1:Math.min(window.devicePixelRatio||1,1.7),width=Math.floor(canvas.clientWidth*dpr),height=Math.floor(canvas.clientHeight*dpr);if(canvas.width!==width||canvas.height!==height){canvas.width=Math.max(1,width);canvas.height=Math.max(1,height)}if(gl)gl.viewport(0,0,canvas.width,canvas.height)}
 let playerFacing=Math.PI,previous=0,npcGiftToday=false;
-function render(now){if(!gameReady)return;const dt=Math.min(.07,(now-previous)/1000||0);previous=now;tick+=dt;const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&(sx||sy)){let n=Math.hypot(sx,sy);sx/=n;sy/=n;const c=Math.cos(state.angle),s=Math.sin(state.angle);let dx=(indoor.room?sx:(sx*c+sy*s))*speed*dt,dz=(indoor.room?sy:(-sx*s+sy*c))*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);const shore=x*x/152+z*z/105;if(shore>1)return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;for(const t of trees)if(dist(x,z,t.x,t.z)<.56)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
+function render(now){if(!gameReady)return;if(indoor.walkIn&&!indoor.room){const w=indoor.walkIn,k=clamp((now-w.start)/390,0,1);state.x=w.x+(w.toX-w.x)*k;state.z=w.z+(w.toZ-w.z)*k;playerFacing=Math.atan2(w.toX-w.x,w.toZ-w.z)}const dt=Math.min(.07,(now-previous)/1000||0);previous=now;tick+=dt;const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&(sx||sy)){let n=Math.hypot(sx,sy);sx/=n;sy/=n;const c=Math.cos(state.angle),s=Math.sin(state.angle);let dx=(indoor.room?sx:(sx*c+sy*s))*speed*dt,dz=(indoor.room?sy:(-sx*s+sy*c))*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);const shore=x*x/152+z*z/105;if(shore>1)return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;for(const t of trees)if(dist(x,z,t.x,t.z)<.56)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
  const fishingActive=fishing.stage!=='idle',roomActive=!!indoor.room;
   const focusX=fishingActive?(state.x-7)*.5:state.x, focusZ=fishingActive?(state.z+6)*.5:state.z;
   if(!roomActive){camFocus.x+=(focusX-camFocus.x)*Math.min(1,dt*(fishingActive?3.6:6));camFocus.z+=(focusZ-camFocus.z)*Math.min(1,dt*(fishingActive?3.6:6));}
@@ -404,7 +404,7 @@ function render(now){if(!gameReady)return;const dt=Math.min(.07,(now-previous)/1
  requestAnimationFrame(render)}
 let lastAutoSave=0;
 function showToast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toaster);toaster=setTimeout(()=>el.classList.remove('show'),2900)}
-function save(){try{const snapshot=indoor.room&&indoor.original?{...state,x:indoor.original.x,z:indoor.original.z,angle:indoor.original.angle}:state;localStorage.setItem(KEY,JSON.stringify(snapshot));$('saveStatus').textContent='● セーブ済'}catch{$('saveStatus').textContent='⚠ 保存できません'}}
+function save(){try{const snapshot=(indoor.room||indoor.transition)&&indoor.original?{...state,x:indoor.original.x,z:indoor.original.z,angle:indoor.original.angle}:state;localStorage.setItem(KEY,JSON.stringify(snapshot));$('saveStatus').textContent='● セーブ済'}catch{$('saveStatus').textContent='⚠ 保存できません'}}
 function updateHud(){ $('dayPill').textContent='☀️ '+state.day+'日目';$('coinPill').textContent='🪙 '+state.coins;
  let msg='🎉 おねがい達成！';if(!state.claimed[0])msg='🍎 木の実を3個集めよう '+Math.min(3,state.questBerries)+'/3';else if(!state.claimed[1])msg='🏪 お店で何か売ってみよう';else if(!state.claimed[2])msg='🥕 畑でにんじんを育てよう';$('missionShort').textContent=msg}
 function setContext(){if(fishing.stage!=='idle'||indoor.transition)return;const t=nearest;if(indoor.room){const names={exit:'島に出る',clerk:'店員さんと話す',seeds:'商品を見る',goods:'買取をお願い',bed:'ベッドで休む',dresser:'着替える',table:'作業テーブルを見る'};$('interactHint').textContent=t?t.icon+' '+t.name+' に近づいたよ':'🏠 室内を歩いて探検しよう';$('actionBtn').textContent=t?'✨ '+names[t.id]:'✨ 調べる';return}$('interactHint').textContent=t?t.icon+' '+t.name+' が近くにあるよ':'🌱 島を自由に探検しよう';$('actionBtn').textContent=t?'✨ '+(t.id==='shop'?'お店に入る':t.id==='npc'?'話しかける':t.id==='home'?'家に入る':t.id==='pond'?'釣りをする':t.id.startsWith('plot')?'畑を調べる':t.id.startsWith('shell')?'拾う':'採集する'):'✨ 調べる'}
