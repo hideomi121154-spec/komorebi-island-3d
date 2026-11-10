@@ -92,3 +92,8 @@
 @media(max-width:375px){.clock-pill{font-size:11px;padding:5px 8px;min-height:27px}#statusBar{top:calc(env(safe-area-inset-top) + 97px)}}
 @media(max-height:700px){#statusBar{top:calc(env(safe-area-inset-top) + 92px)}.room-hud{top:calc(env(safe-area-inset-top) + 145px)}.fish-hud{top:calc(env(safe-area-inset-top) + 146px)}.edge-buttons{top:calc(env(safe-area-inset-top) + 148px)}}
 @media(prefers-reduced-motion:reduce){.night-sky{will-change:auto}}
+
+/* Interior rooms stay warm and readable even while the outdoor clock says night. */
+#app.indoors[data-time-phase="night"] .brand{color:#2b5d50;text-shadow:0 1px #fff9}
+#app.indoors[data-time-phase="night"] .brand em{background:#f9fff4cc;color:#2b5d50}
+#app.indoors[data-time-phase="night"] .clock-pill{background:#fffdf4e8;color:#4a6b65;border-color:#fff}
