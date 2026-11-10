@@ -130,13 +130,13 @@ test('Trade collected fruit with shopkeeper inside, no outside trade panel',()=>
  assert.equal(el('panelOverlay').hidden,true,'the old full-screen shop panel stays closed');
 });
 
-test('Use 3D home bedroom to sleep, and dresser to change clothes',()=>{
+test('Use 3D home bedroom to rest and save without changing real date, and dresser to change clothes',()=>{
  const {api,enter,press,el,leave}=createGame();
  enter('home');
  api.moveTo(-3.1,-1.0);api.interact();
  assert.match(el('roomDialogTitle').textContent,/ベッド/);
- press('roomDialogActions','眠って翌日');
- assert.equal(api.getState().day,2);
+ press('roomDialogActions','休んでセーブ');
+ assert.equal(api.getState().day,1,'resting should not skip the real calendar day');
  assert.equal(el('roomDialogue').hidden,true);
  api.moveTo(3.15,-1.3);api.interact();
  assert.match(el('roomDialogTitle').textContent,/服/);
