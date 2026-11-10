@@ -11,7 +11,8 @@ const daynight=readFileSync(resolve(dir,'daynight.js'),'utf8');
 function mockGame(saved=null){
  const nodes=new Map(),listeners=new Map(),timers=new Map(),local=new Map();
  if(saved)local.set('komorebi_island_3d_v01',JSON.stringify(saved));
- let now=0,id=0;
+ let now=0,id=0,wallNow=Date.parse('2026-11-10T11:40:00Z');
+ class FakeDate extends Date {static now(){return wallNow}}
  function el(key){
   if(!nodes.has(key)){
    const events=new Map();
@@ -26,7 +27,7 @@ function mockGame(saved=null){
   querySelectorAll(){return []},querySelector(){return el('bottom-ui')},
   addEventListener(type,fn){listeners.set(type,fn)}};
  const window={devicePixelRatio:1,addEventListener(){}};
- const context={document,window,console,navigator:{},performance:{now:()=>now},
+ const context={document,window,console,navigator:{},Date:FakeDate,performance:{now:()=>now},
   localStorage:{getItem:key=>local.get(key)||null,setItem:(key,value)=>local.set(key,value)},
   requestAnimationFrame(){},
   setTimeout(cb,ms){const key=++id;timers.set(key,{time:now+ms,cb});return key},
@@ -48,10 +49,11 @@ function mockGame(saved=null){
   throw Error('timer runaway');
  }
  function plot(index=0){const x=[5,6.6,8.2][index];api.moveTo(x,6)}
- return {api,el,plot,advance,local,document,listeners};
+ function advanceRealDay(){wallNow+=86400000;api.syncClock(wallNow)}
+ return {api,el,plot,advance,advanceRealDay,local,document,listeners};
 }
 test('Watering can animation is 3D and a watered plant grows a day faster',()=>{
- const {api,el,plot,advance,local}=mockGame();
+ const {api,el,plot,advance,advanceRealDay,local}=mockGame();
  plot(0);api.interact(); // plant
  assert.equal(api.getState().inventory.seed,1);
  assert.equal(api.plotActionLabel(0),'💧 水をあげる');
@@ -69,16 +71,16 @@ test('Watering can animation is 3D and a watered plant grows a day faster',()=>{
  assert.equal(el('actionBtn').disabled,false);
  assert.equal(api.plotActionLabel(0),'💦 水やり済み');
  api.interact();assert.equal(api.getWatering().active,false,'same-day double-watering must fail');
- api.nextDay();
+ advanceRealDay();
  assert.equal(api.plotActionLabel(0),'🥕 収穫する');
  api.interact();assert.equal(api.getState().inventory.carrot,3);
  assert.equal(api.getState().farm[0],null);
 });
 test('Without watering, an old-style crop still grows in two days',()=>{
- const {api,plot}=mockGame();
+ const {api,plot,advanceRealDay}=mockGame();
  plot(1);api.interact();
- api.nextDay();assert.equal(api.plotActionLabel(1),'💧 水をあげる');
- api.nextDay();assert.equal(api.plotActionLabel(1),'🥕 収穫する');
+ advanceRealDay();assert.equal(api.plotActionLabel(1),'💧 水をあげる');
+ advanceRealDay();assert.equal(api.plotActionLabel(1),'🥕 収穫する');
  api.interact();assert.equal(api.getState().inventory.carrot,3);
 });
 test('Old version one save data loads and can receive first watering',()=>{
