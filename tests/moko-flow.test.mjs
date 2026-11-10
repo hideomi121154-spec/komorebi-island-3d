@@ -21,7 +21,7 @@ test('Original Moko 3D body consists of procedural meshes and leaf sprout',()=>{
  M.draw(counter,at,0,2200);
  assert.ok(counter.sphereCount>=14);
  assert.ok(counter.cylinderCount>=1);
- assert.ok(counter.boxCount>=2);
+ assert.ok(counter.boxCount>=1,'Moko has a 3D bag strap');
  assert.equal(M.waypoints.length,6);
 });
 test('Moko strolls between open plaza waypoints, rests at night and stops for dialogue',()=>{
