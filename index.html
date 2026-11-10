@@ -19,7 +19,7 @@
   <canvas id="gameCanvas" aria-label="3Dのこもれび島"></canvas>
   <div id="nightSky" class="night-sky" aria-hidden="true"><div class="night-moon"></div></div>
   <div class="top-hud">
-    <div class="brand"><span class="brand-leaf">✿</span><div><strong>こもれび島 <em>3D</em></strong><small>小さな島の暮らし</small><button type="button" class="clock-pill" id="timePill" aria-label="ゲーム内の時間を進める。タップで朝・昼・夕方・夜を切り替え" title="タップして時間帯を進める">🌅 08:00 朝 <span class="clock-fast">›</span></button></div></div>
+    <div class="brand"><span class="brand-leaf">✿</span><div><strong>こもれび島 <em>3D</em></strong><small>小さな島の暮らし</small><span class="clock-pill" id="timePill" aria-label="日本標準時と同期中">🕘 00:00 · JST</span></div></div>
     <div class="top-right"><span class="pill" id="dayPill">☀️ 1日目</span><span class="pill gold" id="coinPill">🪙 120</span></div>
   </div>
   <div id="statusBar"><span id="missionShort">🌱 木の実を3個集めよう</span><span id="saveStatus">● セーブ済</span></div>
@@ -27,7 +27,7 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="bottom-ui">
     <div class="dpad" aria-label="移動コントローラー"><button class="up" data-dir="up" aria-label="前に移動">▲</button><button class="left" data-dir="left" aria-label="左に移動">◀</button><button class="center" id="cameraReset" aria-label="カメラを戻す">⌂</button><button class="right" data-dir="right" aria-label="右に移動">▶</button><button class="down" data-dir="down" aria-label="後ろに移動">▼</button></div>
-    <div class="actions"><div class="hint" id="interactHint">あたりを探検しよう！</div><button class="act-main" id="actionBtn">✨ 調べる</button><div class="small-actions"><button id="bagBtn">🎒 持ち物</button><button id="questBtn">📋 おねがい</button><button id="nextDayBtn">🌙 翌日へ</button></div></div>
+    <div class="actions"><div class="hint" id="interactHint">あたりを探検しよう！</div><button class="act-main" id="actionBtn">✨ 調べる</button><div class="small-actions"><button id="bagBtn">🎒 持ち物</button><button id="questBtn">📋 おねがい</button><button id="nextDayBtn">💾 セーブ</button></div></div>
   </div>
   <div id="loadingBanner">島の準備をしています…</div>
   <div class="overlay" id="panelOverlay" hidden><section class="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"><div class="panel-head"><h2 id="panelTitle">持ち物</h2><button id="panelClose" aria-label="閉じる">✕</button></div><div id="panelContent"></div></section></div>
