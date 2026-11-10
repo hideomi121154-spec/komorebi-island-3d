@@ -67,3 +67,13 @@ test('Real-time clock does not fast-forward and uses a read-only JST HUD',()=>{
  assert.match(js,/DAYLIGHT\.calendarDayDiff\(/);
  assert.doesNotMatch(js,/skipToNextTimePeriod|advanceGameClock|beginNextDay/);
 });
+
+test('Original Moko is loaded as a 3D island resident, not an imported image',()=>{
+ assert.match(html,/src="moko3d\.js"/);
+ assert.match(js,/const MOKO=window\.KomorebiMoko/);
+ assert.match(js,/MOKO\.draw\(b,mokoPose/);
+ assert.match(js,/else if\(id==='moko'\)/);
+ assert.match(js,/mokoGiftDay/);
+ assert.match(js,/mode==='moko'/);
+ assert.doesNotMatch(html,/chiikawa|ちいかわ/i);
+});
