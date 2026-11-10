@@ -7,6 +7,7 @@ import {Script} from 'node:vm';
 const dir=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const game=readFileSync(resolve(dir,'game.js'),'utf8');
 const water=readFileSync(resolve(dir,'watering3d.js'),'utf8');
+const daynight=readFileSync(resolve(dir,'daynight.js'),'utf8');
 function mockGame(saved=null){
  const nodes=new Map(),listeners=new Map(),timers=new Map(),local=new Map();
  if(saved)local.set('komorebi_island_3d_v01',JSON.stringify(saved));
@@ -31,6 +32,7 @@ function mockGame(saved=null){
   setTimeout(cb,ms){const key=++id;timers.set(key,{time:now+ms,cb});return key},
   clearTimeout(key){timers.delete(key)}};
  new Script(water).runInNewContext(context);
+ new Script(daynight).runInNewContext(context);
  new Script(game).runInNewContext(context);
  listeners.get('DOMContentLoaded')();
  el('startBtn')._events.get('click')();

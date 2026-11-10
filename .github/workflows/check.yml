@@ -21,5 +21,7 @@ jobs:
         run: node --check rooms3d.js
       - name: Check 3D watering module syntax
         run: node --check watering3d.js
+      - name: Check time-of-day module syntax
+        run: node --check daynight.js
       - name: Run smoke tests
         run: node --test tests/*.test.mjs

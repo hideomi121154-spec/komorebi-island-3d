@@ -47,3 +47,13 @@ test('Farm watering is wired into the same 3D island',()=>{
  assert.match(js,/window\.KomorebiWatering\?\.draw/);
  assert.match(js,/wateredDay===state\.day/);
 });
+
+test('Game clock and sky renderer are linked to the island',()=>{
+ assert.match(html,/src="daynight\.js"/);
+ assert.match(html,/id="timePill"/);
+ assert.match(html,/id="nightSky"/);
+ assert.match(js,/function advanceGameClock\(/);
+ assert.match(js,/function skipToNextTimePeriod\(/);
+ assert.match(js,/DAYLIGHT\.paletteAt\(state\.timeMinutes\)/);
+ assert.match(css,/night-sky/);
+});
