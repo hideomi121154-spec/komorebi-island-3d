@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {Script} from 'node:vm';
 
 const source=readFileSync(resolve(dirname(fileURLToPath(import.meta.url)),'../game.js'),'utf8');
+const daynight=readFileSync(resolve(dirname(fileURLToPath(import.meta.url)),'../daynight.js'),'utf8');
 function mockGame(){
   const nodes=new Map(),listeners=new Map(),queue=new Map();
   let clock=0,nextId=0;
@@ -40,6 +41,7 @@ function mockGame(){
     clearTimeout(id){queue.delete(id)},
     console
   };
+  new Script(daynight).runInNewContext(context);
   new Script(source).runInNewContext(context);
   assert.ok(listeners.has('DOMContentLoaded'));
   listeners.get('DOMContentLoaded')();
