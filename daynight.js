@@ -1,10 +1,11 @@
-/* Komorebi Island's independent game clock and daylight palette.
- * One in-game day lasts 12 active foreground minutes. The clock is not the device's time.
- * Pure helpers enable tests without a browser. Existing save files need no migration. */
+/* Komorebi Island's real-world Japanese time and daylight palette.
+ * Reads the device clock and formats the date/time in Asia/Tokyo; no accelerated time.
+ * Pure helpers let tests exercise midnight changes without affecting saved inventory. */
 (() => {
 'use strict';
 const DAY_MINUTES = 1440;
-const GAME_MINUTES_PER_REAL_SECOND = 2;
+const TZ='Asia/Tokyo';
+const jstFormatter=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
 const checkpoints = [
   {m:0,     top:'#132746', horizon:'#304a6b', fog:'#2a4563', darkness:.79, stars:1},
   {m:285,   top:'#34416f', horizon:'#766c8b', fog:'#68718a', darkness:.60, stars:.52},
@@ -42,17 +43,25 @@ function paletteAt(minutes){
  return {top:colors('top'),horizon:colors('horizon'),fog:colors('fog'),
   darkness:mix(a.darkness,b.darkness,t),stars:mix(a.stars,b.stars,t)};
 }
-function advance(minutes,elapsedSeconds){
- const elapsed=Math.max(0,Number.isFinite(elapsedSeconds)?elapsedSeconds:0);
- const total=normalMinutes(minutes)+elapsed*GAME_MINUTES_PER_REAL_SECOND;
- return {minutes:total%DAY_MINUTES,days:Math.floor(total/DAY_MINUTES)};
+function realTimeAt(epochMilliseconds=Date.now()){
+ const date=new Date(epochMilliseconds);
+ if(!Number.isFinite(date.getTime()))throw new Error('Invalid system clock');
+ const parts=Object.fromEntries(jstFormatter.formatToParts(date).map(p=>[p.type,p.value]));
+ const hour=Number(parts.hour),minute=Number(parts.minute),second=Number(parts.second);
+ return {
+  dateKey:parts.year+'-'+parts.month+'-'+parts.day,
+  minutes:hour*60+minute+second/60,
+  formatted:parts.hour+':'+parts.minute,
+  hour,minute,second,
+  timeZone:TZ
+ };
 }
-function nextPeriod(minutes){
- const m=normalMinutes(minutes);
- const targets=[360,720,1080,1260];
- const next=targets.find(t=>t>m+1e-6);
- if(next!==undefined)return {minutes:next,days:0};
- return {minutes:targets[0],days:1};
+function calendarDayDiff(previousDateKey,currentDateKey){
+ const regex=/^(\d{4})-(\d{2})-(\d{2})$/;
+ const before=regex.exec(String(previousDateKey||'')),after=regex.exec(String(currentDateKey||''));
+ if(!before||!after)return 0;
+ const toUTC=p=>Date.UTC(Number(p[1]),Number(p[2])-1,Number(p[3]));
+ return Math.round((toUTC(after)-toUTC(before))/86400000);
 }
-window.KomorebiTime={DAY_MINUTES,GAME_MINUTES_PER_REAL_SECOND,normalMinutes,phaseOf,format,paletteAt,advance,nextPeriod};
+window.KomorebiTime={DAY_MINUTES,TZ,normalMinutes,phaseOf,format,paletteAt,realTimeAt,calendarDayDiff};
 })();
