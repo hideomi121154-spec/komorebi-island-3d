@@ -7,6 +7,7 @@ import {Script} from 'node:vm';
 
 const source=readFileSync(resolve(dirname(fileURLToPath(import.meta.url)),'../game.js'),'utf8');
 const daynight=readFileSync(resolve(dirname(fileURLToPath(import.meta.url)),'../daynight.js'),'utf8');
+const mokoSource=readFileSync(resolve(dirname(fileURLToPath(import.meta.url)),'../moko3d.js'),'utf8');
 function mockGame(){
   const nodes=new Map(),listeners=new Map(),queue=new Map();
   let clock=0,nextId=0;
@@ -42,6 +43,7 @@ function mockGame(){
     console
   };
   new Script(daynight).runInNewContext(context);
+ new Script(mokoSource).runInNewContext(context);
   new Script(source).runInNewContext(context);
   assert.ok(listeners.has('DOMContentLoaded'));
   listeners.get('DOMContentLoaded')();

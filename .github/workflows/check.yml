@@ -23,5 +23,7 @@ jobs:
         run: node --check watering3d.js
       - name: Check time-of-day module syntax
         run: node --check daynight.js
+      - name: Check original Moko module syntax
+        run: node --check moko3d.js
       - name: Run smoke tests
         run: node --test tests/*.test.mjs

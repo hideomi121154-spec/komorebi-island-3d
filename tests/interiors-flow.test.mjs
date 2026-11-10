@@ -9,6 +9,7 @@ const dir=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const game=readFileSync(resolve(dir,'game.js'),'utf8');
 const rooms=readFileSync(resolve(dir,'rooms3d.js'),'utf8');
 const daynight=readFileSync(resolve(dir,'daynight.js'),'utf8');
+const mokoSource=readFileSync(resolve(dir,'moko3d.js'),'utf8');
 
 function createGame(){
  const nodes=new Map(),events=new Map(),pending=new Map(),storage=new Map();
@@ -47,6 +48,7 @@ function createGame(){
  };
  new Script(rooms).runInNewContext(context);
  new Script(daynight).runInNewContext(context);
+ new Script(mokoSource).runInNewContext(context);
  new Script(game).runInNewContext(context);
  events.get('DOMContentLoaded')();
  assert.ok(window.__komorebiTest,'game booted');

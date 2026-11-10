@@ -8,6 +8,7 @@ import {Script} from 'node:vm';
 const dir=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const daylightSource=readFileSync(resolve(dir,'daynight.js'),'utf8');
 const gameSource=readFileSync(resolve(dir,'game.js'),'utf8');
+const mokoSource=readFileSync(resolve(dir,'moko3d.js'),'utf8');
 
 function helpers(){
  const ctx={window:{}};
@@ -76,6 +77,7 @@ function mockGame(saved,initialEpoch=Date.parse('2026-11-10T11:51:00Z')){
   localStorage:{getItem:key=>store.get(key)||null,setItem:(k,v)=>store.set(k,v)},
   requestAnimationFrame(){},setTimeout(){return ++timer},clearTimeout(){}};
  new Script(daylightSource).runInNewContext(context);
+ new Script(mokoSource).runInNewContext(context);
  new Script(gameSource).runInNewContext(context);
  listeners.get('DOMContentLoaded')();
  assert.ok(window.__komorebiTest,'game loaded');
