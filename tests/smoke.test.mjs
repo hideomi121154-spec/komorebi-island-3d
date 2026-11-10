@@ -10,7 +10,7 @@ const css=readFileSync(resolve(d,'styles.css'),'utf8');
 const js=readFileSync(resolve(d,'game.js'),'utf8');
 test('HTML links to split game files',()=>{assert.match(html,/href="styles\.css"/);assert.match(html,/src="game\.js"/);assert.match(html,/id="gameCanvas"/);assert.match(html,/id="startBtn"/);});
 test('JavaScript syntax parses',()=>assert.doesNotThrow(()=>new Script(js)));
-test('Core systems are present',()=>{for(const k of ['readSave','save','initializeGL','drawSoftware','buildStatic','interact','nextDay'])assert.ok(js.includes(k),k);assert.match(css,/#gameCanvas/);});
+test('Core systems are present',()=>{for(const k of ['readSave','save','initializeGL','drawSoftware','buildStatic','interact','syncRealClock'])assert.ok(js.includes(k),k);assert.match(css,/#gameCanvas/);});
 
 test('In-world 3D fishing replaces the full-screen dialog',()=>{
  for(const id of ['fishHud','fishBack','fishMessage','fishTimer']){
@@ -52,8 +52,18 @@ test('Game clock and sky renderer are linked to the island',()=>{
  assert.match(html,/src="daynight\.js"/);
  assert.match(html,/id="timePill"/);
  assert.match(html,/id="nightSky"/);
- assert.match(js,/function advanceGameClock\(/);
- assert.match(js,/function skipToNextTimePeriod\(/);
+ assert.match(js,/function syncRealClock\(/);
+ assert.match(js,/DAYLIGHT\.realTimeAt\(/);
  assert.match(js,/DAYLIGHT\.paletteAt\(state\.timeMinutes\)/);
  assert.match(css,/night-sky/);
+});
+
+test('Real-time clock does not fast-forward and uses a read-only JST HUD',()=>{
+ assert.match(html,/id="timePill"/);
+ assert.match(html,/日本標準時と同期中/);
+ assert.match(html,/💾 セーブ/);
+ assert.doesNotMatch(html,/🌙 翌日へ|clock-fast.*>›/);
+ assert.match(js,/DAYLIGHT\.realTimeAt\(/);
+ assert.match(js,/DAYLIGHT\.calendarDayDiff\(/);
+ assert.doesNotMatch(js,/skipToNextTimePeriod|advanceGameClock|beginNextDay/);
 });

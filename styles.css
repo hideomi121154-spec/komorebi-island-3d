@@ -97,3 +97,8 @@
 #app.indoors[data-time-phase="night"] .brand{color:#2b5d50;text-shadow:0 1px #fff9}
 #app.indoors[data-time-phase="night"] .brand em{background:#f9fff4cc;color:#2b5d50}
 #app.indoors[data-time-phase="night"] .clock-pill{background:#fffdf4e8;color:#4a6b65;border-color:#fff}
+
+
+/* JST is a live read-only clock: time cannot be fast-forwarded. */
+.clock-pill{pointer-events:none;touch-action:auto;user-select:none;-webkit-user-select:none;cursor:default}
+.clock-pill .clock-fast{display:none}

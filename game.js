@@ -6,12 +6,12 @@ const $ = id => document.getElementById(id);
 const canvas = $('gameCanvas');
  const DAYLIGHT=window.KomorebiTime;
  if(!DAYLIGHT)throw Error('daynight.js is required');
-const initial = {version:1,day:1,timeMinutes:480,coins:120,x:0,z:3,angle:0,inventory:{berry:0,wood:0,shell:0,fish:0,carrot:0,seed:2},harvested:[],shells:[],farm:[null,null,null],furniture:0,houseLevel:1,talkedDay:0,questBerries:0,questSold:false,questGrown:false,claimed:[false,false,false],welcomeSeen:false};
+const initial = {version:1,day:1,timeMinutes:480,realDateKey:null,coins:120,x:0,z:3,angle:0,inventory:{berry:0,wood:0,shell:0,fish:0,carrot:0,seed:2},harvested:[],shells:[],farm:[null,null,null],furniture:0,houseLevel:1,talkedDay:0,questBerries:0,questSold:false,questGrown:false,claimed:[false,false,false],welcomeSeen:false};
 const itemLabels={berry:'木の実',wood:'木材',shell:'貝がら',fish:'魚',carrot:'にんじん',seed:'種'};
 const itemIcons={berry:'🍎',wood:'🪵',shell:'🐚',fish:'🐟',carrot:'🥕',seed:'🌱'};
 const basePrice={berry:32,wood:20,shell:27,fish:74,carrot:46};
 const KEY='komorebi_island_3d_v01';
-function readSave(){try{const p=JSON.parse(localStorage.getItem(KEY)||'null');if(!p||p.version!==1)return structuredCloneSafe(initial);const s=Object.assign(structuredCloneSafe(initial),p);s.inventory=Object.assign({},initial.inventory,p.inventory||{});if(!Array.isArray(s.farm)||s.farm.length!==3)s.farm=[null,null,null];if(!Array.isArray(s.claimed))s.claimed=[false,false,false];s.timeMinutes=DAYLIGHT.normalMinutes(s.timeMinutes);return s;}catch{return structuredCloneSafe(initial)}}
+function readSave(){try{const p=JSON.parse(localStorage.getItem(KEY)||'null');if(!p||p.version!==1)return structuredCloneSafe(initial);const s=Object.assign(structuredCloneSafe(initial),p);s.inventory=Object.assign({},initial.inventory,p.inventory||{});if(!Array.isArray(s.farm)||s.farm.length!==3)s.farm=[null,null,null];if(!Array.isArray(s.claimed))s.claimed=[false,false,false];s.timeMinutes=DAYLIGHT.normalMinutes(s.timeMinutes);s.realDateKey=typeof p.realDateKey==='string'?p.realDateKey:null;return s;}catch{return structuredCloneSafe(initial)}}
 function structuredCloneSafe(v){return JSON.parse(JSON.stringify(v))}
 let state=readSave();
 const input={up:false,down:false,left:false,right:false};
@@ -425,7 +425,7 @@ function drawSoftware(now,eye,aspect,lighting){
 function resize(){const dpr=ctx2d?1:Math.min(window.devicePixelRatio||1,1.7),width=Math.floor(canvas.clientWidth*dpr),height=Math.floor(canvas.clientHeight*dpr);if(canvas.width!==width||canvas.height!==height){canvas.width=Math.max(1,width);canvas.height=Math.max(1,height)}if(gl)gl.viewport(0,0,canvas.width,canvas.height)}
 let playerFacing=Math.PI,previous=0,npcGiftToday=false;
 function render(now){if(!gameReady)return;if(indoor.walkIn&&!indoor.room){const w=indoor.walkIn,k=clamp((now-w.start)/390,0,1);state.x=w.x+(w.toX-w.x)*k;state.z=w.z+(w.toZ-w.z)*k;playerFacing=Math.atan2(w.toX-w.x,w.toZ-w.z)}const dt=Math.min(.07,(now-previous)/1000||0);previous=now;tick+=dt;
- if(state.welcomeSeen&&!document.hidden)advanceGameClock(dt);
+ if(!document.hidden&&(lastClockSampleRaf<0||now-lastClockSampleRaf>=900)){lastClockSampleRaf=now;syncRealClock();}
  const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&(sx||sy)){let n=Math.hypot(sx,sy);sx/=n;sy/=n;const c=Math.cos(state.angle),s=Math.sin(state.angle);let dx=(indoor.room?sx:(sx*c+sy*s))*speed*dt,dz=(indoor.room?sy:(-sx*s+sy*c))*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);const shore=x*x/152+z*z/105;if(shore>1)return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;for(const t of trees)if(dist(x,z,t.x,t.z)<.56)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
  const fishingActive=fishing.stage!=='idle',roomActive=!!indoor.room;
   const focusX=fishingActive?(state.x-7)*.5:state.x, focusZ=fishingActive?(state.z+6)*.5:state.z;
@@ -452,48 +452,47 @@ function render(now){if(!gameReady)return;if(indoor.walkIn&&!indoor.room){const 
  const d=buildDynamic(now);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,d,gl.DYNAMIC_DRAW);bindGeometry(dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,d.length/9);
  requestAnimationFrame(render)}
 
-let shownClockMinute=-1,lastClockSave=0;
+// The phone's wall clock (formatted as Japan Standard Time) owns the game's date and sky.
+// Manual fast-forward is intentionally disabled in real-time mode.
+let shownClockMinute=-1,lastClockSampleRaf=-1,lastClockSave=0;
 function updateClockHud(){
- const phase=DAYLIGHT.phaseOf(state.timeMinutes),label=DAYLIGHT.format(state.timeMinutes);
- $('timePill').textContent=phase.icon+' '+label+' '+phase.label+' ›';
- $('timePill').setAttribute?.('aria-label','ゲーム内 '+label+' '+phase.label+'。タップで次の時間帯へ進める');
+ const phase=DAYLIGHT.phaseOf(state.timeMinutes);
+ const label=DAYLIGHT.format(state.timeMinutes);
+ $('timePill').textContent=phase.icon+' '+label+' '+phase.label+' · JST';
+ $('timePill').setAttribute?.('aria-label','日本標準時 '+label+' '+phase.label+' と同期中');
  $('dayPill').textContent=phase.icon+' '+state.day+'日目';
  $('app').dataset.timePhase=phase.id;
- const stars=DAYLIGHT.paletteAt(state.timeMinutes).stars;
- if($('nightSky')?.style)$('nightSky').style.opacity=indoor.room?'0':String(stars);
+ if($('nightSky')?.style)$('nightSky').style.opacity=indoor.room?'0':String(DAYLIGHT.paletteAt(state.timeMinutes).stars);
  shownClockMinute=Math.floor(state.timeMinutes);
 }
-function beginNextDay(jumpToMorning=false,announce=true){
- state.day++;state.harvested=[];state.shells=[];state.talkedDay=0;
- if(jumpToMorning)state.timeMinutes=420;
- save();updateHud();
- if(announce)showToast('🌅 '+state.day+'日目の朝！ 木の実と貝がらが復活したよ');
-}
-function advanceGameClock(seconds){
- if(!Number.isFinite(seconds)||seconds<=0)return;
- const before=DAYLIGHT.phaseOf(state.timeMinutes).id;
- const next=DAYLIGHT.advance(state.timeMinutes,seconds);
- state.timeMinutes=next.minutes;
- if(next.days){
-  for(let i=0;i<next.days;i++)beginNextDay(false,false);
-  showToast('🌅 新しい朝が来たよ！ '+state.day+'日目');
+function syncRealClock(epochMilliseconds=Date.now(),notify=false){
+ const live=DAYLIGHT.realTimeAt(epochMilliseconds);
+ const previousPhase=DAYLIGHT.phaseOf(state.timeMinutes).id;
+ const previousKey=state.realDateKey;
+ const passed=previousKey?DAYLIGHT.calendarDayDiff(previousKey,live.dateKey):0;
+ if(!previousKey||passed>0)state.realDateKey=live.dateKey;
+ state.timeMinutes=live.minutes;
+ // Resources refresh once per calendar day, including time spent away from the app.
+ if(passed>0){
+  state.day+=passed;
+  state.harvested=[];state.shells=[];state.talkedDay=0;
  }
- const phase=DAYLIGHT.phaseOf(state.timeMinutes);
- if(Math.floor(state.timeMinutes)!==shownClockMinute||next.days)updateClockHud();
- if(!next.days&&phase.id!==before){
-  const messages={morning:'🌅 朝になったよ！',day:'☀️ お昼になったよ！',evening:'🌇 夕焼けがきれい！',night:'🌙 夜になったよ。月と星を見てみよう'};
-  showToast(messages[phase.id]);
+ if(passed>0||Math.floor(state.timeMinutes)!==shownClockMinute)updateClockHud();
+ if(passed>0){
+  save();
+  if(notify)showToast('🌅 日付が変わったよ！ '+state.day+'日目');
+ }else if(notify&&previousPhase!==DAYLIGHT.phaseOf(state.timeMinutes).id){
+  const phase=DAYLIGHT.phaseOf(state.timeMinutes);
+  showToast(phase.icon+' '+phase.label+'の時間になったよ');
  }
- if(tick-lastClockSave>=4){lastClockSave=tick;save();}
+ if(tick-lastClockSave>=20){lastClockSave=tick;save();}
+ return {dateKey:live.dateKey,minutes:live.minutes,daysPassed:Math.max(0,passed)};
 }
-function skipToNextTimePeriod(){
+function saveNow(){
  if(paused)return;
- const result=DAYLIGHT.nextPeriod(state.timeMinutes);
- state.timeMinutes=result.minutes;
- if(result.days)beginNextDay(false,false);
- updateHud();save();
- const phase=DAYLIGHT.phaseOf(state.timeMinutes);
- showToast(phase.icon+' '+DAYLIGHT.format(state.timeMinutes)+' '+phase.label+'になったよ！');
+ syncRealClock();
+ save();
+ showToast('💾 セーブしたよ！ 時間は日本時間と同期中');
 }
 
 let lastAutoSave=0;
@@ -647,8 +646,8 @@ function renderRoomDialogue(mode){
   makeRoomAction('閉じる',closeRoomDialogue);
  }else if(mode==='bed'){
   head.textContent='🛏️ ふかふかのベッド';
-  write('「今日もよくがんばったね。ここで眠ると、次の日の朝になります。」');
-  makeRoomAction('🌙 眠って翌日へ',()=>{closeRoomDialogue();nextDay();showToast('🌅 おうちでぐっすり眠ったよ！')});
+  write('「今日もよくがんばったね。ここで休んでセーブしよう。時間は日本の実際の時刻と同じだよ。」');
+  makeRoomAction('💤 休んでセーブ',()=>{closeRoomDialogue();saveNow();showToast('💤 おうちでひと休み。セーブしたよ！')});
   makeRoomAction('まだ起きている',closeRoomDialogue);
  }else if(mode==='dresser'){
   head.textContent='👕 服を着替える';
@@ -677,7 +676,8 @@ function interactInside(){
  if(modes[t.id])openRoomDialogue(modes[t.id]);
 }
 
-function nextDay(){if(paused)return;beginNextDay(true,true)}
+
+
 function row(icon,title,detail,button,handler,disabled=false){const el=document.createElement('div');el.className='item-row';const sym=document.createElement('span');sym.className='item-symbol';sym.textContent=icon;const center=document.createElement('div');center.className='details';const strong=document.createElement('strong');strong.textContent=title;const small=document.createElement('small');small.textContent=detail;center.append(strong,small);el.append(sym,center);if(button){const btn=document.createElement('button');btn.textContent=button;btn.disabled=disabled;btn.addEventListener('click',handler);el.append(btn)}return el}
 function paragraph(parent,text,cls){let p=document.createElement('p');p.textContent=text;if(cls)p.className=cls;parent.appendChild(p);return p}
 function tag(parent,name,txt){let e=document.createElement(name);e.textContent=txt;parent.appendChild(e);return e}
@@ -695,12 +695,12 @@ function exportSave(){const data=new Blob([JSON.stringify(state,null,2)],{type:'
 function bindControls(){const dirs=document.querySelectorAll('[data-dir]');dirs.forEach(btn=>{const dir=btn.dataset.dir;btn.addEventListener('pointerdown',e=>{e.preventDefault();input[dir]=true;btn.classList.add('pressed');try{btn.setPointerCapture(e.pointerId)}catch{}});const release=e=>{input[dir]=false;btn.classList.remove('pressed')};btn.addEventListener('pointerup',release);btn.addEventListener('pointercancel',release);btn.addEventListener('lostpointercapture',release)});
  const codes={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};
  document.addEventListener('keydown',e=>{if(fishing.stage!=='idle'){if(e.code==='Escape'){e.preventDefault();stopFishing()}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)fishAction()}else if(codes[e.code])e.preventDefault();return}if(codes[e.code]){e.preventDefault();input[codes[e.code]]=true}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)interact()}else if(e.code==='Escape'){if(!$('roomDialogue').hidden)closeRoomDialogue();else if(!$('panelOverlay').hidden)closePanel();else if(indoor.room)leaveRoom()}});document.addEventListener('keyup',e=>{if(codes[e.code]){e.preventDefault();input[codes[e.code]]=false}});window.addEventListener('blur',()=>Object.keys(input).forEach(d=>input[d]=false));
- $('rotateLeft').addEventListener('click',()=>{state.angle-=Math.PI/4;save()});$('rotateRight').addEventListener('click',()=>{state.angle+=Math.PI/4;save()});$('cameraReset').addEventListener('click',()=>{state.angle=0;save();showToast('📷 カメラを戻したよ')});$('actionBtn').addEventListener('click',()=>{if(fishing.stage==='idle')interact();else fishAction()});$('bagBtn').addEventListener('click',()=>openPanel('bag'));$('questBtn').addEventListener('click',()=>openPanel('quests'));$('nextDayBtn').addEventListener('click',nextDay);$('timePill').addEventListener('click',skipToNextTimePeriod);$('panelClose').addEventListener('click',closePanel);$('panelOverlay').addEventListener('click',e=>{if(e.target===$('panelOverlay'))closePanel()});
+ $('rotateLeft').addEventListener('click',()=>{state.angle-=Math.PI/4;save()});$('rotateRight').addEventListener('click',()=>{state.angle+=Math.PI/4;save()});$('cameraReset').addEventListener('click',()=>{state.angle=0;save();showToast('📷 カメラを戻したよ')});$('actionBtn').addEventListener('click',()=>{if(fishing.stage==='idle')interact();else fishAction()});$('bagBtn').addEventListener('click',()=>openPanel('bag'));$('questBtn').addEventListener('click',()=>openPanel('quests'));$('nextDayBtn').addEventListener('click',saveNow);$('panelClose').addEventListener('click',closePanel);$('panelOverlay').addEventListener('click',e=>{if(e.target===$('panelOverlay'))closePanel()});
  let drag=null;canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,angle:state.angle,pointerId:e.pointerId};try{canvas.setPointerCapture(e.pointerId)}catch{}});canvas.addEventListener('pointermove',e=>{if(!drag||drag.pointerId!==e.pointerId)return;state.angle=drag.angle+(e.clientX-drag.x)*.0055});canvas.addEventListener('pointerup',()=>{if(drag)save();drag=null});canvas.addEventListener('pointercancel',()=>drag=null);
  $('fishBack').addEventListener('click',stopFishing);$('roomDialogClose').addEventListener('click',closeRoomDialogue);
- $('startBtn').addEventListener('click',()=>{$('welcomeOverlay').hidden=true;paused=false;state.welcomeSeen=true;save();showToast('🌿 島を探検しよう！')});document.addEventListener('visibilitychange',()=>{if(document.hidden){if(fishing.stage!=='idle')stopFishing();if(watering.active)finishWatering();save()}});window.addEventListener('pagehide',save);
+ $('startBtn').addEventListener('click',()=>{$('welcomeOverlay').hidden=true;paused=false;state.welcomeSeen=true;save();showToast('🌿 島を探検しよう！')});document.addEventListener('visibilitychange',()=>{if(document.hidden){if(fishing.stage!=='idle')stopFishing();if(watering.active)finishWatering();save()}else{syncRealClock();save()}});window.addEventListener('pageshow',()=>syncRealClock());window.addEventListener('pagehide',save);
 }
-function start(){try{initializeGL();bindControls();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),moveTo:(x,z)=>{state.x=x;state.z=z;setContext()},interact,nextDay,openPanel,price,vertices:worldVerts,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),advanceClock:advanceGameClock,skipTime:skipToNextTimePeriod,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
+function start(){try{initializeGL();bindControls();syncRealClock();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),moveTo:(x,z)=>{state.x=x;state.z=z;setContext()},interact,saveNow,openPanel,price,vertices:worldVerts,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,dateKey:state.realDateKey,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),syncClock:syncRealClock,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 
