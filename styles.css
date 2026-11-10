@@ -62,3 +62,33 @@
 @keyframes speechPop{from{opacity:0;transform:translate(-50%,-91%) scale(.93)}to{opacity:1;transform:translate(-50%,-100%) scale(1)}}
 @media(max-height:680px){.speech-bubble{padding:8px 12px 10px}.speech-text{margin-top:4px;font-size:13px}.room-dialogue.npc-choice-mode{bottom:calc(env(safe-area-inset-bottom) + 8px)}}
 @media(prefers-reduced-motion:reduce){.speech-bubble{animation:none}}
+
+
+/* The in-game clock is deliberately separate from local device time. Tap to preview the next period. */
+.clock-pill{display:inline-flex;gap:5px;align-items:center;justify-content:center;margin-top:5px;padding:5px 10px;min-height:29px;background:#fffdf4e8;color:#4a6b65;border:1.5px solid #ffffffdf;border-radius:16px;box-shadow:0 2px 9px #2f4d5e26;font-size:12px;font-weight:900;line-height:1.1;pointer-events:auto;touch-action:manipulation;white-space:nowrap}
+.clock-pill .clock-fast{color:#86ad98;font-size:18px;font-weight:900;line-height:.8}
+#app[data-time-phase="night"] .clock-pill{background:#243956e6;color:#fff1d4;border-color:#e8eff75e;box-shadow:0 1px 13px #e5eaff35}
+#app[data-time-phase="night"] .brand{color:#fff4d6;text-shadow:0 2px 9px #20314d}
+#app[data-time-phase="night"] .brand em{background:#304d61c7;color:#fff8d9}
+#app[data-time-phase="night"] .brand-leaf{color:#a4d5ad}
+#app[data-time-phase="evening"] .clock-pill{background:#fff2e0f0;color:#935d59}
+#statusBar{top:calc(env(safe-area-inset-top) + 101px)}
+.edge-buttons{top:calc(env(safe-area-inset-top) + 155px)}
+.room-hud{top:calc(env(safe-area-inset-top) + 166px)}
+.fish-hud{top:calc(env(safe-area-inset-top) + 162px)}
+.night-sky{position:absolute;z-index:2;left:0;right:0;top:0;height:47%;pointer-events:none;opacity:0;will-change:opacity;mask-image:linear-gradient(#000 0%,#000 54%,transparent 100%);-webkit-mask-image:linear-gradient(#000 0%,#000 54%,transparent 100%);background-image:
+ radial-gradient(1.8px 1.8px at 8% 34%,#fff7cc 98%,transparent 100%),
+ radial-gradient(2px 2px at 20% 61%,#ffffff 98%,transparent 100%),
+ radial-gradient(2px 2px at 29% 22%,#dce9ff 98%,transparent 100%),
+ radial-gradient(2.6px 2.6px at 38% 42%,#fff6d3 98%,transparent 100%),
+ radial-gradient(2px 2px at 52% 19%,#fff 98%,transparent 100%),
+ radial-gradient(1.8px 1.8px at 59% 63%,#ffefbf 98%,transparent 100%),
+ radial-gradient(2.8px 2.8px at 72% 32%,#ffffff 98%,transparent 100%),
+ radial-gradient(2px 2px at 88% 54%,#dbeaff 98%,transparent 100%),
+ radial-gradient(2px 2px at 94% 17%,#fff8de 98%,transparent 100%),
+ radial-gradient(1.6px 1.6px at 14% 76%,#fdf4d3 98%,transparent 100%),
+ radial-gradient(2.1px 2.1px at 81% 78%,#fbf4dd 98%,transparent 100%)}
+.night-moon{position:absolute;top:31%;right:13%;width:36px;height:36px;border-radius:50%;background:#f8f2dc;box-shadow:0 0 18px 7px #e6e8ec70,0 0 43px 15px #d4e4ff45;opacity:.92}
+@media(max-width:375px){.clock-pill{font-size:11px;padding:5px 8px;min-height:27px}#statusBar{top:calc(env(safe-area-inset-top) + 97px)}}
+@media(max-height:700px){#statusBar{top:calc(env(safe-area-inset-top) + 92px)}.room-hud{top:calc(env(safe-area-inset-top) + 145px)}.fish-hud{top:calc(env(safe-area-inset-top) + 146px)}.edge-buttons{top:calc(env(safe-area-inset-top) + 148px)}}
+@media(prefers-reduced-motion:reduce){.night-sky{will-change:auto}}
