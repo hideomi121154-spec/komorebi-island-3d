@@ -123,3 +123,10 @@
 @media(max-height:710px){.redevelopment-status{bottom:calc(env(safe-area-inset-bottom) + 140px);padding:6px 10px;min-height:46px}.redevelopment-top{font-size:10px}}
 @media(max-width:390px){.redevelopment-status{width:88vw}}
 @media(prefers-reduced-motion:reduce){.redevelopment-fill{transition:none}}
+
+/* v1.2: compact status pill reveals more of the living island on iPhone. */
+.redevelopment-status{width:min(77vw,375px);min-height:43px;padding:7px 11px;gap:5px;bottom:calc(env(safe-area-inset-bottom) + 162px);background:#fffdf2ee;border-radius:17px}
+.redevelopment-top{font-size:clamp(10px,2.65vw,12px)}
+.redevelopment-track{height:6px}
+#redevelopmentPercent{font-size:12px}
+@media(max-height:710px){.redevelopment-status{bottom:calc(env(safe-area-inset-bottom) + 133px);padding:5px 8px;min-height:39px}}
