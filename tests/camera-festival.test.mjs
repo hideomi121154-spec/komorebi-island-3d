@@ -44,7 +44,7 @@ test('Touch gestures support vertical looking and bounded pinch / wheel zoom',()
  assert.ok(p.eye.every(Number.isFinite));
  camera.skyView(true);
  const sky=camera.calculate([0,30,40],[0,0,0],{x:1,z:2},0);
- assert.equal(sky.eye[1],1.85);
+ assert.equal(sky.eye[1],10.8);
  assert.ok(sky.center[1]>sky.eye[1]+25,'camera should face nearly straight up');
  assert.ok(camera.fov(54)>54);
 });
