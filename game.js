@@ -273,7 +273,7 @@ function buildBench(b,x,z){b.box(x,.58,z,1.9,.22,.65,'#ba8c67');b.box(x,.93,z-.3
 let softwareGroundCount=0,softwareTerrainCount=0,softwareSandCount=0,softwareSeaCount=0;
 function buildStatic(){const b=new MeshBuilder();
  // Water plane, pale sandy shoreline, raised oval island.
- b.box(19,-.67,0,162,.20,110,'#79c5c8');softwareSeaCount=b.vertices.length/9;
+ b.box(19,-.67,0,270,.20,240,'#79c5c8');softwareSeaCount=b.vertices.length/9;
  const land=(rx,rz,y,edgeBottom,topCol,sideCol,seed)=>{const seg=52;const arr=[];for(let k=0;k<seg;k++){const a=2*Math.PI*k/seg;const r=1+Math.sin(a*7+seed)*.017+Math.cos(a*11+seed)*.012;arr.push([Math.cos(a)*rx*r,Math.sin(a)*rz*r])}for(let k=0;k<seg;k++){const p=arr[k],q=arr[(k+1)%seg];b.tri([0,y,0],[q[0],y,q[1]],[p[0],y,p[1]],topCol);b.quad([p[0],y,p[1]],[q[0],y,q[1]],[q[0]*.98,edgeBottom,q[1]*.98],[p[0]*.98,edgeBottom,p[1]*.98],sideCol)}};
  land(...EXPANSION.sand,-.19,-.57,'#f3dfaa','#ddbc83',4);softwareSandCount=b.vertices.length/9;
  land(...EXPANSION.grass,-.045,-.29,'#9ed88d','#81b875',1);
