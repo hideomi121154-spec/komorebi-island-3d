@@ -462,13 +462,13 @@ function render(now){if(!gameReady)return;if(indoor.walkIn&&!indoor.room){const 
  if(!indoor.room)updateMoko(now);
  const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&(sx||sy)){if(overviewMode){overviewMode=false;$('redevelopmentViewBtn').classList.remove('active')}let n=Math.hypot(sx,sy);sx/=n;sy/=n;const c=Math.cos(state.angle),s=Math.sin(state.angle);let dx=(indoor.room?sx:(sx*c+sy*s))*speed*dt,dz=(indoor.room?sy:(-sx*s+sy*c))*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);if(!EXPANSION.canWalk(x,z)||REDEVELOPMENT.within(x,z))return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;for(const t of trees)if(dist(x,z,t.x,t.z)<.56)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
  const fishingActive=fishing.stage!=='idle',roomActive=!!indoor.room;
-  const focusX=fishingActive?(state.x-7)*.5:(overviewMode&&!roomActive?4.6:state.x), focusZ=fishingActive?(state.z+6)*.5:(overviewMode&&!roomActive?-3.1:state.z);
+  const focusX=fishingActive?(state.x-7)*.5:(overviewMode&&!roomActive?5.5:state.x), focusZ=fishingActive?(state.z+6)*.5:(overviewMode&&!roomActive?-3.1:state.z);
   if(!roomActive){camFocus.x+=(focusX-camFocus.x)*Math.min(1,dt*(fishingActive?3.6:6));camFocus.z+=(focusZ-camFocus.z)*Math.min(1,dt*(fishingActive?3.6:6));}
  let next=findNearby();if(next?.id!==nearest?.id){nearest=next;setContext()}
  resize();
  const aspect=canvas.width/canvas.height;
  const distance=fishingActive?(aspect<.70?14.4:12.1):(overviewMode&&!roomActive?(aspect<.70?40:32):(aspect<.70?26.0:20.5));
- const scenicAngle=overviewMode&&!roomActive?state.angle-.34:state.angle;
+ const scenicAngle=overviewMode&&!roomActive?state.angle-.42:state.angle;
   const eye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):[camFocus.x+Math.sin(scenicAngle)*distance,fishingActive?9.2:(overviewMode?30:14.6),camFocus.z+Math.cos(scenicAngle)*distance];
  const center=roomActive?[0,.95,-.35]:[camFocus.x,0,camFocus.z];
  viewFov=roomActive?52:(overviewMode?54:48);
