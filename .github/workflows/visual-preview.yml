@@ -11,6 +11,8 @@ on:
       - 'styles.css'
       - 'index.html'
       - 'sealine3d.js'
+      - 'nightfestival.js'
+      - 'render-quality.js'
   workflow_dispatch:
 permissions:
   contents: read
