@@ -535,6 +535,34 @@ function syncRealClock(epochMilliseconds=Date.now(),notify=false){
  if(tick-lastClockSave>=20){lastClockSave=tick;save();}
  return {dateKey:live.dateKey,minutes:live.minutes,daysPassed:Math.max(0,passed)};
 }
+function beginSeaJourney(){
+ if(paused||indoor.room||railRide.active||fishing.stage!=='idle')return false;
+ const departure=SEA.nearestStation(state.x,state.z);
+ if(!departure){showToast('🚉 駅に近づいてから列車に乗ろう');return false}
+ railRide.from=departure.island;railRide.to=departure.island==='home'?'commerce':'home';
+ railRide.progress=0;railRide.startedAt=performance.now();railRide.active=true;paused=true;
+ overviewMode=false;$('redevelopmentViewBtn').classList.remove('active');
+ for(const dir of Object.keys(input))input[dir]=false;
+ $('trainHud').hidden=false;$('app').classList.add('train-riding');
+ $('trainHudText').textContent='🚆 こもれびシーライン · '+(railRide.to==='commerce'?'みなと駅':'こもれび駅')+'へ';
+ $('interactHint').textContent='🚆 海の上を走っているよ';
+ $('actionBtn').textContent='🚆 移動中…';
+ save();
+ return true;
+}
+function updateSeaRide(now){
+ if(!railRide.active)return;
+ railRide.progress=clamp((now-railRide.startedAt)/railRide.duration,0,1);
+ if(railRide.progress<1)return;
+ railRide.active=false;railRide.progress=railRide.to==='commerce'?1:0;
+ const destination=railRide.to==='commerce'?SEA.stations[1]:SEA.stations[0];
+ state.x=destination.x;state.z=destination.z;state.currentIsland=railRide.to;
+ state.seaLineRides=(state.seaLineRides||0)+1;state.angle=0;
+ camFocus.x=state.x;camFocus.z=state.z;paused=false;
+ $('trainHud').hidden=true;$('app').classList.remove('train-riding');
+ nearest=null;setContext();save();updateHud();
+ showToast(railRide.to==='commerce'?'🛍️ 商業島に到着！ お店を探検しよう':'🌿 こもれび島に帰ってきたよ！');
+}
 function saveNow(){
  if(paused)return;
  syncRealClock();
@@ -546,9 +574,9 @@ let lastAutoSave=0;
 function showToast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toaster);toaster=setTimeout(()=>el.classList.remove('show'),2900)}
 function save(){try{const snapshot=(indoor.room||indoor.transition)&&indoor.original?{...state,x:indoor.original.x,z:indoor.original.z,angle:indoor.original.angle}:state;localStorage.setItem(KEY,JSON.stringify(snapshot));$('saveStatus').textContent='● セーブ済'}catch{$('saveStatus').textContent='⚠ 保存できません'}}
 function updateRedevelopmentHud(){const p=REDEVELOPMENT.clamp(state.redevelopmentProgress);$('redevelopmentPercent').textContent=p+'%';$('redevelopmentLabel').textContent=p>=100?'🏙️ 新しいマンションが完成！':'🏗️ 島の再開発中 · '+REDEVELOPMENT.stage(p);if($('redevelopmentFill').style)$('redevelopmentFill').style.width=p+'%';$('redevelopmentHud').setAttribute?.('aria-label','島の再開発 '+p+'%・詳細を開く')}
-function updateHud(){ updateClockHud();updateRedevelopmentHud();$('coinPill').textContent='🪙 '+state.coins;
+function updateHud(){ updateClockHud();updateRedevelopmentHud();$('coinPill').textContent='🪙 '+state.coins;if($('islandNamePill'))$('islandNamePill').textContent=state.currentIsland==='commerce'?'🛍️ 商業島・みなと島':'🌿 こもれび島';
  let msg='🎉 おねがい達成！';if(!state.claimed[0])msg='🍎 木の実を3個集めよう '+Math.min(3,state.questBerries)+'/3';else if(!state.claimed[1])msg='🏪 お店で何か売ってみよう';else if(!state.claimed[2])msg='🥕 畑でにんじんを育てよう';$('missionShort').textContent=msg}
-function setContext(){if(fishing.stage!=='idle'||indoor.transition||watering.active)return;const t=nearest;if(indoor.room){const names={exit:'島に出る',clerk:'店員さんと話す',seeds:'商品を見る',goods:'買取をお願い',bed:'ベッドで休む',dresser:'着替える',table:'作業テーブルを見る'};$('interactHint').textContent=t?t.icon+' '+t.name+' に近づいたよ':'🏠 室内を歩いて探検しよう';$('actionBtn').textContent=t?'✨ '+names[t.id]:'✨ 調べる';return}$('interactHint').textContent=t?t.icon+' '+t.name+' が近くにあるよ':'🌱 島を自由に探検しよう';$('actionBtn').textContent=t?'✨ '+(t.id==='shop'?'お店に入る':(t.id==='npc'||t.id==='moko')?'話しかける':t.id==='home'?'家に入る':t.id==='cottage'?'コテージに入る':t.id==='redevelopment'?'工事現場を見る':t.id==='camp'?'休憩する':t.id==='falls'?'滝を眺める':t.id==='pier'?'海を眺める':t.id==='pond'?'釣りをする':t.id.startsWith('plot')?plotActionLabel(Number(t.id.slice(4))):t.id.startsWith('shell')?'拾う':'採集する'):'✨ 調べる'}
+function setContext(){if(fishing.stage!=='idle'||indoor.transition||watering.active||railRide.active)return;const t=nearest;if(indoor.room){const names={exit:'島に出る',clerk:'店員さんと話す',seeds:'商品を見る',goods:'買取をお願い',bed:'ベッドで休む',dresser:'着替える',table:'作業テーブルを見る'};$('interactHint').textContent=t?t.icon+' '+t.name+' に近づいたよ':'🏠 室内を歩いて探検しよう';$('actionBtn').textContent=t?'✨ '+names[t.id]:'✨ 調べる';return}$('interactHint').textContent=t?t.icon+' '+t.name+' が近くにあるよ':'🌱 島を自由に探検しよう';$('actionBtn').textContent=t?'✨ '+(t.id==='shop'?'お店に入る':(t.id==='npc'||t.id==='moko')?'話しかける':t.id==='home'?'家に入る':t.id==='cottage'?'コテージに入る':t.id==='seaStationHome'||t.id==='seaStationCity'?'列車に乗る':t.id.startsWith('city')?'施設を利用する':t.id==='redevelopment'?'工事現場を見る':t.id==='camp'?'休憩する':t.id==='falls'?'滝を眺める':t.id==='pier'?'海を眺める':t.id==='pond'?'釣りをする':t.id.startsWith('plot')?plotActionLabel(Number(t.id.slice(4))):t.id.startsWith('shell')?'拾う':'採集する'):'✨ 調べる'}
 function give(id,amount){state.inventory[id]=(state.inventory[id]||0)+amount}
 function price(id){return Math.max(1,Math.round(basePrice[id]*(.86+(state.day*37+id.length*13)%29/100)))}
 function maybeQuest(){if(!state.claimed[0]&&state.questBerries>=3){state.claimed[0]=true;state.coins+=70;showToast('🎉 おねがい達成！ 70コインをゲット');return}if(state.claimed[0]&&!state.claimed[1]&&state.questSold){state.claimed[1]=true;state.coins+=80;showToast('🎉 商売の達人！ 80コインをゲット');return}if(state.claimed[1]&&!state.claimed[2]&&state.questGrown){state.claimed[2]=true;state.coins+=100;showToast('🎉 初めての収穫！ 100コインをゲット')}}
@@ -574,6 +602,8 @@ function interact(){if(paused)return;if(indoor.room){interactInside();return}con
   else if(id==='falls')showToast('💦 滝から流れる小川。木の橋を渡ってみよう！');
   else if(id==='pier')showToast('🛶 海辺の桟橋。波がきらきらしているよ！');
   else if(id==='redevelopment')openPanel('redevelopment');
+  else if(id==='seaStationHome'||id==='seaStationCity')beginSeaJourney();
+  else if(id.startsWith('city'))openPanel(id);
   else if(id==='shop')enterRoom('shop');else if(id==='home')enterRoom('home');
  updateHud();save();setContext()}
 
@@ -756,7 +786,7 @@ function openPanel(type){panelType=type;paused=true;for(let dir of Object.keys(i
  else if(type==='home'){title.textContent='🏡 わたしの家';paragraph(content,'木の香りがする小さなおうち。お庭をもっと素敵にしてみよう。');content.appendChild(row('🏠','おうちレベル '+state.houseLevel,'島の暮らしを充実させよう',null,null));content.appendChild(row('🔨','おうちを増築する','400コイン・庭に飾りが増える','増築',()=>{if(state.houseLevel>=2||state.coins<400)return;state.coins-=400;state.houseLevel=2;save();updateHud();openPanel('home');showToast('🏠 おうちを増築したよ！')},state.houseLevel>=2||state.coins<400));paragraph(content,'今後は家の中に入れる機能や家具の配置も増やしていく予定です。','tip-box')}
  else if(type==='npc'){title.textContent='🐱 ミミとのおしゃべり';paragraph(content,'「こんにちは！ ここはのんびり過ごすのがいちばんだよ。木の実は木から集められるし、畑の野菜も立派に育つの！」');paragraph(content,npcGiftToday?'「はい、今日のプレゼント。にんじんの種を1個あげるね。また明日お話しよう！」':'「さっきあげた種、植えてみた？ 明日またお話ししようね！」','tip-box');addButton(content,'ありがとう！',closePanel)}
  else if(type==='redevelopment'){const p=REDEVELOPMENT.clamp(state.redevelopmentProgress);title.textContent='🏗️ 島の再開発計画';paragraph(content,'高層マンションを島の右奥で建設中！ くらしの広場や自然はそのまま残す計画です。');content.appendChild(row('🏢','マンション工事 '+p+'%',REDEVELOPMENT.stage(p),null,null));const track=document.createElement('div');track.style.cssText='height:12px;background:#e8e5d7;border-radius:9px;overflow:hidden;margin:12px 0';const fill=document.createElement('div');fill.style.cssText='height:100%;background:#82b991;width:'+p+'%';track.append(fill);content.append(track);if(p<100){paragraph(content,'木材2個を現場へ届けると建設が8%進むよ。工事は日本の日付が変わると少しずつ進むよ。','tip-box');content.appendChild(row('🪵','建設資材を納品する','木材 2個・所持 '+state.inventory.wood+'個','納品',()=>{if(state.inventory.wood<2)return;state.inventory.wood-=2;state.redevelopmentProgress=REDEVELOPMENT.clamp(state.redevelopmentProgress+8);rebuildWorld();updateHud();save();openPanel('redevelopment');showToast('🏗️ 資材を届けたよ！ 工事が8%進んだ！')},state.inventory.wood<2));}else paragraph(content,'🎉 完成おめでとう！ 建設用の足場と作業員がなくなり、新しいマンションが島の風景に加わったよ。','tip-box');addButton(content,'島の景色に戻る',closePanel,'secondary')}
-  else if(type==='map'){title.textContent='🗺 こもれび島の地図';const map=document.createElement('canvas');map.width=520;map.height=420;map.setAttribute('aria-label','島の地図と現在位置');map.style.cssText='display:block;width:100%;height:auto;border-radius:17px;border:2px solid #f7ead0;background:#abdadd';content.appendChild(map);EXPANSION.paintMap(map,state);paragraph(content,'🔴 赤い点が現在地。十字キーで歩いて、新しいコテージ・キャンプ場・滝・桟橋も探検してみよう。','tip-box')}
+  else if(type==='map'){title.textContent='🗺 こもれび島の地図';const map=document.createElement('canvas');map.width=520;map.height=420;map.setAttribute('aria-label','島の地図と現在位置');map.style.cssText='display:block;width:100%;height:auto;border-radius:17px;border:2px solid #f7ead0;background:#abdadd';content.appendChild(map);SEA.paintMap(map,state);paragraph(content,'🔴 赤い点が現在地。海上列車「こもれびシーライン」で2つの島を往復できるよ。駅で「列車に乗る」を押そう。','tip-box')}
   else if(type==='quests'){title.textContent='📋 島のおねがい';const quests=[{done:state.questBerries>=3,claimed:state.claimed[0],txt:'🍎 木の実を3個集めよう',progress:Math.min(3,state.questBerries)+'/3',reward:70},{done:state.questSold,claimed:state.claimed[1],txt:'🏪 商店で何か売ろう',progress:state.questSold?'達成':'未達成',reward:80},{done:state.questGrown,claimed:state.claimed[2],txt:'🥕 にんじんを育てて収穫しよう',progress:state.questGrown?'達成':'未達成',reward:100}];for(const q of quests){content.appendChild(row(q.claimed?'✅':'⭐',q.txt,q.progress+' ・報酬 '+q.reward+'コイン',null,null))}paragraph(content,'おねがいは自動で達成・報酬受け取りになるよ。','tip-box')}
  updateHud()}
 function closePanel(){$('panelOverlay').hidden=true;paused=false;panelType='';setContext()}
@@ -769,7 +799,7 @@ function bindControls(){const dirs=document.querySelectorAll('[data-dir]');dirs.
  $('fishBack').addEventListener('click',stopFishing);$('roomDialogClose').addEventListener('click',closeRoomDialogue);
  $('startBtn').addEventListener('click',()=>{$('welcomeOverlay').hidden=true;paused=false;state.welcomeSeen=true;save();showToast('🌿 島を探検しよう！')});document.addEventListener('visibilitychange',()=>{if(document.hidden){if(fishing.stage!=='idle')stopFishing();if(watering.active)finishWatering();save()}else{syncRealClock();save()}});window.addEventListener('pageshow',()=>syncRealClock());window.addEventListener('pagehide',save);
 }
-function start(){try{initializeGL();bindControls();syncRealClock();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),getIslandBounds:()=>({grass:EXPANSION.grass,sand:EXPANSION.sand}),getRedevelopment:()=>({progress:state.redevelopmentProgress,stage:REDEVELOPMENT.stage(state.redevelopmentProgress),overview:overviewMode}),moveTo:(x,z)=>{state.x=x;state.z=z;setContext()},interact,saveNow,openPanel,price,vertices:worldVerts,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getMokoPose:()=>({...mokoPose}),updateMoko,getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,dateKey:state.realDateKey,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),syncClock:syncRealClock,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
+function start(){try{initializeGL();bindControls();syncRealClock();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),getIslandBounds:()=>({grass:EXPANSION.grass,sand:EXPANSION.sand}),getRedevelopment:()=>({progress:state.redevelopmentProgress,stage:REDEVELOPMENT.stage(state.redevelopmentProgress),overview:overviewMode}),getSeaLine:()=>({island:state.currentIsland,rides:state.seaLineRides,riding:railRide.active,progress:railRide.progress,from:railRide.from,to:railRide.to}),boardTrain:beginSeaJourney,updateTrain:updateSeaRide,moveTo:(x,z)=>{state.x=x;state.z=z;setContext()},interact,saveNow,openPanel,price,vertices:worldVerts,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getMokoPose:()=>({...mokoPose}),updateMoko,getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,dateKey:state.realDateKey,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),syncClock:syncRealClock,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 
