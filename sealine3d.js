@@ -134,21 +134,6 @@ function buildMarket(b){
   for(let j=0;j<3;j++)b.sphere(x-.36+j*.34,.90,z+.42,.16,.12,.14,['#f6cb75','#88c782','#e99a80'][j],4,6);
  }
 }
-function buildWheel(b){
- const x=60.5,z=2.4,r=2.2,cy=3.1;
- for(const side of[-1,1]){
-  b.cylinder(x+side*.66,1.48,z,.09,3.0,6,'#b2c3b8');
- }
- const spokes=10;
- for(let k=0;k<spokes;k++){
-  const a=k*Math.PI*2/spokes,n=(k+1)*Math.PI*2/spokes;
-  const xx=x+r*Math.cos(a),yy=cy+r*Math.sin(a),nx=x+r*Math.cos(n),ny=cy+r*Math.sin(n);
-  b.quad([xx,yy,z-.13],[nx,ny,z-.13],[nx,ny,z+.13],[xx,yy,z+.13],'#f5da91');
-  branch(b,[x,z],[xx,z],.01,-100,'#ffffff'); // no-op removed below
-  b.box(xx,yy-.19,z+.31,.40,.38,.42,['#efb4ad','#a3d6d4','#f8dd91'][k%3]);
- }
- b.cylinder(x,cy,z,.34,.4,10,'#efc97e');
-}
 function wheel(b){
  // Ring made of vertical strips with small passenger baskets.
  const x=60.5,z=2.45,cy=3.0,r=2.12;
