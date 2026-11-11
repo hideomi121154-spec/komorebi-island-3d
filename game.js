@@ -814,15 +814,65 @@ function openPanel(type){panelType=type;paused=true;for(let dir of Object.keys(i
  updateHud()}
 function closePanel(){$('panelOverlay').hidden=true;paused=false;panelType='';setContext()}
 function exportSave(){const data=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const url=URL.createObjectURL(data),a=document.createElement('a');a.href=url;a.download='komorebi-save-day'+state.day+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);showToast('セーブデータを書き出したよ')}
+function refreshSkyButton(){
+ const button=$('skyViewBtn');if(!button||!CAMERA)return;
+ const sky=CAMERA.snapshot().sky;
+ button.classList.toggle('active',sky);
+ button.textContent=sky?'🏝️':'🎆';
+ button.setAttribute('aria-pressed',sky?'true':'false');
+ button.setAttribute('aria-label',sky?'島の画面へ戻る':'空を見上げて花火を見る');
+}
+function toggleSkyCamera(){
+ if(!CAMERA||indoor.room||railRide.active||fishing.stage!=='idle')return;
+ const isSky=!CAMERA.snapshot().sky;
+ CAMERA.skyView(isSky);
+ if(isSky){overviewMode=false;seaLineOverview=false;camFocus.x=state.x;camFocus.z=state.z;$('redevelopmentViewBtn').classList.remove('active')}
+ refreshSkyButton();
+ showToast(isSky?'🎆 空を見上げたよ！ 指で上下、ピンチで拡大できるよ':'🏝️ 島の景色に戻ったよ');
+}
 function bindControls(){const dirs=document.querySelectorAll('[data-dir]');dirs.forEach(btn=>{const dir=btn.dataset.dir;btn.addEventListener('pointerdown',e=>{e.preventDefault();input[dir]=true;btn.classList.add('pressed');try{btn.setPointerCapture(e.pointerId)}catch{}});const release=e=>{input[dir]=false;btn.classList.remove('pressed')};btn.addEventListener('pointerup',release);btn.addEventListener('pointercancel',release);btn.addEventListener('lostpointercapture',release)});
  const codes={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};
  document.addEventListener('keydown',e=>{if(fishing.stage!=='idle'){if(e.code==='Escape'){e.preventDefault();stopFishing()}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)fishAction()}else if(codes[e.code])e.preventDefault();return}if(codes[e.code]){e.preventDefault();input[codes[e.code]]=true}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)interact()}else if(e.code==='Escape'){if(!$('roomDialogue').hidden)closeRoomDialogue();else if(!$('panelOverlay').hidden)closePanel();else if(indoor.room)leaveRoom()}});document.addEventListener('keyup',e=>{if(codes[e.code]){e.preventDefault();input[codes[e.code]]=false}});window.addEventListener('blur',()=>Object.keys(input).forEach(d=>input[d]=false));
- $('redevelopmentHud').addEventListener('click',()=>{if(fishing.stage==='idle'&&!indoor.room)openPanel('redevelopment')});$('redevelopmentViewBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'){overviewMode=!overviewMode;$('redevelopmentViewBtn').classList.toggle('active',overviewMode);showToast(overviewMode?(state.currentIsland==='commerce'?'🏙️ 商業島を見渡そう':'🏗️ 島の再開発を見渡そう'):'🚶 いつもの視点に戻したよ')}});$('seaLineBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'&&!railRide.active)openPanel('sealine')});$('islandMapBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle')openPanel('map')});$('rotateLeft').addEventListener('click',()=>{state.angle-=Math.PI/4;save()});$('rotateRight').addEventListener('click',()=>{state.angle+=Math.PI/4;save()});$('cameraReset').addEventListener('click',()=>{state.angle=0;save();showToast('📷 カメラを戻したよ')});$('actionBtn').addEventListener('click',()=>{if(fishing.stage==='idle')interact();else fishAction()});$('bagBtn').addEventListener('click',()=>openPanel('bag'));$('questBtn').addEventListener('click',()=>openPanel('quests'));$('nextDayBtn').addEventListener('click',saveNow);$('panelClose').addEventListener('click',closePanel);$('panelOverlay').addEventListener('click',e=>{if(e.target===$('panelOverlay'))closePanel()});
- let drag=null;canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,angle:state.angle,pointerId:e.pointerId};try{canvas.setPointerCapture(e.pointerId)}catch{}});canvas.addEventListener('pointermove',e=>{if(!drag||drag.pointerId!==e.pointerId)return;state.angle=drag.angle+(e.clientX-drag.x)*.0055});canvas.addEventListener('pointerup',()=>{if(drag)save();drag=null});canvas.addEventListener('pointercancel',()=>drag=null);
+ $('redevelopmentHud').addEventListener('click',()=>{if(fishing.stage==='idle'&&!indoor.room)openPanel('redevelopment')});$('redevelopmentViewBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'){overviewMode=!overviewMode;$('redevelopmentViewBtn').classList.toggle('active',overviewMode);showToast(overviewMode?(state.currentIsland==='commerce'?'🏙️ 商業島を見渡そう':'🏗️ 島の再開発を見渡そう'):'🚶 いつもの視点に戻したよ')}});$('seaLineBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'&&!railRide.active)openPanel('sealine')});$('islandMapBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle')openPanel('map')});$('rotateLeft').addEventListener('click',()=>{state.angle-=Math.PI/4;save()});$('rotateRight').addEventListener('click',()=>{state.angle+=Math.PI/4;save()});$('cameraReset').addEventListener('click',()=>{state.angle=0;CAMERA?.reset();refreshSkyButton();save();showToast('📷 カメラを戻したよ')});$('skyViewBtn').addEventListener('click',toggleSkyCamera);$('actionBtn').addEventListener('click',()=>{if(fishing.stage==='idle')interact();else fishAction()});$('bagBtn').addEventListener('click',()=>openPanel('bag'));$('questBtn').addEventListener('click',()=>openPanel('quests'));$('nextDayBtn').addEventListener('click',saveNow);$('panelClose').addEventListener('click',closePanel);$('panelOverlay').addEventListener('click',e=>{if(e.target===$('panelOverlay'))closePanel()});
+ // Mouse wheel / trackpad zoom; touch: one-finger free look, two-finger pinch zoom.
+ const pointers=new Map();let drag=null,pinch=null;
+ const pointerDistance=()=>{const p=[...pointers.values()];return p.length<2?0:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)};
+ canvas.addEventListener('wheel',e=>{if(!CAMERA||indoor.room||railRide.active)return;e.preventDefault();CAMERA.zoomBy(Math.exp(-e.deltaY*.0013))},{passive:false});
+ canvas.addEventListener('pointerdown',e=>{
+  const id=e.pointerId??0;
+  pointers.set(id,{x:e.clientX,y:e.clientY});
+  if(pointers.size===1){drag={id,x:e.clientX,lastY:e.clientY,angle:state.angle};pinch=null}
+  else if(pointers.size===2&&CAMERA){pinch={distance:Math.max(1,pointerDistance()),zoom:CAMERA.snapshot().zoom};drag=null}
+  try{canvas.setPointerCapture(id)}catch{}
+ });
+ canvas.addEventListener('pointermove',e=>{
+  const id=e.pointerId??0;if(!pointers.has(id))return;
+  pointers.set(id,{x:e.clientX,y:e.clientY});
+  if(pointers.size>=2){
+   if(CAMERA&&pinch)CAMERA.zoomTo(pinch.zoom*Math.max(1,pointerDistance())/pinch.distance);
+   return;
+  }
+  if(!drag||drag.id!==id)return;
+  if(!indoor.room&&!railRide.active){
+   state.angle=drag.angle+(e.clientX-drag.x)*.0055;
+   CAMERA?.lookBy(e.clientY-drag.lastY);
+   refreshSkyButton();
+  }
+  drag.lastY=e.clientY;
+ });
+ const finishPointer=e=>{
+  const id=e.pointerId??0;pointers.delete(id);
+  if(pointers.size===1){const [remaining,point]=[...pointers.entries()][0];drag={id:remaining,x:point.x,lastY:point.y,angle:state.angle};pinch=null}
+  else if(!pointers.size){drag=null;pinch=null;save()}
+ };
+ canvas.addEventListener('pointerup',finishPointer);
+ canvas.addEventListener('pointercancel',finishPointer);
+ canvas.addEventListener('lostpointercapture',finishPointer);
+ refreshSkyButton();
  $('fishBack').addEventListener('click',stopFishing);$('roomDialogClose').addEventListener('click',closeRoomDialogue);
  $('startBtn').addEventListener('click',()=>{$('welcomeOverlay').hidden=true;paused=false;state.welcomeSeen=true;save();showToast('🌿 島を探検しよう！')});document.addEventListener('visibilitychange',()=>{if(document.hidden){if(fishing.stage!=='idle')stopFishing();if(watering.active)finishWatering();save()}else{syncRealClock();save()}});window.addEventListener('pageshow',()=>syncRealClock());window.addEventListener('pagehide',save);
 }
-function start(){try{initializeGL();bindControls();syncRealClock();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='train')beginSeaJourney();requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),getIslandBounds:()=>({grass:EXPANSION.grass,sand:EXPANSION.sand}),getRedevelopment:()=>({progress:state.redevelopmentProgress,stage:REDEVELOPMENT.stage(state.redevelopmentProgress),overview:overviewMode}),getSeaLine:()=>({island:state.currentIsland,rides:state.seaLineRides,riding:railRide.active,progress:railRide.progress,from:railRide.from,to:railRide.to,panorama:seaLineOverview}),boardTrain:beginSeaJourney,updateTrain:updateSeaRide,moveTo:(x,z)=>{state.x=x;state.z=z;nearest=findNearby();setContext()},interact,saveNow,openPanel,price,vertices:worldVerts,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getMokoPose:()=>({...mokoPose}),updateMoko,getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,dateKey:state.realDateKey,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),syncClock:syncRealClock,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
+function start(){try{initializeGL();bindControls();syncRealClock();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='train')beginSeaJourney();requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),getIslandBounds:()=>({grass:EXPANSION.grass,sand:EXPANSION.sand}),getRedevelopment:()=>({progress:state.redevelopmentProgress,stage:REDEVELOPMENT.stage(state.redevelopmentProgress),overview:overviewMode}),getSeaLine:()=>({island:state.currentIsland,rides:state.seaLineRides,riding:railRide.active,progress:railRide.progress,from:railRide.from,to:railRide.to,panorama:seaLineOverview}),boardTrain:beginSeaJourney,updateTrain:updateSeaRide,moveTo:(x,z)=>{state.x=x;state.z=z;nearest=findNearby();setContext()},interact,saveNow,openPanel,price,vertices:worldVerts,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getMokoPose:()=>({...mokoPose}),updateMoko,getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,dateKey:state.realDateKey,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),getCamera:()=>CAMERA?.snapshot()||null,toggleSkyCamera,syncClock:syncRealClock,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 
