@@ -154,5 +154,44 @@ function drawCanvas(ctx,width,height,ms,intensity,reducedMotion=false){
  }
  ctx.restore();
 }
-window.KomorebiNightFestival={CYCLE,ROCKET_MS,BURST_MS,stars,eventsAt,fireworkAt,makeParticles,burstLighting,createRenderer,drawCanvas};
+// Explicit emissive panels: RGB above 1.0 is reserved for warm night windows
+// and is interpreted as self-illumination by the island's 3D shader.
+function drawWorldLights(builder,ms,intensity){
+ if(intensity<.02)return 0;
+ let count=0;
+ const pulse=.96+.04*Math.sin(ms*.0013);
+ function panel(x,y,z,w,h,seed){
+  if(random(seed*17+13)<.12)return;
+  const flicker=.78+.22*random(seed*37+7);
+  const emission=clamp(intensity*pulse*flicker);
+  const color=[1+emission*1.08,1+emission*.87,1+emission*.36];
+  builder.quad([x-w/2,y-h/2,z],[x+w/2,y-h/2,z],
+   [x+w/2,y+h/2,z],[x-w/2,y+h/2,z],color);count++;
+ }
+ // Home, shop — keep the original daylight windows and save objects untouched.
+ for(let side of [-1,1]){
+  panel(-6+side*1.22,1.20,-3.07,.43,.43,100+side);
+  panel(6+side*1.45,1.20,-3.02,.43,.43,110+side);
+ }
+ // Apartments by the redevelopment district.
+ for(let floor=0;floor<4;floor++)for(let col=0;col<3;col++)
+  panel(7.95+(col-1)*.78,.86+floor*1.05,-11.23,.43,.52,210+floor*3+col);
+ for(let floor=0;floor<3;floor++)for(let side of [-1,1])
+  panel(3.2+side*.62,.70+floor*1.06,-11.60,.44,.45,310+floor*3+side);
+ // Commercial island hotel, shopping mall and offices.
+ for(let floor=0;floor<4;floor++)for(let col=0;col<3;col++)
+  panel(51.6+(col-1)*1.05,.92+floor*1.11,-8.28,.35,.44,400+floor*3+col);
+ for(let col=0;col<6;col++)
+  panel(52.3-2.2+col*.88,1.28,-2.25,.44,1.22,500+col);
+ for(let floor=0;floor<6;floor++)for(let col=0;col<3;col++)
+  panel(58.3+(col-1)*.86,1.03+floor*.83,-6.39,.71,.47,600+floor*3+col);
+ // A few station / boardwalk lanterns provide points of warm local interest.
+ const light=[1+intensity*1.04,1+intensity*.86,1+intensity*.55];
+ for(const [x,y,z] of [[-2.7,1.35,-2.8],[2.7,1.35,-2.8],
+  [16.2,1.5,-1.7],[47.2,1.55,-1.1],[51.2,1.55,.30],[55.6,1.5,-2.7]]){
+  builder.box(x,y,z,.20,.22,.20,light);count++;
+ }
+ return count;
+}
+window.KomorebiNightFestival={CYCLE,ROCKET_MS,BURST_MS,stars,eventsAt,fireworkAt,makeParticles,burstLighting,createRenderer,drawCanvas,drawWorldLights};
 })();
