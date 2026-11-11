@@ -128,7 +128,7 @@ function makeWorldParticles(ms,intensity,anchor={x:0,z:0},eye=[0,2,0],reducedMot
  for(const e of eventsAt(ms)){
   const tx=anchor.x+(e.x-.5)*12;
   const tz=anchor.z+4.2+(random(e.index*101+421)-.5)*8.5;
-  const ty=25+random(e.index*239+92)*9;
+  const ty=(anchor.sky?25:18)+random(e.index*239+92)*(anchor.sky?9:7);
   if(e.age<ROCKET_MS){
    const t=clamp(e.age/ROCKET_MS);
    const head=1.5+(ty-1.5)*t*t*(3-2*t);
