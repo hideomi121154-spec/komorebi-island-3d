@@ -468,7 +468,7 @@ function render(now){if(!gameReady)return;if(indoor.walkIn&&!indoor.room){const 
  resize();
  const aspect=canvas.width/canvas.height;
  const distance=fishingActive?(aspect<.70?14.4:12.1):(overviewMode&&!roomActive?(aspect<.70?40:32):(aspect<.70?26.0:20.5));
- const scenicAngle=overviewMode&&!roomActive?state.angle-.42:state.angle;
+ const scenicAngle=overviewMode&&!roomActive?state.angle-.52:state.angle;
   const eye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):[camFocus.x+Math.sin(scenicAngle)*distance,fishingActive?9.2:(overviewMode?30:14.6),camFocus.z+Math.cos(scenicAngle)*distance];
  const center=roomActive?[0,.95,-.35]:[camFocus.x,0,camFocus.z];
  viewFov=roomActive?52:(overviewMode?54:48);
