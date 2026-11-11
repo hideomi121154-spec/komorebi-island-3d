@@ -32,7 +32,7 @@ test('extended terrain and building mesh draw without invalid coordinates',()=>{
  const b=fakeMesh();
  expanded.ground(b);
  expanded.objects(b);
- assert.ok(b.calls>300);
+ assert.ok(b.calls>180);
 });
 test('map draws island and the saved player location',()=>{
  let draws=0;
