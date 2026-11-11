@@ -72,6 +72,7 @@ function mockGame(initialSaved=null,startEpoch=Date.parse('2026-11-10T12:35:00Z'
  new Script(timeCode).runInNewContext(ctx);
  new Script(readFileSync(new URL('../expansion3d.js',import.meta.url),'utf8')).runInNewContext(ctx);
   new Script(readFileSync(new URL('../redevelopment3d.js',import.meta.url),'utf8')).runInNewContext(ctx);
+  new Script(readFileSync(new URL('../sealine3d.js',import.meta.url),'utf8')).runInNewContext(ctx);
   new Script(gameCode).runInNewContext(ctx);
  listeners.get('DOMContentLoaded')();
  assert.ok(win.__komorebiTest,'game initialization');
