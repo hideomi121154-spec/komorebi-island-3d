@@ -10,6 +10,7 @@ on:
       - 'daynight.js'
       - 'styles.css'
       - 'index.html'
+      - 'sealine3d.js'
   workflow_dispatch:
 permissions:
   contents: read
@@ -27,6 +28,16 @@ jobs:
           localStorage.setItem('komorebi_island_3d_v01',JSON.stringify({
             version:1,day:2,coins:27,x:0,z:3,angle:0,welcomeSeen:true,
             inventory:{berry:2,wood:1,seed:2},
+            questBerries:2,redevelopmentProgress:32
+          }));
+          location.replace('/index.html');
+          </script></body></html>
+          EOF
+          cat > preview-seed-city.html <<'EOF'
+          <!doctype html><html><head><meta charset="utf-8"></head><body><script>
+          localStorage.setItem('komorebi_island_3d_v01',JSON.stringify({
+            version:1,day:3,coins:185,x:47.4,z:-1.6,angle:0,welcomeSeen:true,
+            inventory:{berry:2,wood:1,fish:1,seed:2},currentIsland:'commerce',
             questBerries:2,redevelopmentProgress:32
           }));
           location.replace('/index.html');
@@ -52,9 +63,18 @@ jobs:
             http://127.0.0.1:8765/preview-seed.html
           test -s "$RUNNER_TEMP/island-mobile.png"
           file "$RUNNER_TEMP/island-mobile.png"
+          "$CHROME" --headless --no-sandbox --disable-dev-shm-usage \
+            --enable-webgl --enable-unsafe-swiftshader --use-angle=swiftshader \
+            --hide-scrollbars --window-size=414,896 --virtual-time-budget=8500 \
+            "--screenshot=$RUNNER_TEMP/commercial-island.png" \
+            http://127.0.0.1:8765/preview-seed-city.html
+          test -s "$RUNNER_TEMP/commercial-island.png"
+          file "$RUNNER_TEMP/commercial-island.png"
       - name: Upload screenshot
         uses: actions/upload-artifact@v4
         with:
           name: komorebi-portrait-preview
-          path: ${{ runner.temp }}/island-mobile.png
+          path: |
+            ${{ runner.temp }}/island-mobile.png
+            ${{ runner.temp }}/commercial-island.png
           retention-days: 3
