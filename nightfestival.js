@@ -5,9 +5,9 @@
 (() => {
 'use strict';
 const TWO_PI=Math.PI*2;
-const CYCLE=2850;
+const CYCLE=1600;
 const ROCKET_MS=850;
-const BURST_MS=1850;
+const BURST_MS=2400;
 const palette=[
  [1.00,.68,.24], [1.00,.40,.65], [.41,.80,1.00],
  [.59,1.00,.74], [.78,.58,1.00], [1.00,.84,.54]
@@ -33,7 +33,7 @@ function fireworkAt(index){
 function eventsAt(ms){
  const slot=Math.floor(Math.max(0,ms)/CYCLE);
  const events=[];
- for(let i=Math.max(0,slot-1);i<=slot;i++){
+ for(let i=slot-2;i<=slot;i++){
   const age=ms-i*CYCLE;
   if(age>=0&&age<=ROCKET_MS+BURST_MS)events.push({index:i,age,...fireworkAt(i)});
  }
@@ -106,36 +106,99 @@ function createShader(gl,type,src){
  }
  return shader;
 }
+// 3D fireworks use world coordinates. Unlike screen-fixed particles, they move
+// correctly as the player rotates, zooms and looks vertically overhead.
+function makeWorldParticles(ms,intensity,anchor={x:0,z:0},eye=[0,2,0],reducedMotion=false){
+ if(intensity<=.005)return new Float32Array(0);
+ const points=[];
+ function add(x,y,z,size,rgb,alpha){
+  if(![x,y,z,size,alpha].every(Number.isFinite)||alpha<.012)return;
+  points.push(x,y,z,size,rgb[0],rgb[1],rgb[2],clamp(alpha));
+ }
+ for(const star of stars){
+  const theta=star.x*TWO_PI;
+  const elev=.13+star.y/.565*1.37;
+  const radius=128;
+  const horizontal=Math.cos(elev)*radius;
+  const twinkle=reducedMotion?.82:(.73+.27*Math.sin(ms*.0015+star.phase*2));
+  add(eye[0]+Math.cos(theta)*horizontal,eye[1]+Math.sin(elev)*radius,
+      eye[2]+Math.sin(theta)*horizontal,star.radius*1.55,star.tint,twinkle*intensity*.90);
+ }
+ if(reducedMotion)return new Float32Array(points);
+ for(const e of eventsAt(ms)){
+  const tx=anchor.x+(e.x-.5)*39;
+  const tz=anchor.z+(random(e.index*101+421)-.5)*29;
+  const ty=24+random(e.index*239+92)*11;
+  if(e.age<ROCKET_MS){
+   const t=clamp(e.age/ROCKET_MS);
+   const head=1.5+(ty-1.5)*t*t*(3-2*t);
+   for(let j=0;j<13;j++){
+    const fade=j/13;
+    const py=head-fade*7;
+    if(py<0)continue;
+    add(tx+.14*Math.sin(j+e.index),py,tz+.15*Math.cos(j*2+e.index),
+        2.1+2*(1-fade),e.color,(1-fade)*intensity);
+   }
+   add(tx,head,tz,7.0,[1,1,.85],intensity);
+  }else{
+   const age=e.age-ROCKET_MS;
+   const t=clamp(age/BURST_MS);
+   const grow=Math.pow(t,.60);
+   const fade=Math.pow(1-t,1.06)*intensity;
+   const spread=(8.6+e.spread*42)*grow;
+   const gravity=5.5*t*t;
+   if(t<.15)add(tx,ty,tz,12.0,[1,1,.91],fade*(1-t/.15));
+   for(let spoke=0;spoke<76;spoke++){
+    const phi=TWO_PI*spoke/76+e.index*.39;
+    const elev=(random(spoke*147+e.index*83)-.5)*1.24;
+    const wobble=.18*Math.sin(spoke*1.7+e.index);
+    const dist=spread*(.76+random(e.index*239+spoke*29)*.40);
+    for(let trail=0;trail<3;trail++){
+     const r=dist*(1-trail*.12);
+     const co=Math.cos(elev+wobble*t);
+     add(tx+Math.cos(phi)*co*r,
+         ty+Math.sin(elev+wobble*t)*r-gravity*(.7+random(spoke+29)),
+         tz+Math.sin(phi)*co*r,trail?2.3:3.7,
+         trail===0?[1,1,.85]:e.color,fade*(1-trail*.22));
+    }
+   }
+  }
+ }
+ return new Float32Array(points);
+}
 function createRenderer(gl){
- const vertex="attribute vec3 aParticle;attribute vec4 aTint;uniform float uScale;varying vec4 vTint;void main(){vec2 xy=aParticle.xy*vec2(2.0,-2.0)+vec2(-1.0,1.0);gl_Position=vec4(xy,.999,1.0);gl_PointSize=clamp(aParticle.z*uScale,1.0,28.0);vTint=aTint;}";
- const fragment="precision mediump float;varying vec4 vTint;void main(){float d=length(gl_PointCoord-vec2(.5))*2.0;float halo=1.0-smoothstep(.06,1.0,d);float core=1.0-smoothstep(.0,.33,d);gl_FragColor=vec4(vTint.rgb,vTint.a*(halo*.66+core*.34));}";
+ const vertex="attribute vec4 aWorld;attribute vec4 aTint;uniform mat4 uView;uniform mat4 uProjection;uniform float uScale;varying vec4 vTint;void main(){vec4 p=uView*vec4(aWorld.xyz,1.0);gl_Position=uProjection*p;gl_PointSize=clamp(aWorld.w*uScale*(47.0/max(12.0,-p.z)),1.0,42.0);vTint=aTint;}";
+ const fragment="precision mediump float;varying vec4 vTint;void main(){float d=length(gl_PointCoord-vec2(.5))*2.0;float halo=1.0-smoothstep(.03,1.0,d);float core=1.0-smoothstep(.0,.34,d);gl_FragColor=vec4(vTint.rgb,vTint.a*(halo*.60+core*.40));}";
  const program=gl.createProgram();
  const vs=createShader(gl,gl.VERTEX_SHADER,vertex),fs=createShader(gl,gl.FRAGMENT_SHADER,fragment);
  gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);
  gl.deleteShader(vs);gl.deleteShader(fs);
  if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error('Festival linking: '+gl.getProgramInfoLog(program));
  const buffer=gl.createBuffer();
- const aParticle=gl.getAttribLocation(program,'aParticle'),aTint=gl.getAttribLocation(program,'aTint');
+ const aWorld=gl.getAttribLocation(program,'aWorld'),aTint=gl.getAttribLocation(program,'aTint');
+ const uView=gl.getUniformLocation(program,'uView'),uProjection=gl.getUniformLocation(program,'uProjection');
  const uScale=gl.getUniformLocation(program,'uScale');
  return {
-  draw(ms,intensity,pixelRatio,reducedMotion=false){
-   if(intensity<=.005)return;
-   const points=makeParticles(ms,intensity,reducedMotion);
+  draw(ms,intensity,pixelRatio,reducedMotion=false,view,projection,anchor,eye){
+   if(intensity<=.005||!view||!projection||!eye)return;
+   const points=makeWorldParticles(ms,intensity,anchor,eye,reducedMotion);
    if(!points.length)return;
    gl.useProgram(program);
    gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
    gl.bufferData(gl.ARRAY_BUFFER,points,gl.DYNAMIC_DRAW);
-   gl.enableVertexAttribArray(aParticle);
-   gl.vertexAttribPointer(aParticle,3,gl.FLOAT,false,28,0);
+   gl.enableVertexAttribArray(aWorld);
+   gl.vertexAttribPointer(aWorld,4,gl.FLOAT,false,32,0);
    gl.enableVertexAttribArray(aTint);
-   gl.vertexAttribPointer(aTint,4,gl.FLOAT,false,28,12);
+   gl.vertexAttribPointer(aTint,4,gl.FLOAT,false,32,16);
+   gl.uniformMatrix4fv(uView,false,view);
+   gl.uniformMatrix4fv(uProjection,false,projection);
    gl.uniform1f(uScale,Math.max(1,pixelRatio||1));
-   // Draw sky first, with depth writing disabled; the actual island covers it.
+   // Fill the distant sky first, with no depth writes.
    gl.disable(gl.DEPTH_TEST);gl.depthMask(false);
    gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);
-   gl.drawArrays(gl.POINTS,0,points.length/7);
+   gl.drawArrays(gl.POINTS,0,points.length/8);
    gl.disable(gl.BLEND);gl.depthMask(true);gl.enable(gl.DEPTH_TEST);
-   gl.disableVertexAttribArray(aParticle);gl.disableVertexAttribArray(aTint);
+   gl.disableVertexAttribArray(aWorld);gl.disableVertexAttribArray(aTint);
   },
   destroy(){gl.deleteBuffer(buffer);gl.deleteProgram(program);}
  };
@@ -193,5 +256,5 @@ function drawWorldLights(builder,ms,intensity){
  }
  return count;
 }
-window.KomorebiNightFestival={CYCLE,ROCKET_MS,BURST_MS,stars,eventsAt,fireworkAt,makeParticles,burstLighting,createRenderer,drawCanvas,drawWorldLights};
+window.KomorebiNightFestival={CYCLE,ROCKET_MS,BURST_MS,stars,eventsAt,fireworkAt,makeParticles,makeWorldParticles,burstLighting,createRenderer,drawCanvas,drawWorldLights};
 })();
