@@ -102,3 +102,8 @@
 /* JST is a live read-only clock: time cannot be fast-forwarded. */
 .clock-pill{pointer-events:none;touch-action:auto;user-select:none;-webkit-user-select:none;cursor:default}
 .clock-pill .clock-fast{display:none}
+
+/* v1.0 island map: icon is usable on narrow mobile screens. */
+#islandMapBtn{font-size:21px;touch-action:manipulation}
+#panelContent canvas{object-fit:contain}
+#app.indoors #islandMapBtn{display:none}
