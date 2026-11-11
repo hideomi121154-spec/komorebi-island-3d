@@ -158,7 +158,7 @@ function paintMap(canvas,state){
  ctx.fillStyle='#75c4d1';ctx.beginPath();ctx.ellipse(-7,6,3,2.2,0,0,7);ctx.fill();
  ctx.beginPath();ctx.ellipse(12.6,4.1,1.8,1.4,0,0,7);ctx.fill();
  ctx.strokeStyle='#75c4d1';ctx.lineWidth=1.8;ctx.beginPath();stream.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.stroke();
- for(const [x,z,emoji] of [[-6,-5,'🏡'],[6,-5,'🏪'],[-7,6,'🎣'],[6,6,'🥕'],[-12,9.2,'🏕️'],[9.5,-9.3,'🏠'],[12.55,9.55,'💦'],[17.4,-.8,'🛶']]){
+ for(const [x,z,emoji] of [[-6,-5,'🏡'],[6,-5,'🏪'],[-7,6,'🎣'],[6,6,'🥕'],[-12,9.2,'🏕️'],[9.5,-9.3,'🏠'],[12.55,9.55,'💦'],[17.4,-.8,'🛶'],[14.05,-5.75,'🏗️']]){
   ctx.save();ctx.translate(x,z);ctx.scale(1/scale,1/scale);ctx.font='20px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(emoji,0,0);ctx.restore();
  }
  ctx.fillStyle='#eb6e57';ctx.beginPath();ctx.arc(state.x,state.z,.63,0,Math.PI*2);ctx.fill();
