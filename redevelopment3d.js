@@ -181,11 +181,20 @@ function finishedApartments(b){
  b.box(sx,3.62,sz,2.57,.22,2.19,'#e1d1af');
 }
 function scenicDetails(b){
- // Quiet white clouds behind the town, deliberately away from the crane.
+ // Soft white 2D billboards avoid the dark, stone-like shading of a 3D sphere.
+ // They are still world-space geometry, so camera movement retains parallax.
+ const puff=(x,y,z,rx,ry)=>{
+  const white=[1.34,1.34,1.30],segments=12;
+  for(let i=0;i<segments;i++){
+   const a=i*Math.PI*2/segments,n=(i+1)*Math.PI*2/segments;
+   b.tri([x,y,z],[x+rx*Math.cos(a),y+ry*Math.sin(a),z],
+      [x+rx*Math.cos(n),y+ry*Math.sin(n),z],white);
+  }
+ };
  for(const [x,y,z,s] of [[-12,12,-29,1.1],[3,13,-28,1.2],[20,14,-28,1.04]]){
-  b.sphere(x,y,z,2.3*s,.60*s,.74*s,'#f9ffff',4,8);
-  b.sphere(x-.96*s,y+.38*s,z,1.25*s,.85*s,.67*s,'#fffefa',5,8);
-  b.sphere(x+.78*s,y+.30*s,z,1.47*s,.78*s,.70*s,'#ffffff',5,8);
+  puff(x,y,z,1.75*s,.36*s);
+  puff(x-.89*s,y+.35*s,z,.96*s,.72*s);
+  puff(x+.69*s,y+.26*s,z,1.12*s,.65*s);
  }
  // Delicate sea foam around the shoreline, without covering the beach.
  for(let i=0;i<44;i++){
