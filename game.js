@@ -12,16 +12,19 @@ const EXPANSION=window.KomorebiExpansion;
 if(!EXPANSION)throw Error('expansion3d.js is required');
 const REDEVELOPMENT=window.KomorebiRedevelopment;
 if(!REDEVELOPMENT)throw Error('redevelopment3d.js is required');
-const initial = {version:1,day:1,timeMinutes:480,realDateKey:null,coins:120,x:0,z:3,angle:0,inventory:{berry:0,wood:0,shell:0,fish:0,carrot:0,seed:2},harvested:[],shells:[],farm:[null,null,null],furniture:0,houseLevel:1,talkedDay:0,mokoGiftDay:0,questBerries:0,questSold:false,questGrown:false,claimed:[false,false,false],welcomeSeen:false,redevelopmentProgress:32,redevelopmentDateKey:null};
-const itemLabels={berry:'木の実',wood:'木材',shell:'貝がら',fish:'魚',carrot:'にんじん',seed:'種'};
-const itemIcons={berry:'🍎',wood:'🪵',shell:'🐚',fish:'🐟',carrot:'🥕',seed:'🌱'};
+const SEA=window.KomorebiSeaLine;
+if(!SEA)throw Error('sealine3d.js is required');
+const initial = {version:1,day:1,timeMinutes:480,realDateKey:null,coins:120,x:0,z:3,angle:0,inventory:{berry:0,wood:0,shell:0,fish:0,carrot:0,seed:2,coffee:0,souvenir:0,snack:0},harvested:[],shells:[],farm:[null,null,null],furniture:0,houseLevel:1,talkedDay:0,mokoGiftDay:0,questBerries:0,questSold:false,questGrown:false,claimed:[false,false,false],welcomeSeen:false,redevelopmentProgress:32,redevelopmentDateKey:null,currentIsland:'home',seaLineRides:0};
+const itemLabels={berry:'木の実',wood:'木材',shell:'貝がら',fish:'魚',carrot:'にんじん',seed:'種',coffee:'コーヒー',souvenir:'商業島みやげ',snack:'おやつ'};
+const itemIcons={berry:'🍎',wood:'🪵',shell:'🐚',fish:'🐟',carrot:'🥕',seed:'🌱',coffee:'☕',souvenir:'🎁',snack:'🍪'};
 const basePrice={berry:32,wood:20,shell:27,fish:74,carrot:46};
 const KEY='komorebi_island_3d_v01';
-function readSave(){try{const p=JSON.parse(localStorage.getItem(KEY)||'null');if(!p||p.version!==1)return structuredCloneSafe(initial);const s=Object.assign(structuredCloneSafe(initial),p);s.inventory=Object.assign({},initial.inventory,p.inventory||{});if(!Array.isArray(s.farm)||s.farm.length!==3)s.farm=[null,null,null];if(!Array.isArray(s.claimed))s.claimed=[false,false,false];s.timeMinutes=DAYLIGHT.normalMinutes(s.timeMinutes);s.realDateKey=typeof p.realDateKey==='string'?p.realDateKey:null;s.redevelopmentProgress=REDEVELOPMENT.clamp(p.redevelopmentProgress);s.redevelopmentDateKey=typeof p.redevelopmentDateKey==='string'?p.redevelopmentDateKey:DAYLIGHT.realTimeAt(Date.now()).dateKey;return s;}catch{return structuredCloneSafe(initial)}}
+function readSave(){try{const p=JSON.parse(localStorage.getItem(KEY)||'null');if(!p||p.version!==1)return structuredCloneSafe(initial);const s=Object.assign(structuredCloneSafe(initial),p);s.inventory=Object.assign({},initial.inventory,p.inventory||{});if(!Array.isArray(s.farm)||s.farm.length!==3)s.farm=[null,null,null];if(!Array.isArray(s.claimed))s.claimed=[false,false,false];s.timeMinutes=DAYLIGHT.normalMinutes(s.timeMinutes);s.realDateKey=typeof p.realDateKey==='string'?p.realDateKey:null;s.redevelopmentProgress=REDEVELOPMENT.clamp(p.redevelopmentProgress);s.redevelopmentDateKey=typeof p.redevelopmentDateKey==='string'?p.redevelopmentDateKey:DAYLIGHT.realTimeAt(Date.now()).dateKey;s.currentIsland=SEA.isCommercial(s.x,s.z)?'commerce':'home';s.seaLineRides=Math.max(0,Math.floor(Number(p.seaLineRides)||0));return s;}catch{return structuredCloneSafe(initial)}}
 function structuredCloneSafe(v){return JSON.parse(JSON.stringify(v))}
 let state=readSave();
 const input={up:false,down:false,left:false,right:false};
 let panelType='',paused=false,gameReady=false,nearest=null,toaster=null,saveTimer=null,tick=0;
+const railRide={active:false,from:'home',to:'commerce',startedAt:0,progress:0,duration:7200};
 
 const fishing={stage:'idle',token:0,timer:null,deadline:0,stageAt:0,focusReturn:null};
 const BITE_WINDOW_MS=1600;
@@ -258,7 +261,7 @@ function updateMoko(now){
  }
 }
 
-const things=[{id:'home',x:-6,z:-2.4,r:2.05,icon:'🏡',name:'わたしの家の入口'}, {id:'shop',x:6,z:-2.4,r:2.05,icon:'🏪',name:'こもれび商店の入口'}, {id:'npc',x:1.9,z:.9,r:2.2,icon:'🐱',name:'住民のミミ'}, mokoThing, {id:'pond',x:-7,z:6,r:3.5,icon:'🎣',name:'おさかな池'}, ...farmPlots.map((p,i)=>({id:'plot'+i,x:p.x,z:p.z,r:1.55,icon:'🥕',name:'畑 '+(i+1)})),...trees.map((p,i)=>({id:'tree'+i,x:p.x,z:p.z,r:1.85,icon:'🌳',name:p.type==='pine'?'木材のとれる木':'実のなる木'})),...shells.map((p,i)=>({id:'shell'+i,x:p.x,z:p.z,r:1.5,icon:'🐚',name:'貝がら'})),...EXPANSION.places,REDEVELOPMENT.marker];
+const things=[{id:'home',x:-6,z:-2.4,r:2.05,icon:'🏡',name:'わたしの家の入口'}, {id:'shop',x:6,z:-2.4,r:2.05,icon:'🏪',name:'こもれび商店の入口'}, {id:'npc',x:1.9,z:.9,r:2.2,icon:'🐱',name:'住民のミミ'}, mokoThing, {id:'pond',x:-7,z:6,r:3.5,icon:'🎣',name:'おさかな池'}, ...farmPlots.map((p,i)=>({id:'plot'+i,x:p.x,z:p.z,r:1.55,icon:'🥕',name:'畑 '+(i+1)})),...trees.map((p,i)=>({id:'tree'+i,x:p.x,z:p.z,r:1.85,icon:'🌳',name:p.type==='pine'?'木材のとれる木':'実のなる木'})),...shells.map((p,i)=>({id:'shell'+i,x:p.x,z:p.z,r:1.5,icon:'🐚',name:'貝がら'})),...EXPANSION.places,REDEVELOPMENT.marker,...SEA.stations,...SEA.places];
 function hasResource(t){if(t.id.startsWith('tree'))return !state.harvested.includes(Number(t.id.slice(4)));if(t.id.startsWith('shell'))return !state.shells.includes(Number(t.id.slice(5)));return true}
 function findNearby(){let selected=null,best=1.2;for(const o of indoor.room?roomTargets[indoor.room]:things){if(!hasResource(o))continue;const d=dist(state.x,state.z,o.x,o.z)/o.r;if(d<best){best=d;selected=o}}return selected}
 function buildHouse(b,x,z,shop=false){const walls=shop?'#ffdcaa':'#fce5b9',roof=shop?'#72a5a2':'#e58c80';const w=shop?4.4:3.7,d=shop?3.45:3.4;b.box(x,.98,z,w,1.88,d,walls);b.roof(x,1.91,z,w,d,1.64,roof);b.box(x,.74,z+d/2+.035,1.0,1.49,.095,shop?'#6b958b':'#a37b57');b.box(x,.8,z+d/2+.1,.68,.89,.12,shop?'#d0e8de':'#bd9b73');b.sphere(x+.31,1.07,z+d/2+.22,.07,.07,.07,'#f8d183');for(const xoff of[-w*.33,w*.33]){b.box(x+xoff,1.20,z+d/2+.075,.7,.68,.12,'#fffef2');b.box(x+xoff,1.20,z+d/2+.15,.48,.47,.06,'#8dc8d0');b.box(x+xoff,1.20,z+d/2+.188,.08,.48,.05,'#fffdf2')}
@@ -270,7 +273,7 @@ function buildBench(b,x,z){b.box(x,.58,z,1.9,.22,.65,'#ba8c67');b.box(x,.93,z-.3
 let softwareGroundCount=0,softwareTerrainCount=0,softwareSandCount=0,softwareSeaCount=0;
 function buildStatic(){const b=new MeshBuilder();
  // Water plane, pale sandy shoreline, raised oval island.
- b.box(0,-.67,0,95,.20,95,'#79c5c8');softwareSeaCount=b.vertices.length/9;
+ b.box(19,-.67,0,162,.20,110,'#79c5c8');softwareSeaCount=b.vertices.length/9;
  const land=(rx,rz,y,edgeBottom,topCol,sideCol,seed)=>{const seg=52;const arr=[];for(let k=0;k<seg;k++){const a=2*Math.PI*k/seg;const r=1+Math.sin(a*7+seed)*.017+Math.cos(a*11+seed)*.012;arr.push([Math.cos(a)*rx*r,Math.sin(a)*rz*r])}for(let k=0;k<seg;k++){const p=arr[k],q=arr[(k+1)%seg];b.tri([0,y,0],[q[0],y,q[1]],[p[0],y,p[1]],topCol);b.quad([p[0],y,p[1]],[q[0],y,q[1]],[q[0]*.98,edgeBottom,q[1]*.98],[p[0]*.98,edgeBottom,p[1]*.98],sideCol)}};
  land(...EXPANSION.sand,-.19,-.57,'#f3dfaa','#ddbc83',4);softwareSandCount=b.vertices.length/9;
  land(...EXPANSION.grass,-.045,-.29,'#9ed88d','#81b875',1);
@@ -305,6 +308,7 @@ function buildStatic(){const b=new MeshBuilder();
  b.cylinder(-2.4,.18,1.7,.62,.36,9,'#b18b61');b.cylinder(-2.4,.37,1.7,.53,.035,9,'#efcd95');
  EXPANSION.objects(b);
  REDEVELOPMENT.drawStatic(b,state.redevelopmentProgress);
+ SEA.drawStatic(b);
  return b.toFloat()}
 function buildAvatar(b,x,z,yaw,bob=0,npc=false){b.setTransform(x,-.035+bob,z,yaw);
  const tunic=npc?'#e9a5a2':(['#66b8a3','#df987d','#a694ca'][state.outfit||0]||'#66b8a3'),hair=npc?'#d7a17b':'#63483f',face=npc?'#fbdfc6':'#f6d8ba';
@@ -391,7 +395,7 @@ function buildFishingGeometry(b,now){
   }
 }
 
-function buildDynamic(now){const b=new MeshBuilder();if(indoor.room){drawRoomActors(b,now);return b.toFloat()}let bounce=(Math.sin(now*.011)*.045);buildAvatar(b,state.x,state.z,playerFacing,bounce,false);buildAvatar(b,1.9,.9,Math.sin(now*.00031)*.65,Math.sin(now*.002)*.02,true);
+function buildDynamic(now){const b=new MeshBuilder();if(indoor.room){drawRoomActors(b,now);return b.toFloat()}let bounce=(Math.sin(now*.011)*.045);if(!railRide.active)buildAvatar(b,state.x,state.z,playerFacing,bounce,false);buildAvatar(b,1.9,.9,Math.sin(now*.00031)*.65,Math.sin(now*.002)*.02,true);
  MOKO.draw(b,mokoPose,speech.actor==='moko'?Math.atan2(state.x-mokoPose.x,state.z-mokoPose.z):null,now);
  trees.forEach((t,i)=>{if(t.type!=='fruit'||state.harvested.includes(i))return;for(let j=0;j<3;j++){let a=(j*2.35)+i;let x=t.x+Math.cos(a)*.80,y=2.05+.30*Math.sin(j*2.1),z=t.z+Math.sin(a)*.77;b.sphere(x,y,z,.22,.24,.22,'#ed8c72',5,7);b.leaf(x,y+.23,z,.13,'#79bc78')}});
  shells.forEach((s,i)=>{if(state.shells.includes(i))return;b.sphere(s.x,.08,s.z,.27,.17,.26,'#fff0d5',5,7);b.sphere(s.x+.12,.20,s.z,.09,.09,.09,'#fae0b3',4,5)});
@@ -407,9 +411,10 @@ function buildDynamic(now){const b=new MeshBuilder();if(indoor.room){drawRoomAct
  buildFishingGeometry(b,now);
  if(watering.active)window.KomorebiWatering?.draw(b,now,watering,state,farmPlots[watering.index]);
  REDEVELOPMENT.drawDynamic(b,now,state.redevelopmentProgress);
+ SEA.drawDynamic(b,now,railRide.active?{active:true,progress:railRide.from==='home'?railRide.progress:1-railRide.progress}:null);
  return b.toFloat()}
 let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0,viewFov=48;
-let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,worldBuffer=null,dynamicBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true;
+let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,worldBuffer=null,dynamicBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=!SEA.isCommercial(state.x,state.z);
 const vShader=`attribute vec3 aPos;attribute vec3 aNormal;attribute vec3 aColor;uniform mat4 uProjection;uniform mat4 uView;varying vec3 vColor;varying float vDepth;void main(){vec4 p=uView*vec4(aPos,1.0);gl_Position=uProjection*p;float sun=max(0.0,dot(normalize(aNormal),normalize(vec3(0.5,0.92,0.45))));float light=0.76+sun*0.25;vColor=aColor*light;vDepth=length(p.xyz);}`;
 const fShader=`precision mediump float;varying vec3 vColor;varying float vDepth;uniform vec3 uFog;uniform float uBrightness;void main(){vec3 c=mix(vColor,uFog,smoothstep(62.0,130.0,vDepth)*0.12);gl_FragColor=vec4(mix(c,c*vec3(0.22,0.34,0.58),clamp(uBrightness,0.0,1.0)),1.0);}`;
 function makeShader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error('Shader error: '+gl.getShaderInfoLog(s));return s}
@@ -460,18 +465,20 @@ let playerFacing=Math.PI,previous=0,npcGiftToday=false;
 function render(now){if(!gameReady)return;if(indoor.walkIn&&!indoor.room){const w=indoor.walkIn,k=clamp((now-w.start)/390,0,1);state.x=w.x+(w.toX-w.x)*k;state.z=w.z+(w.toZ-w.z)*k;playerFacing=Math.atan2(w.toX-w.x,w.toZ-w.z)}const dt=Math.min(.07,(now-previous)/1000||0);previous=now;tick+=dt;
  if(!document.hidden&&(lastClockSampleRaf<0||now-lastClockSampleRaf>=900)){lastClockSampleRaf=now;syncRealClock();}
  if(!indoor.room)updateMoko(now);
- const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&(sx||sy)){if(overviewMode){overviewMode=false;$('redevelopmentViewBtn').classList.remove('active')}let n=Math.hypot(sx,sy);sx/=n;sy/=n;const c=Math.cos(state.angle),s=Math.sin(state.angle);let dx=(indoor.room?sx:(sx*c+sy*s))*speed*dt,dz=(indoor.room?sy:(-sx*s+sy*c))*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);if(!EXPANSION.canWalk(x,z)||REDEVELOPMENT.within(x,z))return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;for(const t of trees)if(dist(x,z,t.x,t.z)<.56)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
+  if(railRide.active)updateSeaRide(now);
+ const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&!railRide.active&&(sx||sy)){if(overviewMode){overviewMode=false;$('redevelopmentViewBtn').classList.remove('active')}let n=Math.hypot(sx,sy);sx/=n;sy/=n;const c=Math.cos(state.angle),s=Math.sin(state.angle);let dx=(indoor.room?sx:(sx*c+sy*s))*speed*dt,dz=(indoor.room?sy:(-sx*s+sy*c))*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);if(SEA.isCommercial(x,z))return SEA.walkable(x,z);if(!EXPANSION.canWalk(x,z)||REDEVELOPMENT.within(x,z))return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;for(const t of trees)if(dist(x,z,t.x,t.z)<.56)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
  const fishingActive=fishing.stage!=='idle',roomActive=!!indoor.room;
-  const focusX=fishingActive?(state.x-7)*.5:(overviewMode&&!roomActive?5.5:state.x), focusZ=fishingActive?(state.z+6)*.5:(overviewMode&&!roomActive?-3.1:state.z);
+  const travelPoint=railRide.active?SEA.pointAt(railRide.from==='home'?railRide.progress:1-railRide.progress):null;
+  const focusX=travelPoint?travelPoint.x:fishingActive?(state.x-7)*.5:(overviewMode&&!roomActive?5.5:state.x), focusZ=travelPoint?travelPoint.z:fishingActive?(state.z+6)*.5:(overviewMode&&!roomActive?-3.1:state.z);
   if(!roomActive){camFocus.x+=(focusX-camFocus.x)*Math.min(1,dt*(fishingActive?3.6:6));camFocus.z+=(focusZ-camFocus.z)*Math.min(1,dt*(fishingActive?3.6:6));}
  let next=findNearby();if(next?.id!==nearest?.id){nearest=next;setContext()}
  resize();
  const aspect=canvas.width/canvas.height;
- const distance=fishingActive?(aspect<.70?14.4:12.1):(overviewMode&&!roomActive?(aspect<.70?40:32):(aspect<.70?26.0:20.5));
+ const distance=travelPoint?21:fishingActive?(aspect<.70?14.4:12.1):(overviewMode&&!roomActive?(aspect<.70?40:32):(aspect<.70?26.0:20.5));
  const scenicAngle=overviewMode&&!roomActive?state.angle-.52:state.angle;
-  const eye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):[camFocus.x+Math.sin(scenicAngle)*distance,fishingActive?9.2:(overviewMode?30:14.6),camFocus.z+Math.cos(scenicAngle)*distance];
+  const eye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):travelPoint?[camFocus.x-8.5,12.5,camFocus.z+18.5]:[camFocus.x+Math.sin(scenicAngle)*distance,fishingActive?9.2:(overviewMode?30:14.6),camFocus.z+Math.cos(scenicAngle)*distance];
  const center=roomActive?[0,.95,-.35]:[camFocus.x,0,camFocus.z];
- viewFov=roomActive?52:(overviewMode?54:48);
+ viewFov=roomActive?52:(travelPoint?56:overviewMode?54:48);
   updateSpeechPosition(eye,center,aspect,viewFov*Math.PI/180);
  const lighting=DAYLIGHT.paletteAt(state.timeMinutes);
  if($('nightSky')?.style)$('nightSky').style.opacity=roomActive?'0':String(lighting.stars);
@@ -480,7 +487,7 @@ function render(now){if(!gameReady)return;if(indoor.walkIn&&!indoor.room){const 
  gl.clearColor(roomActive?.86:lighting.top[0],roomActive?.84:lighting.top[1],roomActive?.77:lighting.top[2],1);
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  gl.uniformMatrix4fv(uView,false,lookAt(eye,center,[0,1,0]));
- gl.uniformMatrix4fv(uProj,false,perspective(viewFov*Math.PI/180,aspect,.1,130));
+ gl.uniformMatrix4fv(uProj,false,perspective(viewFov*Math.PI/180,aspect,.1,220));
  gl.uniform3f(uFog,...(roomActive?[.89,.80,.68]:lighting.fog));
  gl.uniform1f(uLight,indoorShade);
  bindGeometry(roomActive?indoor.buffer:worldBuffer);
