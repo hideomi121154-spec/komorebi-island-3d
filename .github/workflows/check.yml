@@ -25,5 +25,9 @@ jobs:
         run: node --check daynight.js
       - name: Check original Moko module syntax
         run: node --check moko3d.js
+      - name: Check night festival and HD scaling syntax
+        run: |
+          node --check nightfestival.js
+          node --check render-quality.js
       - name: Run smoke tests
         run: node --test tests/*.test.mjs
