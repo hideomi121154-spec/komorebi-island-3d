@@ -8,6 +8,7 @@ on:
       - 'redevelopment3d.js'
       - 'expansion3d.js'
       - 'daynight.js'
+      - 'sky-gradient.js'
       - 'styles.css'
       - 'index.html'
       - 'sealine3d.js'

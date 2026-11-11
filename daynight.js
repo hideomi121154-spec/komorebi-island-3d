@@ -8,8 +8,12 @@ const TZ='Asia/Tokyo';
 const jstFormatter=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
 const checkpoints = [
   {m:0,     top:'#132746', horizon:'#304a6b', fog:'#2a4563', darkness:.79, stars:1},
-  {m:285,   top:'#34416f', horizon:'#766c8b', fog:'#68718a', darkness:.60, stars:.52},
-  {m:360,   top:'#e79b82', horizon:'#f1cf9d', fog:'#c8bba2', darkness:.34, stars:0},
+  // Pre-dawn keeps a cool navy-blue zenith; sunrise warms only the horizon.
+  {m:285,   top:'#253c65', horizon:'#505d7d', fog:'#566c86', darkness:.67, stars:.62},
+  {m:335,   top:'#304c76', horizon:'#877e97', fog:'#718395', darkness:.55, stars:.28},
+  {m:360,   top:'#466c96', horizon:'#d7aaa0', fog:'#95a5b3', darkness:.40, stars:.07},
+  {m:385,   top:'#6d9cc0', horizon:'#f2d0b4', fog:'#b2c6cd', darkness:.22, stars:0},
+  {m:430,   top:'#89c3df', horizon:'#dcebf0', fog:'#b1d2d7', darkness:.085, stars:0},
   {m:480,   top:'#95d3ed', horizon:'#d8efe7', fog:'#b2dad3', darkness:.055, stars:0},
   {m:720,   top:'#8cc9ef', horizon:'#d9efe9', fog:'#b0dcda', darkness:0, stars:0},
   {m:990,   top:'#91c9d8', horizon:'#f0d4af', fog:'#b9d8d2', darkness:.10, stars:0},
