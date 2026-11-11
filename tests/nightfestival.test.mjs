@@ -23,7 +23,7 @@ test('HD night effects are injected before the island engine',()=>{
  const iGame=html.indexOf('src="game.js');
  assert.ok(iFestival>0&&iQuality>iFestival&&iGame>iQuality);
  const game=source('game.js');
- assert.match(game,/festivalRenderer\.draw\(now,lighting\.stars/);
+ assert.match(game,/festivalRenderer\.draw\(now,fireworksIntensity/);
  assert.match(game,/gl\.useProgram\(prog\)/);
  assert.match(game,/FESTIVAL\.burstLighting\(now,lighting\.stars\)/);
  assert.match(game,/renderQuality\.ratio\(cssW,cssH/);
