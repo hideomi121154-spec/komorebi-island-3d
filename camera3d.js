@@ -26,7 +26,7 @@ function create(){
  function snapshot(){return {...state};}
  function calculate(eye,center,player,angle){
   if(state.sky){
-   const origin=[player.x,1.85,player.z];
+   const origin=[player.x,10.8,player.z]; // Elevated spectator camera clears station canopies and nearby roofs.
    const cp=Math.cos(state.pitch);
    return {eye:origin,center:[
     origin[0]+Math.sin(angle)*cp*35,
