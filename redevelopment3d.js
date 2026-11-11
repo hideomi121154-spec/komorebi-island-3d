@@ -4,7 +4,7 @@
 const site={x:14.05,z:-5.75,width:6.15,depth:4.95};
 const marker={id:'redevelopment',x:10.5,z:-2.45,r:2.1,icon:'🏗️',name:'島の再開発現場'};
 const clamp=n=>Math.max(0,Math.min(100,Math.round(Number.isFinite(+n)?+n:32)));
-function completedFloors(progress){return progress>=100?9:Math.max(1,Math.min(8,Math.floor(clamp(progress)/11)));}
+function completedFloors(progress){return progress>=100?9:Math.max(1,Math.min(8,Math.ceil(clamp(progress)/12)+1));}
 function within(x,z){return Math.abs(x-site.x)<site.width/2+.18&&Math.abs(z-site.z)<site.depth/2+.15;}
 function clearTrees(trees){
  // Move only the trees physically located inside the redevelopment fence.
