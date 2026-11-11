@@ -85,3 +85,20 @@ test('Automatic rendering scale reacts to consistently slow frames',()=>{
  for(let i=1;i<=150;i++)q.observe(i*35);
  assert.ok(q.current().limit<start);
 });
+
+test('3D fireworks exist above the island and can be viewed from overhead',()=>{
+ const points=festival.worldParticles(1250,1,[5,-3]);
+ assert.ok(points.length>8*100);
+ for(let i=0;i<points.length;i+=8){
+  assert.ok(Number.isFinite(points[i])&&Number.isFinite(points[i+1])&&Number.isFinite(points[i+2]));
+  assert.ok(points[i+1]>0,'fireworks must be above the island');
+ }
+ assert.equal(festival.worldParticles(1250,0,[5,-3]).length,0);
+ assert.equal(festival.worldParticles(1250,1,[5,-3],true).length,0);
+ const game=source('game.js');
+ assert.match(game,/worldFestivalRenderer\.draw\(now,fireworksIntensity/);
+ assert.match(game,/canvas\.addEventListener\('wheel'/);
+ assert.match(game,/cameraPitch=clamp/);
+ assert.match(game,/pointers\.size===2/);
+ assert.match(game,/festivalViewBtn/);
+});
