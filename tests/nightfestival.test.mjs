@@ -8,7 +8,7 @@ import {Script} from 'node:vm';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const source=n=>readFileSync(resolve(root,n),'utf8');
 function loadModule(name,key){
- const context={window:{}};
+ const context={window:{},URLSearchParams};
  new Script(source(name),{filename:name}).runInNewContext(context);
  assert.ok(context.window[key],name+' should register');
  return context.window[key];
