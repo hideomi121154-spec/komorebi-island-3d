@@ -130,3 +130,18 @@
 .redevelopment-track{height:6px}
 #redevelopmentPercent{font-size:12px}
 @media(max-height:710px){.redevelopment-status{bottom:calc(env(safe-area-inset-bottom) + 133px);padding:5px 8px;min-height:39px}}
+
+
+/* v1.3: one 3D world, two connected islands and a real moving train. */
+.island-name-pill{position:absolute;z-index:3;top:calc(env(safe-area-inset-top) + 150px);left:15px;padding:6px 10px;background:#fffdf4dd;border:1px solid #ffffffb8;border-radius:15px;color:#4e816f;font-weight:900;font-size:11px;max-width:58vw;box-shadow:0 3px 12px #39736d22;pointer-events:none}
+.sea-train-hud[hidden]{display:none}
+.sea-train-hud{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 175px);z-index:7;width:min(86vw,400px);transform:translateX(-50%);background:#fffef1f2;border:2px solid #fff;border-radius:21px;padding:13px 17px;box-shadow:0 8px 24px #366d7666;text-align:center;font-size:clamp(13px,3.6vw,16px);font-weight:900;color:#426d66;pointer-events:none}
+.sea-train-progress{display:block;height:7px;border-radius:8px;background:#dbe9e7;margin-top:11px;overflow:hidden}
+.sea-train-progress>span{display:block;width:45%;height:100%;border-radius:8px;background:#74b5aa;animation:sealine-progress 7.2s linear both}
+@keyframes sealine-progress{0%{transform:translateX(-110%)}100%{transform:translateX(240%)}}
+#app.train-riding .dpad,#app.train-riding .bottom-ui,#app.train-riding .redevelopment-status{display:none}
+#app.train-riding .island-name-pill{display:none}
+#app.train-riding .edge-buttons{display:none}
+#app.indoors .island-name-pill{display:none}
+@media(max-height:710px){.island-name-pill{top:calc(env(safe-area-inset-top) + 142px);font-size:10px}.sea-train-hud{top:calc(env(safe-area-inset-top) + 140px)}}
+@media(prefers-reduced-motion:reduce){.sea-train-progress>span{animation:none}}
