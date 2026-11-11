@@ -408,10 +408,10 @@ function buildDynamic(now){const b=new MeshBuilder();if(indoor.room){drawRoomAct
  if(watering.active)window.KomorebiWatering?.draw(b,now,watering,state,farmPlots[watering.index]);
  REDEVELOPMENT.drawDynamic(b,now,state.redevelopmentProgress);
  return b.toFloat()}
-let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0;
+let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0,viewFov=48;
 let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,worldBuffer=null,dynamicBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true;
 const vShader=`attribute vec3 aPos;attribute vec3 aNormal;attribute vec3 aColor;uniform mat4 uProjection;uniform mat4 uView;varying vec3 vColor;varying float vDepth;void main(){vec4 p=uView*vec4(aPos,1.0);gl_Position=uProjection*p;float sun=max(0.0,dot(normalize(aNormal),normalize(vec3(0.5,0.92,0.45))));float light=0.76+sun*0.25;vColor=aColor*light;vDepth=length(p.xyz);}`;
-const fShader=`precision mediump float;varying vec3 vColor;varying float vDepth;uniform vec3 uFog;uniform float uBrightness;void main(){vec3 c=mix(vColor,uFog,smoothstep(32.0,67.0,vDepth)*0.63);gl_FragColor=vec4(mix(c,c*vec3(0.22,0.34,0.58),clamp(uBrightness,0.0,1.0)),1.0);}`;
+const fShader=`precision mediump float;varying vec3 vColor;varying float vDepth;uniform vec3 uFog;uniform float uBrightness;void main(){vec3 c=mix(vColor,uFog,smoothstep(62.0,130.0,vDepth)*0.12);gl_FragColor=vec4(mix(c,c*vec3(0.22,0.34,0.58),clamp(uBrightness,0.0,1.0)),1.0);}`;
 function makeShader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error('Shader error: '+gl.getShaderInfoLog(s));return s}
 function initializeGL(){gl=canvas.getContext('webgl',{alpha:false,antialias:true,preserveDrawingBuffer:false})||canvas.getContext('experimental-webgl',{alpha:false,antialias:true});if(!gl){ctx2d=canvas.getContext('2d',{alpha:false});if(!ctx2d)throw Error('描画機能が利用できません');softwareWorld=buildStatic();return;}prog=gl.createProgram();gl.attachShader(prog,makeShader(gl.VERTEX_SHADER,vShader));gl.attachShader(prog,makeShader(gl.FRAGMENT_SHADER,fShader));gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw Error('WebGL setup failed');gl.useProgram(prog);positionLoc=gl.getAttribLocation(prog,'aPos');normalLoc=gl.getAttribLocation(prog,'aNormal');colorLoc=gl.getAttribLocation(prog,'aColor');uView=gl.getUniformLocation(prog,'uView');uProj=gl.getUniformLocation(prog,'uProjection');uFog=gl.getUniformLocation(prog,'uFog');uLight=gl.getUniformLocation(prog,'uBrightness');worldBuffer=gl.createBuffer();dynamicBuffer=gl.createBuffer();const world=buildStatic();gl.bindBuffer(gl.ARRAY_BUFFER,worldBuffer);gl.bufferData(gl.ARRAY_BUFFER,world,gl.STATIC_DRAW);worldVerts=world.length/9;gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);gl.clearColor(.70,.87,.90,1);}
 function rebuildWorld(){if(!worldBuffer&&!ctx2d)return;const mesh=buildStatic();if(gl){gl.bindBuffer(gl.ARRAY_BUFFER,worldBuffer);gl.bufferData(gl.ARRAY_BUFFER,mesh,gl.STATIC_DRAW);worldVerts=mesh.length/9}else softwareWorld=mesh;}
@@ -425,8 +425,8 @@ function drawSoftware(now,eye,aspect,lighting){
  const cssColor=rgb=>'rgb('+rgb.map(v=>Math.round(v*255)).join(',')+')';
   const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,indoor.room?'#e3e8dc':cssColor(lighting.top));sky.addColorStop(.61,indoor.room?'#f6e8cb':cssColor(lighting.horizon));sky.addColorStop(1,indoor.room?'#d8c1a1':cssColor(lighting.fog));ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
  const view=lookAt(eye,indoor.room?[0,.95,-.35]:[camFocus.x,0,camFocus.z],[0,1,0]);
- const perspectiveX=1/Math.tan((indoor.room?26:24)*Math.PI/180)/aspect;
- const perspectiveY=1/Math.tan((indoor.room?26:24)*Math.PI/180);
+ const perspectiveX=1/Math.tan(viewFov*.5*Math.PI/180)/aspect;
+ const perspectiveY=1/Math.tan(viewFov*.5*Math.PI/180);
  const triangles=[];
  function process(data,start=0,end=data.length){for(let i=start;i<end;i+=27){
   let tri=[],depth=0,skip=false;
@@ -462,15 +462,17 @@ function render(now){if(!gameReady)return;if(indoor.walkIn&&!indoor.room){const 
  if(!indoor.room)updateMoko(now);
  const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&(sx||sy)){if(overviewMode){overviewMode=false;$('redevelopmentViewBtn').classList.remove('active')}let n=Math.hypot(sx,sy);sx/=n;sy/=n;const c=Math.cos(state.angle),s=Math.sin(state.angle);let dx=(indoor.room?sx:(sx*c+sy*s))*speed*dt,dz=(indoor.room?sy:(-sx*s+sy*c))*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);if(!EXPANSION.canWalk(x,z)||REDEVELOPMENT.within(x,z))return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;for(const t of trees)if(dist(x,z,t.x,t.z)<.56)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
  const fishingActive=fishing.stage!=='idle',roomActive=!!indoor.room;
-  const focusX=fishingActive?(state.x-7)*.5:(overviewMode&&!roomActive?5.2:state.x), focusZ=fishingActive?(state.z+6)*.5:(overviewMode&&!roomActive?-2.3:state.z);
+  const focusX=fishingActive?(state.x-7)*.5:(overviewMode&&!roomActive?4.6:state.x), focusZ=fishingActive?(state.z+6)*.5:(overviewMode&&!roomActive?-3.1:state.z);
   if(!roomActive){camFocus.x+=(focusX-camFocus.x)*Math.min(1,dt*(fishingActive?3.6:6));camFocus.z+=(focusZ-camFocus.z)*Math.min(1,dt*(fishingActive?3.6:6));}
  let next=findNearby();if(next?.id!==nearest?.id){nearest=next;setContext()}
  resize();
  const aspect=canvas.width/canvas.height;
- const distance=fishingActive?(aspect<.70?14.4:12.1):(overviewMode&&!roomActive?(aspect<.70?55:40):(aspect<.70?26.0:20.5));
- const eye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):[camFocus.x+Math.sin(state.angle)*distance,fishingActive?9.2:(overviewMode?24:14.6),camFocus.z+Math.cos(state.angle)*distance];
+ const distance=fishingActive?(aspect<.70?14.4:12.1):(overviewMode&&!roomActive?(aspect<.70?40:32):(aspect<.70?26.0:20.5));
+ const scenicAngle=overviewMode&&!roomActive?state.angle-.34:state.angle;
+  const eye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):[camFocus.x+Math.sin(scenicAngle)*distance,fishingActive?9.2:(overviewMode?30:14.6),camFocus.z+Math.cos(scenicAngle)*distance];
  const center=roomActive?[0,.95,-.35]:[camFocus.x,0,camFocus.z];
- updateSpeechPosition(eye,center,aspect,(roomActive?52:48)*Math.PI/180);
+ viewFov=roomActive?52:(overviewMode?54:48);
+  updateSpeechPosition(eye,center,aspect,viewFov*Math.PI/180);
  const lighting=DAYLIGHT.paletteAt(state.timeMinutes);
  if($('nightSky')?.style)$('nightSky').style.opacity=roomActive?'0':String(lighting.stars);
  if(ctx2d){drawSoftware(now,eye,aspect,lighting);requestAnimationFrame(render);return;}
@@ -478,7 +480,7 @@ function render(now){if(!gameReady)return;if(indoor.walkIn&&!indoor.room){const 
  gl.clearColor(roomActive?.86:lighting.top[0],roomActive?.84:lighting.top[1],roomActive?.77:lighting.top[2],1);
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  gl.uniformMatrix4fv(uView,false,lookAt(eye,center,[0,1,0]));
- gl.uniformMatrix4fv(uProj,false,perspective((roomActive?52:48)*Math.PI/180,aspect,.1,130));
+ gl.uniformMatrix4fv(uProj,false,perspective(viewFov*Math.PI/180,aspect,.1,130));
  gl.uniform3f(uFog,...(roomActive?[.89,.80,.68]:lighting.fog));
  gl.uniform1f(uLight,indoorShade);
  bindGeometry(roomActive?indoor.buffer:worldBuffer);
