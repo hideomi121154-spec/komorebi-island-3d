@@ -11,7 +11,7 @@ function clearTrees(trees){
  // Keep array order stable, so historical save indexes remain valid.
  const spots=[[18.2,1.75],[16.7,2.55],[8.7,-12.8],[16.1,3.4]];
  let next=0;
- for(const t of trees)if(within(t.x,t.z)){
+ for(const t of trees)if(Math.abs(t.x-site.x)<site.width/2+.9&&Math.abs(t.z-site.z)<site.depth/2+.9){
   const p=spots[next++%spots.length];t.x=p[0];t.z=p[1];
  }
 }
