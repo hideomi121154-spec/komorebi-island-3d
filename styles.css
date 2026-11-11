@@ -166,3 +166,9 @@
 @media(prefers-reduced-motion:reduce){
  #app[data-time-phase="night"] .night-moon{animation:none}
 }
+
+/* Fireworks camera controls are part of the game HUD, not a modal. */
+.festival-controls{position:absolute;top:110px;right:10px;z-index:35;display:flex;flex-direction:column;gap:7px;align-items:flex-end;pointer-events:none}
+.festival-controls button{pointer-events:auto;border:1px solid #ffffff75;border-radius:18px;padding:9px 11px;background:#182e58e8;color:#fff;font-size:12px;font-weight:700;box-shadow:0 3px 12px #0005;touch-action:manipulation}
+#gameCanvas{touch-action:none}
+@media(max-width:420px){.festival-controls{top:124px;right:7px}.festival-controls button{font-size:11px;padding:8px}}
