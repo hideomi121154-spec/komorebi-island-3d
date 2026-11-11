@@ -487,7 +487,7 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
  const distance=travelPoint?21:seaLineOverview?(aspect<.70?116:90):fishingActive?(aspect<.70?14.4:12.1):(overviewMode&&!roomActive?(state.currentIsland==='commerce'?(aspect<.70?48:38):(aspect<.70?40:32)):(aspect<.70?26.0:20.5));
  const scenicAngle=seaLineOverview?-.24:overviewMode&&!roomActive?state.angle-.52:state.angle;
   const baseEye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):travelPoint?[camFocus.x-8.5,12.5,camFocus.z+18.5]:[camFocus.x+Math.sin(scenicAngle)*distance,fishingActive?9.2:(seaLineOverview?66:overviewMode?30:14.6),camFocus.z+Math.cos(scenicAngle)*distance];
-  const baseCenter=roomActive?[0,.95,-.35]:[camFocus.x,(demoFireworks||DAYLIGHT.paletteAt(state.timeMinutes).stars>.45)?12.0:0,camFocus.z];
+  const baseCenter=roomActive?[0,.95,-.35]:[camFocus.x,(demoFireworks||DAYLIGHT.paletteAt(state.timeMinutes).stars>.45)?15.0:0,camFocus.z];
   const look=(!roomActive&&!travelPoint&&!fishingActive&&CAMERA)?CAMERA.calculate(baseEye,baseCenter,{x:state.x,z:state.z},scenicAngle):{eye:baseEye,center:baseCenter};
   const eye=look.eye,center=look.center;
   const normalFov=roomActive?52:(travelPoint?56:seaLineOverview?70:overviewMode?54:48);
