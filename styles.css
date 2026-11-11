@@ -145,3 +145,24 @@
 #app.indoors .island-name-pill{display:none}
 @media(max-height:710px){.island-name-pill{top:calc(env(safe-area-inset-top) + 142px);font-size:10px}.sea-train-hud{top:calc(env(safe-area-inset-top) + 140px)}}
 @media(prefers-reduced-motion:reduce){.sea-train-progress>span{animation:none}}
+
+/* v1.8 night festival: layered moonlight while procedural 3D fireworks stay behind geometry. */
+#app[data-time-phase="night"] .night-sky::before{
+ content:"";position:absolute;inset:0;pointer-events:none;
+ background:radial-gradient(ellipse at 72% 26%,rgba(121,154,225,.14),transparent 41%),
+            linear-gradient(180deg,rgba(9,25,63,.08),transparent 73%);
+}
+#app[data-time-phase="night"] .night-moon{
+ width:clamp(32px,8vw,49px);height:clamp(32px,8vw,49px);
+ background:radial-gradient(circle at 31% 31%,#fffaf0 0 17%,transparent 19%),
+            radial-gradient(circle at 65% 55%,#d8d5cb80 0 10%,transparent 12%),
+            radial-gradient(circle at 40% 77%,#d4d2c580 0 7%,transparent 9%),#fff1d9;
+ box-shadow:0 0 19px 5px #fcf3e4a8,0 0 48px 16px #c5d6ff45;
+ animation:festivalMoonBreathe 8s ease-in-out infinite alternate;
+}
+@keyframes festivalMoonBreathe{
+ from{filter:brightness(.97)}to{filter:brightness(1.08)}
+}
+@media(prefers-reduced-motion:reduce){
+ #app[data-time-phase="night"] .night-moon{animation:none}
+}
