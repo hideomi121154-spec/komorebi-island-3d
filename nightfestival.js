@@ -193,11 +193,12 @@ function createRenderer(gl){
    gl.uniformMatrix4fv(uView,false,view);
    gl.uniformMatrix4fv(uProjection,false,projection);
    gl.uniform1f(uScale,Math.max(1,pixelRatio||1));
-   // Fill the distant sky first, with no depth writes.
-   gl.disable(gl.DEPTH_TEST);gl.depthMask(false);
+   // Draw after the opaque 3D world with depth testing, so near
+   // fireworks remain visible above water and roofs hide distant sparks.
+   gl.enable(gl.DEPTH_TEST);gl.depthMask(false);
    gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);
    gl.drawArrays(gl.POINTS,0,points.length/8);
-   gl.disable(gl.BLEND);gl.depthMask(true);gl.enable(gl.DEPTH_TEST);
+   gl.disable(gl.BLEND);gl.depthMask(true);
    gl.disableVertexAttribArray(aWorld);gl.disableVertexAttribArray(aTint);
   },
   destroy(){gl.deleteBuffer(buffer);gl.deleteProgram(program);}
