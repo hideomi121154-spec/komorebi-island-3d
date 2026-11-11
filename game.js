@@ -8,6 +8,7 @@ const canvas = $('gameCanvas');
  if(!DAYLIGHT)throw Error('daynight.js is required');
  const FESTIVAL=window.KomorebiNightFestival||null;
  const QUALITY=window.KomorebiRenderQuality||null;
+ const CAMERA=window.KomorebiCamera3D?.create?.()||null;
  const reducedMotion=!!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
  const renderQuality=QUALITY?.create({mode:QUALITY.modeFromSearch(typeof location==='undefined'?'':location.search)})||null;
 const MOKO=window.KomorebiMoko;
@@ -418,6 +419,7 @@ function buildDynamic(now){const b=new MeshBuilder();if(indoor.room){drawRoomAct
  if(watering.active)window.KomorebiWatering?.draw(b,now,watering,state,farmPlots[watering.index]);
  REDEVELOPMENT.drawDynamic(b,now,state.redevelopmentProgress);
  SEA.drawDynamic(b,now,railRide.active?{active:true,progress:railRide.from==='home'?railRide.progress:1-railRide.progress}:null);
+ FESTIVAL?.drawWorldLights?.(b,now,DAYLIGHT.paletteAt(state.timeMinutes).stars);
  return b.toFloat()}
 let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0,viewFov=48;
 let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,festivalRenderer=null,worldBuffer=null,dynamicBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine');
@@ -429,14 +431,14 @@ function rebuildWorld(){if(!worldBuffer&&!ctx2d)return;const mesh=buildStatic();
 function perspective(fov,aspect,near,far){const t=1/Math.tan(fov/2),o=1/(near-far);return new Float32Array([t/aspect,0,0,0,0,t,0,0,0,0,(far+near)*o,-1,0,0,2*far*near*o,0])}
 function lookAt(eye,center,up){let z=[eye[0]-center[0],eye[1]-center[1],eye[2]-center[2]];let ll=Math.hypot(...z)||1;z=z.map(v=>v/ll);let x=[up[1]*z[2]-up[2]*z[1],up[2]*z[0]-up[0]*z[2],up[0]*z[1]-up[1]*z[0]];ll=Math.hypot(...x)||1;x=x.map(v=>v/ll);let y=[z[1]*x[2]-z[2]*x[1],z[2]*x[0]-z[0]*x[2],z[0]*x[1]-z[1]*x[0]];return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-(x[0]*eye[0]+x[1]*eye[1]+x[2]*eye[2]),-(y[0]*eye[0]+y[1]*eye[1]+y[2]*eye[2]),-(z[0]*eye[0]+z[1]*eye[1]+z[2]*eye[2]),1])}
 function bindGeometry(buffer){gl.bindBuffer(gl.ARRAY_BUFFER,buffer);for(const [loc,offset] of[[positionLoc,0],[normalLoc,12],[colorLoc,24]]){gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,36,offset)}}
-function drawSoftware(now,eye,aspect,lighting){
+function drawSoftware(now,eye,center,aspect,lighting){
  if(now-lastSoftwareDraw<83)return;
  lastSoftwareDraw=now;
  const W=canvas.width,H=canvas.height,ctx=ctx2d;
  const cssColor=rgb=>'rgb('+rgb.map(v=>Math.round(v*255)).join(',')+')';
   const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,indoor.room?'#e3e8dc':cssColor(lighting.top));sky.addColorStop(.61,indoor.room?'#f6e8cb':cssColor(lighting.horizon));sky.addColorStop(1,indoor.room?'#d8c1a1':cssColor(lighting.fog));ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
   if(!indoor.room)FESTIVAL?.drawCanvas(ctx,W,H,now,lighting.stars,reducedMotion);
- const view=lookAt(eye,indoor.room?[0,.95,-.35]:[camFocus.x,0,camFocus.z],[0,1,0]);
+ const view=lookAt(eye,center,[0,1,0]);
  const perspectiveX=1/Math.tan(viewFov*.5*Math.PI/180)/aspect;
  const perspectiveY=1/Math.tan(viewFov*.5*Math.PI/180);
  const triangles=[];
@@ -483,20 +485,27 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
  const aspect=canvas.width/canvas.height;
  const distance=travelPoint?21:seaLineOverview?(aspect<.70?116:90):fishingActive?(aspect<.70?14.4:12.1):(overviewMode&&!roomActive?(state.currentIsland==='commerce'?(aspect<.70?48:38):(aspect<.70?40:32)):(aspect<.70?26.0:20.5));
  const scenicAngle=seaLineOverview?-.24:overviewMode&&!roomActive?state.angle-.52:state.angle;
-  const eye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):travelPoint?[camFocus.x-8.5,12.5,camFocus.z+18.5]:[camFocus.x+Math.sin(scenicAngle)*distance,fishingActive?9.2:(seaLineOverview?66:overviewMode?30:14.6),camFocus.z+Math.cos(scenicAngle)*distance];
- const center=roomActive?[0,.95,-.35]:[camFocus.x,0,camFocus.z];
- viewFov=roomActive?52:(travelPoint?56:seaLineOverview?70:overviewMode?54:48);
+  const baseEye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):travelPoint?[camFocus.x-8.5,12.5,camFocus.z+18.5]:[camFocus.x+Math.sin(scenicAngle)*distance,fishingActive?9.2:(seaLineOverview?66:overviewMode?30:14.6),camFocus.z+Math.cos(scenicAngle)*distance];
+  const baseCenter=roomActive?[0,.95,-.35]:[camFocus.x,DAYLIGHT.paletteAt(state.timeMinutes).stars>.45?7.0:0,camFocus.z];
+  const look=(!roomActive&&!travelPoint&&!fishingActive&&CAMERA)?CAMERA.calculate(baseEye,baseCenter,{x:state.x,z:state.z},scenicAngle):{eye:baseEye,center:baseCenter};
+  const eye=look.eye,center=look.center;
+  const normalFov=roomActive?52:(travelPoint?56:seaLineOverview?70:overviewMode?54:48);
+  viewFov=CAMERA&&!roomActive&&!travelPoint?CAMERA.fov(normalFov):normalFov;
   updateSpeechPosition(eye,center,aspect,viewFov*Math.PI/180);
  const lighting=DAYLIGHT.paletteAt(state.timeMinutes);
  if($('nightSky')?.style)$('nightSky').style.opacity=roomActive?'0':String(lighting.stars);
- if(ctx2d){drawSoftware(now,eye,aspect,lighting);requestAnimationFrame(render);return;}
+ if(ctx2d){drawSoftware(now,eye,center,aspect,lighting);requestAnimationFrame(render);return;}
  const indoorShade=roomActive?.06:lighting.darkness;
  gl.clearColor(roomActive?.86:lighting.top[0],roomActive?.84:lighting.top[1],roomActive?.77:lighting.top[2],1);
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
- if(!roomActive&&festivalRenderer)festivalRenderer.draw(now,lighting.stars,canvas.width/Math.max(1,canvas.clientWidth||1),reducedMotion);
+ const viewMatrix=lookAt(eye,center,[0,1,0]),projectionMatrix=perspective(viewFov*Math.PI/180,aspect,.1,280);
+ if(!roomActive&&festivalRenderer){
+  const anchor=CAMERA?.snapshot().sky?{x:state.x,z:state.z}:state.currentIsland==='commerce'?{x:52,z:-4}:{x:5.5,z:-3.1};
+  festivalRenderer.draw(now,lighting.stars,canvas.width/Math.max(1,canvas.clientWidth||1),reducedMotion,viewMatrix,projectionMatrix,anchor,eye);
+ }
  gl.useProgram(prog);
- gl.uniformMatrix4fv(uView,false,lookAt(eye,center,[0,1,0]));
- gl.uniformMatrix4fv(uProj,false,perspective(viewFov*Math.PI/180,aspect,.1,220));
+ gl.uniformMatrix4fv(uView,false,viewMatrix);
+ gl.uniformMatrix4fv(uProj,false,projectionMatrix);
  gl.uniform3f(uFog,...(roomActive?[.89,.80,.68]:lighting.fog));
  gl.uniform1f(uLight,indoorShade);
  const festivalLight=(!roomActive&&FESTIVAL)?FESTIVAL.burstLighting(now,lighting.stars):null;
