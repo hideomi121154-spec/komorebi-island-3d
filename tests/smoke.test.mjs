@@ -8,7 +8,7 @@ const d=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const html=readFileSync(resolve(d,'index.html'),'utf8');
 const css=readFileSync(resolve(d,'styles.css'),'utf8');
 const js=readFileSync(resolve(d,'game.js'),'utf8');
-test('HTML links to split game files',()=>{assert.match(html,/href="styles\.css"/);assert.match(html,/src="game\.js"/);assert.match(html,/id="gameCanvas"/);assert.match(html,/id="startBtn"/);});
+test('HTML links to split game files',()=>{assert.match(html,/href="styles\.css(?:\?[^"]*)?"/);assert.match(html,/src="game\.js(?:\?[^"]*)?"/);assert.match(html,/id="gameCanvas"/);assert.match(html,/id="startBtn"/);});
 test('JavaScript syntax parses',()=>assert.doesNotThrow(()=>new Script(js)));
 test('Core systems are present',()=>{for(const k of ['readSave','save','initializeGL','drawSoftware','buildStatic','interact','syncRealClock'])assert.ok(js.includes(k),k);assert.match(css,/#gameCanvas/);});
 
@@ -29,7 +29,7 @@ test('In-world 3D fishing replaces the full-screen dialog',()=>{
 });
 
 test('Walkable interior resources are linked and wired',()=>{
- assert.match(html,/src="rooms3d\.js"/);
+ assert.match(html,/src="rooms3d\.js(?:\?[^"]*)?"/);
  assert.match(html,/id="roomDialogue"/);
  assert.match(html,/id="roomHud"/);
  assert.match(html,/id="sceneVeil"/);
@@ -41,7 +41,7 @@ test('Walkable interior resources are linked and wired',()=>{
 });
 
 test('Farm watering is wired into the same 3D island',()=>{
- assert.match(html,/src="watering3d\.js"/);
+ assert.match(html,/src="watering3d\.js(?:\?[^"]*)?"/);
  for(const fn of ['beginWatering','finishWatering','plotActionLabel','cropGrowth'])
   assert.ok(js.includes('function '+fn+'('),fn);
  assert.match(js,/window\.KomorebiWatering\?\.draw/);
@@ -49,7 +49,7 @@ test('Farm watering is wired into the same 3D island',()=>{
 });
 
 test('Game clock and sky renderer are linked to the island',()=>{
- assert.match(html,/src="daynight\.js"/);
+ assert.match(html,/src="daynight\.js(?:\?[^"]*)?"/);
  assert.match(html,/id="timePill"/);
  assert.match(html,/id="nightSky"/);
  assert.match(js,/function syncRealClock\(/);
@@ -69,7 +69,7 @@ test('Real-time clock does not fast-forward and uses a read-only JST HUD',()=>{
 });
 
 test('Original Moko is loaded as a 3D island resident, not an imported image',()=>{
- assert.match(html,/src="moko3d\.js"/);
+ assert.match(html,/src="moko3d\.js(?:\?[^"]*)?"/);
  assert.match(js,/const MOKO=window\.KomorebiMoko/);
  assert.match(js,/MOKO\.draw\(b,mokoPose/);
  assert.match(js,/else if\(id==='moko'\)/);
