@@ -29,5 +29,7 @@ jobs:
         run: |
           node --check nightfestival.js
           node --check render-quality.js
+      - name: Validate sky gradient shader syntax
+        run: node --check sky-gradient.js
       - name: Run smoke tests
         run: node --test tests/*.test.mjs
