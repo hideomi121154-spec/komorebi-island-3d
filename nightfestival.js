@@ -10,7 +10,7 @@ const ROCKET_MS=850;
 const BURST_MS=2400;
 const palette=[
  [1.00,.68,.24], [1.00,.40,.65], [.41,.80,1.00],
- [.59,1.00,.74], [.78,.58,1.00], [1.00,.84,.54]
+ [1.00,.42,.77], [.78,.52,1.00], [.54,1.00,.72]
 ];
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 function random(seed){
@@ -144,22 +144,28 @@ function makeWorldParticles(ms,intensity,anchor={x:0,z:0},eye=[0,2,0],reducedMot
    const age=e.age-ROCKET_MS;
    const t=clamp(age/BURST_MS);
    const grow=Math.pow(t,.60);
-   const fade=Math.pow(1-t,.56)*intensity;
+   const fade=Math.pow(1-t,.45)*intensity;
    const spread=(5.4+e.spread*18)*grow;
-   const gravity=5.5*t*t;
-   if(t<.15)add(tx,ty,tz,12.0,[1,1,.91],fade*(1-t/.15));
-   for(let spoke=0;spoke<76;spoke++){
-    const phi=TWO_PI*spoke/76+e.index*.39;
-    const elev=(random(spoke*147+e.index*83)-.5)*1.24;
-    const wobble=.18*Math.sin(spoke*1.7+e.index);
-    const dist=spread*(.76+random(e.index*239+spoke*29)*.40);
-    for(let trail=0;trail<3;trail++){
-     const r=dist*(1-trail*.12);
-     const co=Math.cos(elev+wobble*t);
-     add(tx+Math.cos(phi)*co*r,
-         ty+Math.sin(elev+wobble*t)*r-gravity*(.7+random(spoke+29)),
-         tz+Math.sin(phi)*co*r,trail?3.1:4.8,
-         trail===0?[1,1,.85]:e.color,fade*(1-trail*.22));
+   const gravity=3.5*t*t;
+   // Each ray travels from the core to the outside. A ring of dots alone
+   // looks like random stars when viewed from underneath.
+   add(tx,ty-gravity*.25,tz,10.5,[1,1,.84],fade*.80);
+   for(let spoke=0;spoke<56;spoke++){
+    const phi=TWO_PI*spoke/56+e.index*.19;
+    const elev=(random(spoke*147+e.index*83)-.5)*.30;
+    const wobble=.065*Math.sin(spoke*1.7+e.index);
+    const dist=spread*(.82+random(e.index*239+spoke*29)*.27);
+    const co=Math.cos(elev+wobble*t);
+    const bright=e.color.map(c=>Math.min(1,.25+c*.95));
+    for(let trail=0;trail<9;trail++){
+     const f=.15+trail*.102;
+     const radius=dist*f;
+     add(tx+Math.cos(phi)*co*radius,
+         ty+Math.sin(elev+wobble*t)*radius-gravity*f*f,
+         tz+Math.sin(phi)*co*radius,
+         trail===8?5.4:3.1+trail*.12,
+         trail%4===0?bright:e.color,
+         fade*(.55+.45*f));
     }
    }
   }
