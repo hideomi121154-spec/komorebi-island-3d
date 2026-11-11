@@ -9,6 +9,7 @@ const canvas = $('gameCanvas');
  const FESTIVAL=window.KomorebiNightFestival||null;
  const QUALITY=window.KomorebiRenderQuality||null;
  const CAMERA=window.KomorebiCamera3D?.create?.()||null;
+ const demoFireworks=typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='fireworks';
  const reducedMotion=!!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
  const renderQuality=QUALITY?.create({mode:QUALITY.modeFromSearch(typeof location==='undefined'?'':location.search)})||null;
 const MOKO=window.KomorebiMoko;
@@ -419,7 +420,7 @@ function buildDynamic(now){const b=new MeshBuilder();if(indoor.room){drawRoomAct
  if(watering.active)window.KomorebiWatering?.draw(b,now,watering,state,farmPlots[watering.index]);
  REDEVELOPMENT.drawDynamic(b,now,state.redevelopmentProgress);
  SEA.drawDynamic(b,now,railRide.active?{active:true,progress:railRide.from==='home'?railRide.progress:1-railRide.progress}:null);
- FESTIVAL?.drawWorldLights?.(b,now,DAYLIGHT.paletteAt(state.timeMinutes).stars);
+ FESTIVAL?.drawWorldLights?.(b,now,demoFireworks?1:DAYLIGHT.paletteAt(state.timeMinutes).stars);
  return b.toFloat()}
 let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0,viewFov=48;
 let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,uWaterTime=null,festivalRenderer=null,worldBuffer=null,dynamicBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine');
@@ -486,13 +487,13 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
  const distance=travelPoint?21:seaLineOverview?(aspect<.70?116:90):fishingActive?(aspect<.70?14.4:12.1):(overviewMode&&!roomActive?(state.currentIsland==='commerce'?(aspect<.70?48:38):(aspect<.70?40:32)):(aspect<.70?26.0:20.5));
  const scenicAngle=seaLineOverview?-.24:overviewMode&&!roomActive?state.angle-.52:state.angle;
   const baseEye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):travelPoint?[camFocus.x-8.5,12.5,camFocus.z+18.5]:[camFocus.x+Math.sin(scenicAngle)*distance,fishingActive?9.2:(seaLineOverview?66:overviewMode?30:14.6),camFocus.z+Math.cos(scenicAngle)*distance];
-  const baseCenter=roomActive?[0,.95,-.35]:[camFocus.x,DAYLIGHT.paletteAt(state.timeMinutes).stars>.45?12.0:0,camFocus.z];
+  const baseCenter=roomActive?[0,.95,-.35]:[camFocus.x,(demoFireworks||DAYLIGHT.paletteAt(state.timeMinutes).stars>.45)?12.0:0,camFocus.z];
   const look=(!roomActive&&!travelPoint&&!fishingActive&&CAMERA)?CAMERA.calculate(baseEye,baseCenter,{x:state.x,z:state.z},scenicAngle):{eye:baseEye,center:baseCenter};
   const eye=look.eye,center=look.center;
   const normalFov=roomActive?52:(travelPoint?56:seaLineOverview?70:overviewMode?54:48);
   viewFov=CAMERA&&!roomActive&&!travelPoint?CAMERA.fov(normalFov):normalFov;
   updateSpeechPosition(eye,center,aspect,viewFov*Math.PI/180);
- const lighting=DAYLIGHT.paletteAt(state.timeMinutes);
+ const lighting=demoFireworks?DAYLIGHT.paletteAt(1260):DAYLIGHT.paletteAt(state.timeMinutes);
  if($('nightSky')?.style)$('nightSky').style.opacity=roomActive?'0':String(lighting.stars);
  if(ctx2d){drawSoftware(now,eye,center,aspect,lighting);requestAnimationFrame(render);return;}
  const indoorShade=roomActive?.06:lighting.darkness;
@@ -873,7 +874,7 @@ function bindControls(){const dirs=document.querySelectorAll('[data-dir]');dirs.
  $('fishBack').addEventListener('click',stopFishing);$('roomDialogClose').addEventListener('click',closeRoomDialogue);
  $('startBtn').addEventListener('click',()=>{$('welcomeOverlay').hidden=true;paused=false;state.welcomeSeen=true;save();showToast('🌿 島を探検しよう！')});document.addEventListener('visibilitychange',()=>{if(document.hidden){if(fishing.stage!=='idle')stopFishing();if(watering.active)finishWatering();save()}else{syncRealClock();save()}});window.addEventListener('pageshow',()=>syncRealClock());window.addEventListener('pagehide',save);
 }
-function start(){try{initializeGL();bindControls();syncRealClock();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='train')beginSeaJourney();requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),getIslandBounds:()=>({grass:EXPANSION.grass,sand:EXPANSION.sand}),getRedevelopment:()=>({progress:state.redevelopmentProgress,stage:REDEVELOPMENT.stage(state.redevelopmentProgress),overview:overviewMode}),getSeaLine:()=>({island:state.currentIsland,rides:state.seaLineRides,riding:railRide.active,progress:railRide.progress,from:railRide.from,to:railRide.to,panorama:seaLineOverview}),boardTrain:beginSeaJourney,updateTrain:updateSeaRide,moveTo:(x,z)=>{state.x=x;state.z=z;nearest=findNearby();setContext()},interact,saveNow,openPanel,price,vertices:worldVerts,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getMokoPose:()=>({...mokoPose}),updateMoko,getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,dateKey:state.realDateKey,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),getCamera:()=>CAMERA?.snapshot()||null,toggleSkyCamera,syncClock:syncRealClock,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
+function start(){try{initializeGL();bindControls();syncRealClock();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}if(demoFireworks){CAMERA?.skyView(true);overviewMode=false;seaLineOverview=false;refreshSkyButton()}if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='train')beginSeaJourney();requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),getIslandBounds:()=>({grass:EXPANSION.grass,sand:EXPANSION.sand}),getRedevelopment:()=>({progress:state.redevelopmentProgress,stage:REDEVELOPMENT.stage(state.redevelopmentProgress),overview:overviewMode}),getSeaLine:()=>({island:state.currentIsland,rides:state.seaLineRides,riding:railRide.active,progress:railRide.progress,from:railRide.from,to:railRide.to,panorama:seaLineOverview}),boardTrain:beginSeaJourney,updateTrain:updateSeaRide,moveTo:(x,z)=>{state.x=x;state.z=z;nearest=findNearby();setContext()},interact,saveNow,openPanel,price,vertices:worldVerts,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getMokoPose:()=>({...mokoPose}),updateMoko,getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,dateKey:state.realDateKey,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),getCamera:()=>CAMERA?.snapshot()||null,toggleSkyCamera,syncClock:syncRealClock,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 
