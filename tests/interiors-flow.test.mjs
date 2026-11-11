@@ -49,7 +49,9 @@ function createGame(){
  new Script(rooms).runInNewContext(context);
  new Script(daynight).runInNewContext(context);
  new Script(mokoSource).runInNewContext(context);
- new Script(game).runInNewContext(context);
+ new Script(readFileSync(new URL('../expansion3d.js',import.meta.url),'utf8')).runInNewContext(context);
+  new Script(readFileSync(new URL('../redevelopment3d.js',import.meta.url),'utf8')).runInNewContext(context);
+  new Script(game).runInNewContext(context);
  events.get('DOMContentLoaded')();
  assert.ok(window.__komorebiTest,'game booted');
  make('startBtn')._events.get('click')();
