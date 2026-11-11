@@ -111,7 +111,7 @@ function building(b,progress){
  }
 }
 function craneStatic(b){
- const x=16.45,z=-7.05,towerHeight=12.8,crane='#efae30';
+ const x=16.15,z=-7.05,towerHeight=12.8,crane='#efae30';
  b.box(x,towerHeight/2,z,.43,towerHeight,.43,crane);
  for(let y=.6;y<towerHeight;y+=1.1){
   b.box(x,y,z,.86,.10,.78,'#f6c15a');
@@ -214,7 +214,7 @@ function worker(b,x,z,now,offset){
 }
 function drawDynamic(b,now,progress){
  if(progress>=100)return;
- const t=now*.00022,cx=16.45,cz=-7.05,top=13.05;
+ const t=now*.00022,cx=16.15,cz=-7.05,top=13.05;
  // A real rotating jib hook would require another crane; on this crane the hoist
  // travels smoothly along its fixed beam, keeping the materials within the site.
  const hookX=14.8+1.25*Math.sin(t),hang=7.7+.65*Math.sin(t*1.4);
