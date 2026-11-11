@@ -147,8 +147,58 @@ function supplies(b){
   b.sphere(16.1+dx,.17,-4.55+dz,.21,.19,.21,'#525958',5,6);
  b.box(16.25,.99,-4.55,.65,.43,.78,'#e6bf69');
 }
+function finishedApartments(b){
+ // Low-rise residential buildings set behind the construction site for depth,
+ // making redevelopment look like a district, not a lone tower.
+ const x=7.95,z=-12.45;
+ b.box(x,2.38,z,2.7,4.68,2.15,'#e6e5dc');
+ for(let floor=0;floor<4;floor++){
+  const y=.86+floor*1.05;
+  for(const offset of[-.78,0,.78]){
+   b.box(x+offset,y,z+1.11,.62,.72,.075,'#fff5df');
+   b.box(x+offset,y,z+1.17,.50,.59,.055,'#91ccda');
+   b.box(x+offset,y-.30,z+1.30,.72,.11,.42,'#e2e8e5');
+   b.box(x+offset,y-.13,z+1.52,.72,.12,.06,'#b8ddd3');
+  }
+  b.box(x+1.39,y,z,.055,.65,1.42,'#9ac2cd');
+ }
+ b.box(x,4.76,z,2.92,.20,2.35,'#f4f2e8');
+ for(const xx of[x-1.05,x+1.05]){
+  b.box(xx,4.95,z,.25,.30,1.84,'#93bca5');
+  for(const zz of[z-.7,z+.7])b.sphere(xx,5.10,zz,.26,.23,.28,'#7db47b',4,6);
+ }
+ // A second small apartment wing reads as a real neighborhood at distance.
+ const sx=3.2,sz=-12.75;
+ b.box(sx,1.78,sz,2.32,3.53,1.95,'#f4e7cc');
+ for(let i=0;i<3;i++){
+  const y=.70+i*1.06;
+  for(const xx of[sx-.62,sx+.62]){
+   b.box(xx,y,sz+1.02,.67,.65,.08,'#fff9eb');
+   b.box(xx,y,sz+1.09,.51,.52,.07,'#a2cdd0');
+  }
+  b.box(sx,y-.42,sz+1.17,2.33,.08,.26,'#dcc0a0');
+ }
+ b.box(sx,3.62,sz,2.57,.22,2.19,'#e1d1af');
+}
+function scenicDetails(b){
+ // Quiet white clouds behind the town, deliberately away from the crane.
+ for(const [x,y,z,s] of [[-12,12,-29,1.1],[3,13,-28,1.2],[20,14,-28,1.04]]){
+  b.sphere(x,y,z,2.3*s,.60*s,.74*s,'#f9ffff',4,8);
+  b.sphere(x-.96*s,y+.38*s,z,1.25*s,.85*s,.67*s,'#fffefa',5,8);
+  b.sphere(x+.78*s,y+.30*s,z,1.47*s,.78*s,.70*s,'#ffffff',5,8);
+ }
+ // Delicate sea foam around the shoreline, without covering the beach.
+ for(let i=0;i<44;i++){
+  const angle=i*Math.PI*2/44;
+  const radius=1.11+.018*Math.sin(i*2.41);
+  const x=21.2*radius*Math.cos(angle),z=17.25*radius*Math.sin(angle);
+  b.ellipseDisc(x,-.554,z,.44,.075,i%3?'#acd9da':'#daf2e5',7);
+ }
+}
 function drawStatic(b,progress){
  paintedRoad(b);
+ finishedApartments(b);
+ scenicDetails(b);
  b.box(site.x,.04,site.z,site.width,.16,site.depth,'#c2bfb5');
  b.box(site.x,.125,site.z,site.width-.24,.12,site.depth-.24,'#d2c9b4');
  building(b,progress);
