@@ -34,6 +34,50 @@ test('Sea line connects TWO separate islands without moving the original town',(
  assert.equal(SEA.nearestStation(44.4,-1.25).id,'seaStationCity');
  assert.equal(SEA.nearestStation(0,0),null);
 });
+
+test('boarding wins over overlapping pier on home station approach',()=>{
+ const {api,node}=boot();
+ api.moveTo(17.4,-.50);
+ assert.equal(api.getNear().id,'seaStationHome','pier must not intercept station');
+ assert.match(node('actionBtn').textContent,/列車に乗る/);
+ api.interact();
+ assert.equal(api.getSeaLine().riding,true);
+ api.updateTrain(7300);
+ assert.equal(api.getSeaLine().island,'commerce');
+});
+
+test('one-tap boarding via train button works out and back',()=>{
+ const {api,node}=boot();
+ const tapRide=()=>{
+  node('seaLineBtn')._handlers.get('click')();
+  const action=node('panelContent').children.find(e=>e.textContent?.includes('へ今すぐ乗車'));
+  assert.ok(action,'train panel must offer direct boarding');
+  action._handlers.get('click')();
+ };
+ tapRide();
+ assert.equal(api.getSeaLine().riding,true);
+ api.updateTrain(7300);
+ assert.equal(api.getSeaLine().island,'commerce');
+ tapRide();
+ assert.equal(api.getSeaLine().riding,true);
+ api.updateTrain(7300);
+ assert.equal(api.getSeaLine().island,'home');
+ assert.equal(api.getSeaLine().rides,2);
+});
+
+test('station trees are moved without changing harvest indices',()=>{
+ const sea=loadSea();
+ const trees=[{x:16.6,z:4.2,type:'fruit'},{x:16,z:-1.9,type:'pine'},{x:-7,z:5,type:'pine'}];
+ sea.clearStationTrees(trees);
+ assert.equal(trees.length,3);
+ assert.equal(trees[0].type,'fruit');
+ assert.equal(trees[1].type,'pine');
+ assert.ok(Math.hypot(trees[0].x-sea.A.x,trees[0].z-sea.A.z)>4.45);
+ assert.ok(Math.hypot(trees[1].x-sea.A.x,trees[1].z-sea.A.z)>4.45);
+ assert.equal(trees[2].x,-7);
+ assert.equal(trees[2].z,5);
+});
+
 test('Rail geometry and 3D trains have finite original mesh values',()=>{
  const sea=loadSea(),b=geometry(),d=geometry();
  sea.drawTerrain(b);sea.drawStatic(b);
