@@ -475,11 +475,11 @@ function render(now){if(!gameReady)return;if(indoor.walkIn&&!indoor.room){const 
  let next=findNearby();if(next?.id!==nearest?.id){nearest=next;setContext()}
  resize();
  const aspect=canvas.width/canvas.height;
- const distance=travelPoint?21:seaLineOverview?(aspect<.70?73:60):fishingActive?(aspect<.70?14.4:12.1):(overviewMode&&!roomActive?(aspect<.70?40:32):(aspect<.70?26.0:20.5));
+ const distance=travelPoint?21:seaLineOverview?(aspect<.70?116:90):fishingActive?(aspect<.70?14.4:12.1):(overviewMode&&!roomActive?(state.currentIsland==='commerce'?(aspect<.70?48:38):(aspect<.70?40:32)):(aspect<.70?26.0:20.5));
  const scenicAngle=seaLineOverview?-.24:overviewMode&&!roomActive?state.angle-.52:state.angle;
-  const eye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):travelPoint?[camFocus.x-8.5,12.5,camFocus.z+18.5]:[camFocus.x+Math.sin(scenicAngle)*distance,fishingActive?9.2:(seaLineOverview?40:overviewMode?30:14.6),camFocus.z+Math.cos(scenicAngle)*distance];
+  const eye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):travelPoint?[camFocus.x-8.5,12.5,camFocus.z+18.5]:[camFocus.x+Math.sin(scenicAngle)*distance,fishingActive?9.2:(seaLineOverview?66:overviewMode?30:14.6),camFocus.z+Math.cos(scenicAngle)*distance];
  const center=roomActive?[0,.95,-.35]:[camFocus.x,0,camFocus.z];
- viewFov=roomActive?52:(travelPoint?56:seaLineOverview?59:overviewMode?54:48);
+ viewFov=roomActive?52:(travelPoint?56:seaLineOverview?70:overviewMode?54:48);
   updateSpeechPosition(eye,center,aspect,viewFov*Math.PI/180);
  const lighting=DAYLIGHT.paletteAt(state.timeMinutes);
  if($('nightSky')?.style)$('nightSky').style.opacity=roomActive?'0':String(lighting.stars);
