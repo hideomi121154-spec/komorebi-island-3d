@@ -154,5 +154,83 @@ function drawCanvas(ctx,width,height,ms,intensity,reducedMotion=false){
  }
  ctx.restore();
 }
-window.KomorebiNightFestival={CYCLE,ROCKET_MS,BURST_MS,stars,eventsAt,fireworkAt,makeParticles,burstLighting,createRenderer,drawCanvas};
+
+/* True 3D fireworks, visible from ground, tilted camera, and overhead.
+ * Positions are world coordinates; hardware depth test hides sparks behind buildings.
+ */
+function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false){
+ const values=[];
+ if(intensity<=.005||reducedMotion)return new Float32Array(0);
+ function push(x,y,z,size,color,alpha){
+  if(alpha<.015)return;
+  values.push(x,y,z,size,color[0],color[1],color[2],clamp(alpha));
+ }
+ // Two overlapping launch cycles ensure a continuous, legible display.
+ for(let slot=Math.floor(ms/2100)-1;slot<=Math.floor(ms/2100);slot++){
+  if(slot<0)continue;
+  const age=ms-slot*2100;
+  if(age<0||age>2850)continue;
+  const seed=slot+1;
+  const cx=origin[0]+(random(seed*73+3)-.5)*13;
+  const cz=origin[1]+(random(seed*47+9)-.5)*10;
+  const height=21+random(seed*91+7)*9;
+  const tint=palette[seed%palette.length];
+  if(age<700){
+   const t=age/700;
+   const y=1+(height-1)*t*t*(3-2*t);
+   push(cx,y,cz,8,[1,1,.9],intensity);
+   for(let k=0;k<9;k++)push(cx+(random(seed*11+k)-.5)*.35,y-k*.48,cz,2.7,tint,intensity*(1-k/10));
+  }else{
+   const t=clamp((age-700)/2150);
+   const fade=Math.pow(1-t,1.15)*intensity;
+   const spread=(5.2+random(seed*29)*3.5)*Math.pow(t,.55);
+   if(t<.13)push(cx,height,cz,15,[1,1,1],fade);
+   for(let k=0;k<100;k++){
+    const angle=TWO_PI*k/100;
+    const vertical=1-2*((k+.5)/100);
+    const radial=Math.sqrt(Math.max(0,1-vertical*vertical));
+    const spin=angle*1.61803398875*13.0;
+    const reach=spread*(.75+random(seed*103+k*13)*.45);
+    const x=cx+Math.cos(spin)*radial*reach;
+    const z=cz+Math.sin(spin)*radial*reach;
+    const y=height+vertical*reach-3.5*t*t;
+    push(x,y,z,4.1,k%5===0?[1,1,.92]:tint,fade);
+    if(k%2===0)push(cx+(x-cx)*.88,height+(y-height)*.88,z+(cz-z)*.12,2.3,tint,fade*.6);
+   }
+  }
+ }
+ return new Float32Array(values);
+}
+function createWorldRenderer(gl){
+ const vertex="attribute vec4 aWorld;attribute vec4 aTint;uniform mat4 uView;uniform mat4 uProj;uniform float uScale;varying vec4 vTint;void main(){vec4 p=uView*vec4(aWorld.xyz,1.0);gl_Position=uProj*p;gl_PointSize=clamp(aWorld.w*uScale*min(1.8,24.0/max(8.0,-p.z)),1.0,36.0);vTint=aTint;}";
+ const fragment="precision mediump float;varying vec4 vTint;void main(){float r=length(gl_PointCoord-vec2(.5))*2.0;float core=1.0-smoothstep(.04,.55,r);float halo=1.0-smoothstep(.15,1.0,r);gl_FragColor=vec4(vTint.rgb,vTint.a*(core*.7+halo*.3));}";
+ const program=gl.createProgram();
+ const vs=createShader(gl,gl.VERTEX_SHADER,vertex),fs=createShader(gl,gl.FRAGMENT_SHADER,fragment);
+ gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);
+ gl.deleteShader(vs);gl.deleteShader(fs);
+ if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error('World fireworks link: '+gl.getProgramInfoLog(program));
+ const buffer=gl.createBuffer();
+ const aWorld=gl.getAttribLocation(program,'aWorld'),aTint=gl.getAttribLocation(program,'aTint');
+ const uView=gl.getUniformLocation(program,'uView'),uProj=gl.getUniformLocation(program,'uProj'),uScale=gl.getUniformLocation(program,'uScale');
+ return {
+  draw(ms,intensity,origin,view,proj,pixelRatio,reducedMotion=false){
+   const points=worldParticles(ms,intensity,origin,reducedMotion);
+   if(!points.length)return;
+   gl.useProgram(program);
+   gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+   gl.bufferData(gl.ARRAY_BUFFER,points,gl.DYNAMIC_DRAW);
+   gl.enableVertexAttribArray(aWorld);gl.vertexAttribPointer(aWorld,4,gl.FLOAT,false,32,0);
+   gl.enableVertexAttribArray(aTint);gl.vertexAttribPointer(aTint,4,gl.FLOAT,false,32,16);
+   gl.uniformMatrix4fv(uView,false,view);gl.uniformMatrix4fv(uProj,false,proj);
+   gl.uniform1f(uScale,Math.max(1,pixelRatio||1));
+   gl.enable(gl.DEPTH_TEST);gl.depthMask(false);
+   gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);
+   gl.drawArrays(gl.POINTS,0,points.length/8);
+   gl.disable(gl.BLEND);gl.depthMask(true);
+   gl.disableVertexAttribArray(aWorld);gl.disableVertexAttribArray(aTint);
+  },
+  destroy(){gl.deleteBuffer(buffer);gl.deleteProgram(program);}
+ };
+}
+window.KomorebiNightFestival={CYCLE,ROCKET_MS,BURST_MS,stars,eventsAt,fireworkAt,makeParticles,burstLighting,createRenderer,drawCanvas,worldParticles,createWorldRenderer};
 })();
