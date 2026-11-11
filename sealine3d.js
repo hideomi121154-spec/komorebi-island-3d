@@ -34,9 +34,22 @@ function walkable(x,z){
  return true;
 }
 function nearestStation(x,z){
+ // The home station shares a small peninsula with the original pier.
+ // Favor boarding across the station approach instead of requiring one exact tile.
  const d0=Math.hypot(x-stations[0].x,z-stations[0].z);
  const d1=Math.hypot(x-stations[1].x,z-stations[1].z);
- return d0<2.85?stations[0]:(d1<3?stations[1]:null);
+ return d0<=4.25?stations[0]:(d1<=3.5?stations[1]:null);
+}
+function clearStationTrees(trees){
+ // Keep each array index unchanged so pre-existing harvested tree IDs remain valid.
+ // Moving obstructing trees also reveals the station entrance on narrow iPhones.
+ const openSpots=[[-15.4,9.0],[-12.6,-10.4],[10.6,12.0],[-16.8,-3.8],[3.2,13.4]];
+ let index=0;
+ for(const t of trees){
+  if(Math.hypot(t.x-A.x,t.z-A.z)>4.45)continue;
+  const target=openSpots[index++%openSpots.length];
+  t.x=target[0];t.z=target[1];
+ }
 }
 function branch(b,a,c,width,y,col){
  const sx=-(c[1]-a[1]),sz=c[0]-a[0],l=Math.hypot(sx,sz)||1,rx=sx/l*width/2,rz=sz/l*width/2;
@@ -262,5 +275,5 @@ function paintMap(canvas,state){
  c.restore();
 }
 window.KomorebiSeaLine={A,B,CENTER,RADII,stations,places,drawTerrain,drawStatic,drawDynamic,
- isCommercial,walkable,pointAt,nearestStation,paintMap};
+ isCommercial,walkable,pointAt,nearestStation,clearStationTrees,paintMap};
 })();
