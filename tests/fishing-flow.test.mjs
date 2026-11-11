@@ -46,6 +46,7 @@ function mockGame(){
  new Script(mokoSource).runInNewContext(context);
   new Script(readFileSync(new URL('../expansion3d.js',import.meta.url),'utf8')).runInNewContext(context);
   new Script(readFileSync(new URL('../redevelopment3d.js',import.meta.url),'utf8')).runInNewContext(context);
+  new Script(readFileSync(new URL('../sealine3d.js',import.meta.url),'utf8')).runInNewContext(context);
   new Script(source).runInNewContext(context);
   assert.ok(listeners.has('DOMContentLoaded'));
   listeners.get('DOMContentLoaded')();
