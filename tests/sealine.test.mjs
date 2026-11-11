@@ -105,7 +105,7 @@ function boot(){
    appendChild(child){this.children.push(child);return child},
    append(...items){this.children.push(...items)},replaceChildren(...items){this.children=[...items]},
    setAttribute(k,v){this[k]=v},focus(){},
-   getContext(t){return id==='gameCanvas'&&t==='2d'?{}:null}};
+   getContext(t){if(t!=='2d')return null;if(id==='gameCanvas')return {};if(id.endsWith('-canvas'))return new Proxy({},{get(){return()=>{}},set(){return true}});return null}};
   nodes.set(id,e);return e;
  };
  const document={readyState:'loading',hidden:false,getElementById:node,activeElement:null,
