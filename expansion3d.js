@@ -6,7 +6,7 @@ const extraTrees = [
  {x:-15.5,z:7.4,type:'fruit'}, {x:-11,z:12,type:'pine'},
  {x:-5.8,z:13.3,type:'fruit'}, {x:-.4,z:13.2,type:'pine'},
  {x:5.3,z:12.6,type:'fruit'}, {x:16,z:-1.9,type:'pine'},
- {x:13.3,z:-7.5,type:'fruit'}, {x:6.5,z:-12.7,type:'pine'},
+ {x:13.3,z:-7.5,type:'fruit'}, {x:5.2,z:-13.7,type:'pine'},
  {x:-.5,z:-13.7,type:'fruit'}, {x:-7,z:-12,type:'pine'},
  {x:-14,z:-7.5,type:'fruit'}, {x:16.6,z:4.2,type:'fruit'},
  {x:-16.2,z:3.8,type:'pine'}, {x:-3.5,z:14,type:'fruit'},
