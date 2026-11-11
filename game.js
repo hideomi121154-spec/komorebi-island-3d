@@ -6,6 +6,10 @@ const $ = id => document.getElementById(id);
 const canvas = $('gameCanvas');
  const DAYLIGHT=window.KomorebiTime;
  if(!DAYLIGHT)throw Error('daynight.js is required');
+ const FESTIVAL=window.KomorebiNightFestival||null;
+ const QUALITY=window.KomorebiRenderQuality||null;
+ const reducedMotion=!!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+ const renderQuality=QUALITY?.create({mode:QUALITY.modeFromSearch(typeof location==='undefined'?'':location.search)})||null;
 const MOKO=window.KomorebiMoko;
 if(!MOKO)throw Error('moko3d.js is required');
 const EXPANSION=window.KomorebiExpansion;
@@ -416,11 +420,11 @@ function buildDynamic(now){const b=new MeshBuilder();if(indoor.room){drawRoomAct
  SEA.drawDynamic(b,now,railRide.active?{active:true,progress:railRide.from==='home'?railRide.progress:1-railRide.progress}:null);
  return b.toFloat()}
 let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0,viewFov=48;
-let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,worldBuffer=null,dynamicBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine');
+let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,festivalRenderer=null,worldBuffer=null,dynamicBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine');
 const vShader=`attribute vec3 aPos;attribute vec3 aNormal;attribute vec3 aColor;uniform mat4 uProjection;uniform mat4 uView;varying vec3 vColor;varying float vDepth;void main(){vec4 p=uView*vec4(aPos,1.0);gl_Position=uProjection*p;float sun=max(0.0,dot(normalize(aNormal),normalize(vec3(0.5,0.92,0.45))));float light=0.76+sun*0.25;vColor=aColor*light;vDepth=length(p.xyz);}`;
-const fShader=`precision mediump float;varying vec3 vColor;varying float vDepth;uniform vec3 uFog;uniform float uBrightness;void main(){vec3 c=mix(vColor,uFog,smoothstep(62.0,130.0,vDepth)*0.12);gl_FragColor=vec4(mix(c,c*vec3(0.22,0.34,0.58),clamp(uBrightness,0.0,1.0)),1.0);}`;
+const fShader=`precision mediump float;varying vec3 vColor;varying float vDepth;uniform vec3 uFog;uniform float uBrightness;uniform vec3 uFestivalTint;uniform float uFestivalGlow;void main(){vec3 c=mix(vColor,uFog,smoothstep(62.0,130.0,vDepth)*0.12);vec3 night=mix(c,c*vec3(0.22,0.34,0.58),clamp(uBrightness,0.0,1.0));gl_FragColor=vec4(clamp(night+uFestivalTint*uFestivalGlow,0.0,1.0),1.0);}`;
 function makeShader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error('Shader error: '+gl.getShaderInfoLog(s));return s}
-function initializeGL(){gl=canvas.getContext('webgl',{alpha:false,antialias:true,preserveDrawingBuffer:false})||canvas.getContext('experimental-webgl',{alpha:false,antialias:true});if(!gl){ctx2d=canvas.getContext('2d',{alpha:false});if(!ctx2d)throw Error('描画機能が利用できません');softwareWorld=buildStatic();return;}prog=gl.createProgram();gl.attachShader(prog,makeShader(gl.VERTEX_SHADER,vShader));gl.attachShader(prog,makeShader(gl.FRAGMENT_SHADER,fShader));gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw Error('WebGL setup failed');gl.useProgram(prog);positionLoc=gl.getAttribLocation(prog,'aPos');normalLoc=gl.getAttribLocation(prog,'aNormal');colorLoc=gl.getAttribLocation(prog,'aColor');uView=gl.getUniformLocation(prog,'uView');uProj=gl.getUniformLocation(prog,'uProjection');uFog=gl.getUniformLocation(prog,'uFog');uLight=gl.getUniformLocation(prog,'uBrightness');worldBuffer=gl.createBuffer();dynamicBuffer=gl.createBuffer();const world=buildStatic();gl.bindBuffer(gl.ARRAY_BUFFER,worldBuffer);gl.bufferData(gl.ARRAY_BUFFER,world,gl.STATIC_DRAW);worldVerts=world.length/9;gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);gl.clearColor(.70,.87,.90,1);}
+function initializeGL(){gl=canvas.getContext('webgl',{alpha:false,antialias:true,preserveDrawingBuffer:false})||canvas.getContext('experimental-webgl',{alpha:false,antialias:true});if(!gl){ctx2d=canvas.getContext('2d',{alpha:false});if(!ctx2d)throw Error('描画機能が利用できません');softwareWorld=buildStatic();return;}prog=gl.createProgram();gl.attachShader(prog,makeShader(gl.VERTEX_SHADER,vShader));gl.attachShader(prog,makeShader(gl.FRAGMENT_SHADER,fShader));gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw Error('WebGL setup failed');gl.useProgram(prog);positionLoc=gl.getAttribLocation(prog,'aPos');normalLoc=gl.getAttribLocation(prog,'aNormal');colorLoc=gl.getAttribLocation(prog,'aColor');uView=gl.getUniformLocation(prog,'uView');uProj=gl.getUniformLocation(prog,'uProjection');uFog=gl.getUniformLocation(prog,'uFog');uLight=gl.getUniformLocation(prog,'uBrightness');uFestivalTint=gl.getUniformLocation(prog,'uFestivalTint');uFestivalGlow=gl.getUniformLocation(prog,'uFestivalGlow');worldBuffer=gl.createBuffer();dynamicBuffer=gl.createBuffer();const world=buildStatic();gl.bindBuffer(gl.ARRAY_BUFFER,worldBuffer);gl.bufferData(gl.ARRAY_BUFFER,world,gl.STATIC_DRAW);worldVerts=world.length/9;gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);gl.clearColor(.70,.87,.90,1);if(FESTIVAL){try{festivalRenderer=FESTIVAL.createRenderer(gl)}catch(error){console.warn('Night festival graphics unavailable:',error);festivalRenderer=null}}}
 function rebuildWorld(){if(!worldBuffer&&!ctx2d)return;const mesh=buildStatic();if(gl){gl.bindBuffer(gl.ARRAY_BUFFER,worldBuffer);gl.bufferData(gl.ARRAY_BUFFER,mesh,gl.STATIC_DRAW);worldVerts=mesh.length/9}else softwareWorld=mesh;}
 function perspective(fov,aspect,near,far){const t=1/Math.tan(fov/2),o=1/(near-far);return new Float32Array([t/aspect,0,0,0,0,t,0,0,0,0,(far+near)*o,-1,0,0,2*far*near*o,0])}
 function lookAt(eye,center,up){let z=[eye[0]-center[0],eye[1]-center[1],eye[2]-center[2]];let ll=Math.hypot(...z)||1;z=z.map(v=>v/ll);let x=[up[1]*z[2]-up[2]*z[1],up[2]*z[0]-up[0]*z[2],up[0]*z[1]-up[1]*z[0]];ll=Math.hypot(...x)||1;x=x.map(v=>v/ll);let y=[z[1]*x[2]-z[2]*x[1],z[2]*x[0]-z[0]*x[2],z[0]*x[1]-z[1]*x[0]];return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-(x[0]*eye[0]+x[1]*eye[1]+x[2]*eye[2]),-(y[0]*eye[0]+y[1]*eye[1]+y[2]*eye[2]),-(z[0]*eye[0]+z[1]*eye[1]+z[2]*eye[2]),1])}
@@ -431,6 +435,7 @@ function drawSoftware(now,eye,aspect,lighting){
  const W=canvas.width,H=canvas.height,ctx=ctx2d;
  const cssColor=rgb=>'rgb('+rgb.map(v=>Math.round(v*255)).join(',')+')';
   const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,indoor.room?'#e3e8dc':cssColor(lighting.top));sky.addColorStop(.61,indoor.room?'#f6e8cb':cssColor(lighting.horizon));sky.addColorStop(1,indoor.room?'#d8c1a1':cssColor(lighting.fog));ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+  if(!indoor.room)FESTIVAL?.drawCanvas(ctx,W,H,now,lighting.stars,reducedMotion);
  const view=lookAt(eye,indoor.room?[0,.95,-.35]:[camFocus.x,0,camFocus.z],[0,1,0]);
  const perspectiveX=1/Math.tan(viewFov*.5*Math.PI/180)/aspect;
  const perspectiveY=1/Math.tan(viewFov*.5*Math.PI/180);
@@ -462,9 +467,9 @@ function drawSoftware(now,eye,aspect,lighting){
  process(softwareWorld,softwareTerrainCount*9,softwareGroundCount*9);paint();
  process(softwareWorld,softwareGroundCount*9);process(buildDynamic(now));paint();
 }
-function resize(){const dpr=ctx2d?1:Math.min(window.devicePixelRatio||1,1.7),width=Math.floor(canvas.clientWidth*dpr),height=Math.floor(canvas.clientHeight*dpr);if(canvas.width!==width||canvas.height!==height){canvas.width=Math.max(1,width);canvas.height=Math.max(1,height)}if(gl)gl.viewport(0,0,canvas.width,canvas.height)}
+function resize(){const cssW=Math.max(1,canvas.clientWidth||window.innerWidth||360),cssH=Math.max(1,canvas.clientHeight||window.innerHeight||720);const dpr=ctx2d?1:(renderQuality?renderQuality.ratio(cssW,cssH,window.devicePixelRatio||1):Math.min(window.devicePixelRatio||1,1.7));const width=Math.floor(cssW*dpr),height=Math.floor(cssH*dpr);if(canvas.width!==width||canvas.height!==height){canvas.width=Math.max(1,width);canvas.height=Math.max(1,height)}if(gl)gl.viewport(0,0,canvas.width,canvas.height)}
 let playerFacing=Math.PI,previous=0,npcGiftToday=false;
-function render(now){if(!gameReady)return;if(indoor.walkIn&&!indoor.room){const w=indoor.walkIn,k=clamp((now-w.start)/390,0,1);state.x=w.x+(w.toX-w.x)*k;state.z=w.z+(w.toZ-w.z)*k;playerFacing=Math.atan2(w.toX-w.x,w.toZ-w.z)}const dt=Math.min(.07,(now-previous)/1000||0);previous=now;tick+=dt;
+function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.walkIn&&!indoor.room){const w=indoor.walkIn,k=clamp((now-w.start)/390,0,1);state.x=w.x+(w.toX-w.x)*k;state.z=w.z+(w.toZ-w.z)*k;playerFacing=Math.atan2(w.toX-w.x,w.toZ-w.z)}const dt=Math.min(.07,(now-previous)/1000||0);previous=now;tick+=dt;
  if(!document.hidden&&(lastClockSampleRaf<0||now-lastClockSampleRaf>=900)){lastClockSampleRaf=now;syncRealClock();}
  if(!indoor.room)updateMoko(now);
   if(railRide.active)updateSeaRide(now);
@@ -488,10 +493,15 @@ function render(now){if(!gameReady)return;if(indoor.walkIn&&!indoor.room){const 
  const indoorShade=roomActive?.06:lighting.darkness;
  gl.clearColor(roomActive?.86:lighting.top[0],roomActive?.84:lighting.top[1],roomActive?.77:lighting.top[2],1);
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+ if(!roomActive&&festivalRenderer)festivalRenderer.draw(now,lighting.stars,canvas.width/Math.max(1,canvas.clientWidth||1),reducedMotion);
+ gl.useProgram(prog);
  gl.uniformMatrix4fv(uView,false,lookAt(eye,center,[0,1,0]));
  gl.uniformMatrix4fv(uProj,false,perspective(viewFov*Math.PI/180,aspect,.1,220));
  gl.uniform3f(uFog,...(roomActive?[.89,.80,.68]:lighting.fog));
  gl.uniform1f(uLight,indoorShade);
+ const festivalLight=(!roomActive&&FESTIVAL)?FESTIVAL.burstLighting(now,lighting.stars):null;
+ gl.uniform3fv(uFestivalTint,festivalLight?.color||[1,.8,.5]);
+ gl.uniform1f(uFestivalGlow,festivalLight?.strength||0);
  bindGeometry(roomActive?indoor.buffer:worldBuffer);
  gl.drawArrays(gl.TRIANGLES,0,roomActive?indoor.count:worldVerts);
  const d=buildDynamic(now);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,d,gl.DYNAMIC_DRAW);bindGeometry(dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,d.length/9);
