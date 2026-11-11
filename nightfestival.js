@@ -126,9 +126,9 @@ function makeWorldParticles(ms,intensity,anchor={x:0,z:0},eye=[0,2,0],reducedMot
  }
  if(reducedMotion)return new Float32Array(points);
  for(const e of eventsAt(ms)){
-  const tx=anchor.x+(e.x-.5)*39;
-  const tz=anchor.z+(random(e.index*101+421)-.5)*29;
-  const ty=24+random(e.index*239+92)*11;
+  const tx=anchor.x+(e.x-.5)*12;
+  const tz=anchor.z+4.2+(random(e.index*101+421)-.5)*8.5;
+  const ty=25+random(e.index*239+92)*9;
   if(e.age<ROCKET_MS){
    const t=clamp(e.age/ROCKET_MS);
    const head=1.5+(ty-1.5)*t*t*(3-2*t);
@@ -144,8 +144,8 @@ function makeWorldParticles(ms,intensity,anchor={x:0,z:0},eye=[0,2,0],reducedMot
    const age=e.age-ROCKET_MS;
    const t=clamp(age/BURST_MS);
    const grow=Math.pow(t,.60);
-   const fade=Math.pow(1-t,1.06)*intensity;
-   const spread=(8.6+e.spread*42)*grow;
+   const fade=Math.pow(1-t,.56)*intensity;
+   const spread=(5.4+e.spread*18)*grow;
    const gravity=5.5*t*t;
    if(t<.15)add(tx,ty,tz,12.0,[1,1,.91],fade*(1-t/.15));
    for(let spoke=0;spoke<76;spoke++){
@@ -158,7 +158,7 @@ function makeWorldParticles(ms,intensity,anchor={x:0,z:0},eye=[0,2,0],reducedMot
      const co=Math.cos(elev+wobble*t);
      add(tx+Math.cos(phi)*co*r,
          ty+Math.sin(elev+wobble*t)*r-gravity*(.7+random(spoke+29)),
-         tz+Math.sin(phi)*co*r,trail?2.3:3.7,
+         tz+Math.sin(phi)*co*r,trail?3.1:4.8,
          trail===0?[1,1,.85]:e.color,fade*(1-trail*.22));
     }
    }
