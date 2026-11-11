@@ -34,6 +34,12 @@ jobs:
           EOF
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/komorebi-http.log 2>&1 &
           sleep 2
+      - name: Install Japanese font for a faithful iPhone-like text layout
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk
+          fc-cache -f
       - name: Render Chrome portrait screenshot
         shell: bash
         run: |
