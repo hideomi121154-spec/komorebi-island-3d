@@ -29,5 +29,6 @@ jobs:
         run: |
           node --check nightfestival.js
           node --check render-quality.js
+          node --check camera3d.js
       - name: Run smoke tests
         run: node --test tests/*.test.mjs

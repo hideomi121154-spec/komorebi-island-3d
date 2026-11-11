@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#e1f6e6">
   <meta name="description" content="こもれび島 3D — 島で歩く、集める、育てる。オリジナルの小さな生活ゲーム。">
   <title>こもれび島 3D | 小さな島の暮らし</title>
-  <link rel="stylesheet" href="styles.css?v=20261111-v18">
+  <link rel="stylesheet" href="styles.css?v=20261111-v19">
 </head>
 <body>
 <div id="app">
@@ -24,7 +24,7 @@
   </div>
   <div id="statusBar"><span id="missionShort">🌱 木の実を3個集めよう</span><span id="saveStatus">● セーブ済</span></div>
   <div id="islandNamePill" class="island-name-pill">🌿 こもれび島</div>
-  <div class="edge-buttons"><button id="rotateLeft" aria-label="カメラを左回転">↶</button><button id="rotateRight" aria-label="カメラを右回転">↷</button><button id="islandMapBtn" aria-label="拡張された島の地図を開く" title="島マップ">🗺</button><button id="redevelopmentViewBtn" class="active" aria-label="島の再開発を見渡す・通常カメラに戻す" title="再開発を見渡す">🏗️</button><button id="seaLineBtn" aria-label="こもれびシーラインの路線図・駅へ移動" title="海上列車と商業島">🚆</button></div>
+  <div class="edge-buttons"><button id="rotateLeft" aria-label="カメラを左回転">↶</button><button id="rotateRight" aria-label="カメラを右回転">↷</button><button id="islandMapBtn" aria-label="拡張された島の地図を開く" title="島マップ">🗺</button><button id="redevelopmentViewBtn" class="active" aria-label="島の再開発を見渡す・通常カメラに戻す" title="再開発を見渡す">🏗️</button><button id="seaLineBtn" aria-label="こもれびシーラインの路線図・駅へ移動" title="海上列車と商業島">🚆</button><button id="skyViewBtn" type="button" aria-label="空を見上げて花火を見る" aria-pressed="false" title="花火を見る・元に戻す">🎆</button></div>
   <button id="redevelopmentHud" class="redevelopment-status" aria-label="島の再開発 32%・詳細を開く" type="button"><span class="redevelopment-top"><strong id="redevelopmentLabel">🏗️ 島の再開発中 · 基礎・低層階を建設中</strong><strong id="redevelopmentPercent">32%</strong></span><span class="redevelopment-track"><span id="redevelopmentFill" class="redevelopment-fill" style="width:32%"></span></span></button>
   <div id="trainHud" class="sea-train-hud" hidden><span id="trainHudText">🚆 こもれびシーラインで移動中…</span><span class="sea-train-progress" aria-hidden="true"><span></span></span></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -66,8 +66,9 @@
 <script src="expansion3d.js?v=20261111-v17" defer></script>
 <script src="redevelopment3d.js?v=20261111-v17" defer></script>
 <script src="sealine3d.js?v=20261111-v17" defer></script>
-<script src="nightfestival.js?v=20261111-v18" defer></script>
+<script src="nightfestival.js?v=20261111-v19" defer></script>
 <script src="render-quality.js?v=20261111-v18" defer></script>
-<script src="game.js?v=20261111-v18" defer></script>
+<script src="camera3d.js?v=20261111-v19" defer></script>
+<script src="game.js?v=20261111-v19" defer></script>
 </body>
 </html>

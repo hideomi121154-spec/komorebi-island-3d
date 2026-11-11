@@ -8,6 +8,8 @@ const canvas = $('gameCanvas');
  if(!DAYLIGHT)throw Error('daynight.js is required');
  const FESTIVAL=window.KomorebiNightFestival||null;
  const QUALITY=window.KomorebiRenderQuality||null;
+ const CAMERA=window.KomorebiCamera3D?.create?.()||null;
+ const demoFireworks=typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='fireworks';
  const reducedMotion=!!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
  const renderQuality=QUALITY?.create({mode:QUALITY.modeFromSearch(typeof location==='undefined'?'':location.search)})||null;
 const MOKO=window.KomorebiMoko;
@@ -418,25 +420,26 @@ function buildDynamic(now){const b=new MeshBuilder();if(indoor.room){drawRoomAct
  if(watering.active)window.KomorebiWatering?.draw(b,now,watering,state,farmPlots[watering.index]);
  REDEVELOPMENT.drawDynamic(b,now,state.redevelopmentProgress);
  SEA.drawDynamic(b,now,railRide.active?{active:true,progress:railRide.from==='home'?railRide.progress:1-railRide.progress}:null);
+ FESTIVAL?.drawWorldLights?.(b,now,demoFireworks?1:DAYLIGHT.paletteAt(state.timeMinutes).stars);
  return b.toFloat()}
 let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0,viewFov=48;
-let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,festivalRenderer=null,worldBuffer=null,dynamicBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine');
-const vShader=`attribute vec3 aPos;attribute vec3 aNormal;attribute vec3 aColor;uniform mat4 uProjection;uniform mat4 uView;varying vec3 vColor;varying float vDepth;void main(){vec4 p=uView*vec4(aPos,1.0);gl_Position=uProjection*p;float sun=max(0.0,dot(normalize(aNormal),normalize(vec3(0.5,0.92,0.45))));float light=0.76+sun*0.25;vColor=aColor*light;vDepth=length(p.xyz);}`;
-const fShader=`precision mediump float;varying vec3 vColor;varying float vDepth;uniform vec3 uFog;uniform float uBrightness;uniform vec3 uFestivalTint;uniform float uFestivalGlow;void main(){vec3 c=mix(vColor,uFog,smoothstep(62.0,130.0,vDepth)*0.12);vec3 night=mix(c,c*vec3(0.22,0.34,0.58),clamp(uBrightness,0.0,1.0));gl_FragColor=vec4(clamp(night+uFestivalTint*uFestivalGlow,0.0,1.0),1.0);}`;
+let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,uWaterTime=null,festivalRenderer=null,worldBuffer=null,dynamicBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine');
+const vShader=`attribute vec3 aPos;attribute vec3 aNormal;attribute vec3 aColor;uniform mat4 uProjection;uniform mat4 uView;varying vec3 vColor;varying float vDepth;varying vec3 vEmission;varying vec2 vSeaPos;varying float vSea;void main(){vec4 p=uView*vec4(aPos,1.0);gl_Position=uProjection*p;float sun=max(0.0,dot(normalize(aNormal),normalize(vec3(0.5,0.92,0.45))));float light=0.76+sun*0.25;vColor=aColor*light;vDepth=length(p.xyz);vEmission=max(aColor-vec3(1.0),vec3(0.0));vSeaPos=aPos.xz;vSea=(1.0-step(-0.48,aPos.y))*step(0.68,aColor.g)*step(0.68,aColor.b)*(1.0-step(0.60,aColor.r));}`;
+const fShader=`precision mediump float;varying vec3 vColor;varying float vDepth;varying vec3 vEmission;varying vec2 vSeaPos;varying float vSea;uniform vec3 uFog;uniform float uBrightness;uniform vec3 uFestivalTint;uniform float uFestivalGlow;uniform float uWaterTime;void main(){vec3 c=mix(vColor,uFog,smoothstep(62.0,130.0,vDepth)*0.12);vec3 night=mix(c,c*vec3(0.22,0.34,0.58),clamp(uBrightness,0.0,1.0));float wave=0.5+0.5*sin(vSeaPos.x*.29+uWaterTime*.8)*sin(vSeaPos.y*.78-uWaterTime*.65);vec3 sea=vec3(.017,.043,.098)+vec3(.018,.061,.092)*wave;night=mix(night,sea,clamp(uBrightness*vSea*(1.0-smoothstep(37.0,115.0,vDepth)),0.0,1.0));night+=uFestivalTint*uFestivalGlow*(.6+vSea*wave*.65);float emission=clamp(max(vEmission.r,max(vEmission.g,vEmission.b)),0.0,1.0);night=mix(night,clamp(vEmission,0.0,1.0),emission);gl_FragColor=vec4(clamp(night,0.0,1.0),1.0);}`;
 function makeShader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error('Shader error: '+gl.getShaderInfoLog(s));return s}
-function initializeGL(){gl=canvas.getContext('webgl',{alpha:false,antialias:true,preserveDrawingBuffer:false})||canvas.getContext('experimental-webgl',{alpha:false,antialias:true});if(!gl){ctx2d=canvas.getContext('2d',{alpha:false});if(!ctx2d)throw Error('描画機能が利用できません');softwareWorld=buildStatic();return;}prog=gl.createProgram();gl.attachShader(prog,makeShader(gl.VERTEX_SHADER,vShader));gl.attachShader(prog,makeShader(gl.FRAGMENT_SHADER,fShader));gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw Error('WebGL setup failed');gl.useProgram(prog);positionLoc=gl.getAttribLocation(prog,'aPos');normalLoc=gl.getAttribLocation(prog,'aNormal');colorLoc=gl.getAttribLocation(prog,'aColor');uView=gl.getUniformLocation(prog,'uView');uProj=gl.getUniformLocation(prog,'uProjection');uFog=gl.getUniformLocation(prog,'uFog');uLight=gl.getUniformLocation(prog,'uBrightness');uFestivalTint=gl.getUniformLocation(prog,'uFestivalTint');uFestivalGlow=gl.getUniformLocation(prog,'uFestivalGlow');worldBuffer=gl.createBuffer();dynamicBuffer=gl.createBuffer();const world=buildStatic();gl.bindBuffer(gl.ARRAY_BUFFER,worldBuffer);gl.bufferData(gl.ARRAY_BUFFER,world,gl.STATIC_DRAW);worldVerts=world.length/9;gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);gl.clearColor(.70,.87,.90,1);if(FESTIVAL){try{festivalRenderer=FESTIVAL.createRenderer(gl)}catch(error){console.warn('Night festival graphics unavailable:',error);festivalRenderer=null}}}
+function initializeGL(){gl=canvas.getContext('webgl',{alpha:false,antialias:true,preserveDrawingBuffer:false})||canvas.getContext('experimental-webgl',{alpha:false,antialias:true});if(!gl){ctx2d=canvas.getContext('2d',{alpha:false});if(!ctx2d)throw Error('描画機能が利用できません');softwareWorld=buildStatic();return;}prog=gl.createProgram();gl.attachShader(prog,makeShader(gl.VERTEX_SHADER,vShader));gl.attachShader(prog,makeShader(gl.FRAGMENT_SHADER,fShader));gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw Error('WebGL setup failed');gl.useProgram(prog);positionLoc=gl.getAttribLocation(prog,'aPos');normalLoc=gl.getAttribLocation(prog,'aNormal');colorLoc=gl.getAttribLocation(prog,'aColor');uView=gl.getUniformLocation(prog,'uView');uProj=gl.getUniformLocation(prog,'uProjection');uFog=gl.getUniformLocation(prog,'uFog');uLight=gl.getUniformLocation(prog,'uBrightness');uFestivalTint=gl.getUniformLocation(prog,'uFestivalTint');uFestivalGlow=gl.getUniformLocation(prog,'uFestivalGlow');uWaterTime=gl.getUniformLocation(prog,'uWaterTime');worldBuffer=gl.createBuffer();dynamicBuffer=gl.createBuffer();const world=buildStatic();gl.bindBuffer(gl.ARRAY_BUFFER,worldBuffer);gl.bufferData(gl.ARRAY_BUFFER,world,gl.STATIC_DRAW);worldVerts=world.length/9;gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);gl.clearColor(.70,.87,.90,1);if(FESTIVAL){try{festivalRenderer=FESTIVAL.createRenderer(gl)}catch(error){console.warn('Night festival graphics unavailable:',error);festivalRenderer=null}}}
 function rebuildWorld(){if(!worldBuffer&&!ctx2d)return;const mesh=buildStatic();if(gl){gl.bindBuffer(gl.ARRAY_BUFFER,worldBuffer);gl.bufferData(gl.ARRAY_BUFFER,mesh,gl.STATIC_DRAW);worldVerts=mesh.length/9}else softwareWorld=mesh;}
 function perspective(fov,aspect,near,far){const t=1/Math.tan(fov/2),o=1/(near-far);return new Float32Array([t/aspect,0,0,0,0,t,0,0,0,0,(far+near)*o,-1,0,0,2*far*near*o,0])}
 function lookAt(eye,center,up){let z=[eye[0]-center[0],eye[1]-center[1],eye[2]-center[2]];let ll=Math.hypot(...z)||1;z=z.map(v=>v/ll);let x=[up[1]*z[2]-up[2]*z[1],up[2]*z[0]-up[0]*z[2],up[0]*z[1]-up[1]*z[0]];ll=Math.hypot(...x)||1;x=x.map(v=>v/ll);let y=[z[1]*x[2]-z[2]*x[1],z[2]*x[0]-z[0]*x[2],z[0]*x[1]-z[1]*x[0]];return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-(x[0]*eye[0]+x[1]*eye[1]+x[2]*eye[2]),-(y[0]*eye[0]+y[1]*eye[1]+y[2]*eye[2]),-(z[0]*eye[0]+z[1]*eye[1]+z[2]*eye[2]),1])}
 function bindGeometry(buffer){gl.bindBuffer(gl.ARRAY_BUFFER,buffer);for(const [loc,offset] of[[positionLoc,0],[normalLoc,12],[colorLoc,24]]){gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,36,offset)}}
-function drawSoftware(now,eye,aspect,lighting){
+function drawSoftware(now,eye,center,aspect,lighting){
  if(now-lastSoftwareDraw<83)return;
  lastSoftwareDraw=now;
  const W=canvas.width,H=canvas.height,ctx=ctx2d;
  const cssColor=rgb=>'rgb('+rgb.map(v=>Math.round(v*255)).join(',')+')';
   const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,indoor.room?'#e3e8dc':cssColor(lighting.top));sky.addColorStop(.61,indoor.room?'#f6e8cb':cssColor(lighting.horizon));sky.addColorStop(1,indoor.room?'#d8c1a1':cssColor(lighting.fog));ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
   if(!indoor.room)FESTIVAL?.drawCanvas(ctx,W,H,now,lighting.stars,reducedMotion);
- const view=lookAt(eye,indoor.room?[0,.95,-.35]:[camFocus.x,0,camFocus.z],[0,1,0]);
+ const view=lookAt(eye,center,[0,1,0]);
  const perspectiveX=1/Math.tan(viewFov*.5*Math.PI/180)/aspect;
  const perspectiveY=1/Math.tan(viewFov*.5*Math.PI/180);
  const triangles=[];
@@ -483,28 +486,36 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
  const aspect=canvas.width/canvas.height;
  const distance=travelPoint?21:seaLineOverview?(aspect<.70?116:90):fishingActive?(aspect<.70?14.4:12.1):(overviewMode&&!roomActive?(state.currentIsland==='commerce'?(aspect<.70?48:38):(aspect<.70?40:32)):(aspect<.70?26.0:20.5));
  const scenicAngle=seaLineOverview?-.24:overviewMode&&!roomActive?state.angle-.52:state.angle;
-  const eye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):travelPoint?[camFocus.x-8.5,12.5,camFocus.z+18.5]:[camFocus.x+Math.sin(scenicAngle)*distance,fishingActive?9.2:(seaLineOverview?66:overviewMode?30:14.6),camFocus.z+Math.cos(scenicAngle)*distance];
- const center=roomActive?[0,.95,-.35]:[camFocus.x,0,camFocus.z];
- viewFov=roomActive?52:(travelPoint?56:seaLineOverview?70:overviewMode?54:48);
+  const baseEye=roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):travelPoint?[camFocus.x-8.5,12.5,camFocus.z+18.5]:[camFocus.x+Math.sin(scenicAngle)*distance,fishingActive?9.2:(seaLineOverview?66:overviewMode?30:14.6),camFocus.z+Math.cos(scenicAngle)*distance];
+  const baseCenter=roomActive?[0,.95,-.35]:[camFocus.x,(demoFireworks||DAYLIGHT.paletteAt(state.timeMinutes).stars>.45)?12.0:0,camFocus.z];
+  const look=(!roomActive&&!travelPoint&&!fishingActive&&CAMERA)?CAMERA.calculate(baseEye,baseCenter,{x:state.x,z:state.z},scenicAngle):{eye:baseEye,center:baseCenter};
+  const eye=look.eye,center=look.center;
+  const normalFov=roomActive?52:(travelPoint?56:seaLineOverview?70:overviewMode?54:48);
+  viewFov=CAMERA&&!roomActive&&!travelPoint?CAMERA.fov(normalFov):normalFov;
   updateSpeechPosition(eye,center,aspect,viewFov*Math.PI/180);
- const lighting=DAYLIGHT.paletteAt(state.timeMinutes);
+ const lighting=demoFireworks?DAYLIGHT.paletteAt(1260):DAYLIGHT.paletteAt(state.timeMinutes);
  if($('nightSky')?.style)$('nightSky').style.opacity=roomActive?'0':String(lighting.stars);
- if(ctx2d){drawSoftware(now,eye,aspect,lighting);requestAnimationFrame(render);return;}
+ if(ctx2d){drawSoftware(now,eye,center,aspect,lighting);requestAnimationFrame(render);return;}
  const indoorShade=roomActive?.06:lighting.darkness;
  gl.clearColor(roomActive?.86:lighting.top[0],roomActive?.84:lighting.top[1],roomActive?.77:lighting.top[2],1);
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
- if(!roomActive&&festivalRenderer)festivalRenderer.draw(now,lighting.stars,canvas.width/Math.max(1,canvas.clientWidth||1),reducedMotion);
+ const viewMatrix=lookAt(eye,center,[0,1,0]),projectionMatrix=perspective(viewFov*Math.PI/180,aspect,.1,280);
  gl.useProgram(prog);
- gl.uniformMatrix4fv(uView,false,lookAt(eye,center,[0,1,0]));
- gl.uniformMatrix4fv(uProj,false,perspective(viewFov*Math.PI/180,aspect,.1,220));
+ gl.uniformMatrix4fv(uView,false,viewMatrix);
+ gl.uniformMatrix4fv(uProj,false,projectionMatrix);
  gl.uniform3f(uFog,...(roomActive?[.89,.80,.68]:lighting.fog));
  gl.uniform1f(uLight,indoorShade);
  const festivalLight=(!roomActive&&FESTIVAL)?FESTIVAL.burstLighting(now,lighting.stars):null;
  gl.uniform3fv(uFestivalTint,festivalLight?.color||[1,.8,.5]);
  gl.uniform1f(uFestivalGlow,festivalLight?.strength||0);
+ gl.uniform1f(uWaterTime,now*.001);
  bindGeometry(roomActive?indoor.buffer:worldBuffer);
  gl.drawArrays(gl.TRIANGLES,0,roomActive?indoor.count:worldVerts);
  const d=buildDynamic(now);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,d,gl.DYNAMIC_DRAW);bindGeometry(dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,d.length/9);
+ if(!roomActive&&festivalRenderer){
+  const anchor=CAMERA?.snapshot().sky?{x:state.x,z:state.z,sky:true}:state.currentIsland==='commerce'?{x:52,z:-4,sky:false}:{x:5.5,z:-3.1,sky:false};
+  festivalRenderer.draw(now,lighting.stars,canvas.width/Math.max(1,canvas.clientWidth||1),reducedMotion,viewMatrix,projectionMatrix,anchor,eye);
+ }
  requestAnimationFrame(render)}
 
 // The phone's wall clock (formatted as Japan Standard Time) owns the game's date and sky.
@@ -805,15 +816,65 @@ function openPanel(type){panelType=type;paused=true;for(let dir of Object.keys(i
  updateHud()}
 function closePanel(){$('panelOverlay').hidden=true;paused=false;panelType='';setContext()}
 function exportSave(){const data=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const url=URL.createObjectURL(data),a=document.createElement('a');a.href=url;a.download='komorebi-save-day'+state.day+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);showToast('セーブデータを書き出したよ')}
+function refreshSkyButton(){
+ const button=$('skyViewBtn');if(!button||!CAMERA)return;
+ const sky=CAMERA.snapshot().sky;
+ button.classList.toggle('active',sky);
+ button.textContent=sky?'🏝️':'🎆';
+ button.setAttribute('aria-pressed',sky?'true':'false');
+ button.setAttribute('aria-label',sky?'島の画面へ戻る':'空を見上げて花火を見る');
+}
+function toggleSkyCamera(){
+ if(!CAMERA||indoor.room||railRide.active||fishing.stage!=='idle')return;
+ const isSky=!CAMERA.snapshot().sky;
+ CAMERA.skyView(isSky);
+ if(isSky){overviewMode=false;seaLineOverview=false;camFocus.x=state.x;camFocus.z=state.z;$('redevelopmentViewBtn').classList.remove('active')}
+ refreshSkyButton();
+ showToast(isSky?'🎆 空を見上げたよ！ 指で上下、ピンチで拡大できるよ':'🏝️ 島の景色に戻ったよ');
+}
 function bindControls(){const dirs=document.querySelectorAll('[data-dir]');dirs.forEach(btn=>{const dir=btn.dataset.dir;btn.addEventListener('pointerdown',e=>{e.preventDefault();input[dir]=true;btn.classList.add('pressed');try{btn.setPointerCapture(e.pointerId)}catch{}});const release=e=>{input[dir]=false;btn.classList.remove('pressed')};btn.addEventListener('pointerup',release);btn.addEventListener('pointercancel',release);btn.addEventListener('lostpointercapture',release)});
  const codes={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};
  document.addEventListener('keydown',e=>{if(fishing.stage!=='idle'){if(e.code==='Escape'){e.preventDefault();stopFishing()}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)fishAction()}else if(codes[e.code])e.preventDefault();return}if(codes[e.code]){e.preventDefault();input[codes[e.code]]=true}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)interact()}else if(e.code==='Escape'){if(!$('roomDialogue').hidden)closeRoomDialogue();else if(!$('panelOverlay').hidden)closePanel();else if(indoor.room)leaveRoom()}});document.addEventListener('keyup',e=>{if(codes[e.code]){e.preventDefault();input[codes[e.code]]=false}});window.addEventListener('blur',()=>Object.keys(input).forEach(d=>input[d]=false));
- $('redevelopmentHud').addEventListener('click',()=>{if(fishing.stage==='idle'&&!indoor.room)openPanel('redevelopment')});$('redevelopmentViewBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'){overviewMode=!overviewMode;$('redevelopmentViewBtn').classList.toggle('active',overviewMode);showToast(overviewMode?(state.currentIsland==='commerce'?'🏙️ 商業島を見渡そう':'🏗️ 島の再開発を見渡そう'):'🚶 いつもの視点に戻したよ')}});$('seaLineBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'&&!railRide.active)openPanel('sealine')});$('islandMapBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle')openPanel('map')});$('rotateLeft').addEventListener('click',()=>{state.angle-=Math.PI/4;save()});$('rotateRight').addEventListener('click',()=>{state.angle+=Math.PI/4;save()});$('cameraReset').addEventListener('click',()=>{state.angle=0;save();showToast('📷 カメラを戻したよ')});$('actionBtn').addEventListener('click',()=>{if(fishing.stage==='idle')interact();else fishAction()});$('bagBtn').addEventListener('click',()=>openPanel('bag'));$('questBtn').addEventListener('click',()=>openPanel('quests'));$('nextDayBtn').addEventListener('click',saveNow);$('panelClose').addEventListener('click',closePanel);$('panelOverlay').addEventListener('click',e=>{if(e.target===$('panelOverlay'))closePanel()});
- let drag=null;canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,angle:state.angle,pointerId:e.pointerId};try{canvas.setPointerCapture(e.pointerId)}catch{}});canvas.addEventListener('pointermove',e=>{if(!drag||drag.pointerId!==e.pointerId)return;state.angle=drag.angle+(e.clientX-drag.x)*.0055});canvas.addEventListener('pointerup',()=>{if(drag)save();drag=null});canvas.addEventListener('pointercancel',()=>drag=null);
+ $('redevelopmentHud').addEventListener('click',()=>{if(fishing.stage==='idle'&&!indoor.room)openPanel('redevelopment')});$('redevelopmentViewBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'){overviewMode=!overviewMode;$('redevelopmentViewBtn').classList.toggle('active',overviewMode);showToast(overviewMode?(state.currentIsland==='commerce'?'🏙️ 商業島を見渡そう':'🏗️ 島の再開発を見渡そう'):'🚶 いつもの視点に戻したよ')}});$('seaLineBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'&&!railRide.active)openPanel('sealine')});$('islandMapBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle')openPanel('map')});$('rotateLeft').addEventListener('click',()=>{state.angle-=Math.PI/4;save()});$('rotateRight').addEventListener('click',()=>{state.angle+=Math.PI/4;save()});$('cameraReset').addEventListener('click',()=>{state.angle=0;CAMERA?.reset();refreshSkyButton();save();showToast('📷 カメラを戻したよ')});$('skyViewBtn').addEventListener('click',toggleSkyCamera);$('actionBtn').addEventListener('click',()=>{if(fishing.stage==='idle')interact();else fishAction()});$('bagBtn').addEventListener('click',()=>openPanel('bag'));$('questBtn').addEventListener('click',()=>openPanel('quests'));$('nextDayBtn').addEventListener('click',saveNow);$('panelClose').addEventListener('click',closePanel);$('panelOverlay').addEventListener('click',e=>{if(e.target===$('panelOverlay'))closePanel()});
+ // Mouse wheel / trackpad zoom; touch: one-finger free look, two-finger pinch zoom.
+ const pointers=new Map();let drag=null,pinch=null;
+ const pointerDistance=()=>{const p=[...pointers.values()];return p.length<2?0:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)};
+ canvas.addEventListener('wheel',e=>{if(!CAMERA||indoor.room||railRide.active)return;e.preventDefault();CAMERA.zoomBy(Math.exp(-e.deltaY*.0013))},{passive:false});
+ canvas.addEventListener('pointerdown',e=>{
+  const id=e.pointerId??0;
+  pointers.set(id,{x:e.clientX,y:e.clientY});
+  if(pointers.size===1){drag={id,x:e.clientX,lastY:e.clientY,angle:state.angle};pinch=null}
+  else if(pointers.size===2&&CAMERA){pinch={distance:Math.max(1,pointerDistance()),zoom:CAMERA.snapshot().zoom};drag=null}
+  try{canvas.setPointerCapture(id)}catch{}
+ });
+ canvas.addEventListener('pointermove',e=>{
+  const id=e.pointerId??0;if(!pointers.has(id))return;
+  pointers.set(id,{x:e.clientX,y:e.clientY});
+  if(pointers.size>=2){
+   if(CAMERA&&pinch)CAMERA.zoomTo(pinch.zoom*Math.max(1,pointerDistance())/pinch.distance);
+   return;
+  }
+  if(!drag||drag.id!==id)return;
+  if(!indoor.room&&!railRide.active){
+   state.angle=drag.angle+(e.clientX-drag.x)*.0055;
+   CAMERA?.lookBy(e.clientY-drag.lastY);
+   refreshSkyButton();
+  }
+  drag.lastY=e.clientY;
+ });
+ const finishPointer=e=>{
+  const id=e.pointerId??0;pointers.delete(id);
+  if(pointers.size===1){const [remaining,point]=[...pointers.entries()][0];drag={id:remaining,x:point.x,lastY:point.y,angle:state.angle};pinch=null}
+  else if(!pointers.size){drag=null;pinch=null;save()}
+ };
+ canvas.addEventListener('pointerup',finishPointer);
+ canvas.addEventListener('pointercancel',finishPointer);
+ canvas.addEventListener('lostpointercapture',finishPointer);
+ refreshSkyButton();
  $('fishBack').addEventListener('click',stopFishing);$('roomDialogClose').addEventListener('click',closeRoomDialogue);
  $('startBtn').addEventListener('click',()=>{$('welcomeOverlay').hidden=true;paused=false;state.welcomeSeen=true;save();showToast('🌿 島を探検しよう！')});document.addEventListener('visibilitychange',()=>{if(document.hidden){if(fishing.stage!=='idle')stopFishing();if(watering.active)finishWatering();save()}else{syncRealClock();save()}});window.addEventListener('pageshow',()=>syncRealClock());window.addEventListener('pagehide',save);
 }
-function start(){try{initializeGL();bindControls();syncRealClock();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='train')beginSeaJourney();requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),getIslandBounds:()=>({grass:EXPANSION.grass,sand:EXPANSION.sand}),getRedevelopment:()=>({progress:state.redevelopmentProgress,stage:REDEVELOPMENT.stage(state.redevelopmentProgress),overview:overviewMode}),getSeaLine:()=>({island:state.currentIsland,rides:state.seaLineRides,riding:railRide.active,progress:railRide.progress,from:railRide.from,to:railRide.to,panorama:seaLineOverview}),boardTrain:beginSeaJourney,updateTrain:updateSeaRide,moveTo:(x,z)=>{state.x=x;state.z=z;nearest=findNearby();setContext()},interact,saveNow,openPanel,price,vertices:worldVerts,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getMokoPose:()=>({...mokoPose}),updateMoko,getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,dateKey:state.realDateKey,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),syncClock:syncRealClock,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
+function start(){try{initializeGL();bindControls();syncRealClock();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}if(demoFireworks){CAMERA?.skyView(true);overviewMode=false;seaLineOverview=false;refreshSkyButton()}if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='train')beginSeaJourney();requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),getIslandBounds:()=>({grass:EXPANSION.grass,sand:EXPANSION.sand}),getRedevelopment:()=>({progress:state.redevelopmentProgress,stage:REDEVELOPMENT.stage(state.redevelopmentProgress),overview:overviewMode}),getSeaLine:()=>({island:state.currentIsland,rides:state.seaLineRides,riding:railRide.active,progress:railRide.progress,from:railRide.from,to:railRide.to,panorama:seaLineOverview}),boardTrain:beginSeaJourney,updateTrain:updateSeaRide,moveTo:(x,z)=>{state.x=x;state.z=z;nearest=findNearby();setContext()},interact,saveNow,openPanel,price,vertices:worldVerts,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getMokoPose:()=>({...mokoPose}),updateMoko,getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,dateKey:state.realDateKey,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),getCamera:()=>CAMERA?.snapshot()||null,toggleSkyCamera,syncClock:syncRealClock,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 
