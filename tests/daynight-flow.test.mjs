@@ -78,7 +78,9 @@ function mockGame(saved,initialEpoch=Date.parse('2026-11-10T11:51:00Z')){
   requestAnimationFrame(){},setTimeout(){return ++timer},clearTimeout(){}};
  new Script(daylightSource).runInNewContext(context);
  new Script(mokoSource).runInNewContext(context);
- new Script(gameSource).runInNewContext(context);
+ new Script(readFileSync(new URL('../expansion3d.js',import.meta.url),'utf8')).runInNewContext(context);
+  new Script(readFileSync(new URL('../redevelopment3d.js',import.meta.url),'utf8')).runInNewContext(context);
+  new Script(gameSource).runInNewContext(context);
  listeners.get('DOMContentLoaded')();
  assert.ok(window.__komorebiTest,'game loaded');
  el('startBtn')._events.get('click')();
