@@ -43,7 +43,7 @@ test('city is nearly three times the original playable area, not just camera zoo
 
 test('existing stations, interactable stores and saved collection indexes remain intact',()=>{
  const {KomorebiSeaLine:S,KomorebiExpansion:E}=load();
- assert.deepEqual(S.stations.map(x=>x.id),['seaStationHome','seaStationCity']);
+ assert.deepEqual(Array.from(S.stations,x=>String(x.id)),['seaStationHome','seaStationCity']);
  assert.equal(S.nearestStation(17.4,2.85).id,'seaStationHome');
  assert.equal(S.nearestStation(44.4,-1.25).id,'seaStationCity');
  assert.equal(S.places.length,12);
