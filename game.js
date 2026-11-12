@@ -20,7 +20,7 @@ if(!REDEVELOPMENT)throw Error('redevelopment3d.js is required');
 const SEA=window.KomorebiSeaLine;
 if(!SEA)throw Error('sealine3d.js is required');
 const initial = {version:1,day:1,timeMinutes:480,realDateKey:null,coins:120,x:0,z:3,angle:0,inventory:{berry:0,wood:0,shell:0,fish:0,carrot:0,seed:2,coffee:0,souvenir:0,snack:0},harvested:[],shells:[],farm:[null,null,null],furniture:0,houseLevel:1,talkedDay:0,mokoGiftDay:0,questBerries:0,questSold:false,questGrown:false,claimed:[false,false,false],welcomeSeen:false,redevelopmentProgress:32,redevelopmentDateKey:null,currentIsland:'home',seaLineRides:0};
-const itemLabels={berry:'木の実',wood:'木材',shell:'貝がら',fish:'魚',carrot:'にんじん',seed:'種',coffee:'コーヒー',souvenir:'商業島みやげ',snack:'おやつ'};
+const itemLabels={berry:'果物',wood:'木材',shell:'貝がら',fish:'魚',carrot:'にんじん',seed:'種',coffee:'コーヒー',souvenir:'商業島みやげ',snack:'おやつ'};
 const itemIcons={berry:'🍎',wood:'🪵',shell:'🐚',fish:'🐟',carrot:'🥕',seed:'🌱',coffee:'☕',souvenir:'🎁',snack:'🍪'};
 const basePrice={berry:32,wood:20,shell:27,fish:74,carrot:46};
 const KEY='komorebi_island_3d_v01';
@@ -215,6 +215,39 @@ SEA.clearStationTrees(trees);
 const shells=[{x:-11.2,z:4.6},{x:-8.6,z:-1.2},{x:8.8,z:8.8},{x:11.4,z:4.5}];
 shells.push(...EXPANSION.shells);
 const farmPlots=[{x:5.0,z:6.0},{x:6.6,z:6.0},{x:8.2,z:6.0}];
+// Tree-free resources occupy small, accessible spots. Indexes >=100 avoid
+// collisions with historical tree IDs in existing save data.
+const resourceSpots=[
+ {x:-3.10,z:2.35,type:'fruit',name:'果物のかご'},
+ {x:3.75,z:3.05,type:'fruit',name:'果物のかご'},
+ {x:-4.35,z:-10.85,type:'lumber',name:'建設資材置き場'},
+ {x:10.25,z:1.35,type:'lumber',name:'建設資材置き場'}
+];
+function resourceCollected(i){return state.harvested.includes(100+i)}
+function drawSupplyStations(b){
+ for(const p of resourceSpots){
+  if(p.type==='fruit'){
+   b.box(p.x,.18,p.z,1.03,.34,.81,'#b18c6b');
+   b.box(p.x,.36,p.z,1.12,.09,.90,'#d3b18a');
+   b.box(p.x,.10,p.z,1.09,.08,.90,'#987854');
+  }else{
+   b.box(p.x,.105,p.z,1.45,.18,1.05,'#9f8265');
+   for(const off of [-.41,.41])b.box(p.x+off,.035,p.z,.16,.10,1.08,'#b39c7d');
+  }
+ }
+}
+function drawAvailableSupplies(b){
+ resourceSpots.forEach((p,i)=>{
+  if(resourceCollected(i))return;
+  if(p.type==='fruit'){
+   for(const [dx,dz,col] of [[-.33,0,'#ec9a79'],[0,-.14,'#f4c05b'],[.31,.10,'#e98b80'],[-.08,.18,'#f3b65e']])
+    b.sphere(p.x+dx,.53,p.z+dz,.16,.15,.16,col,4,6);
+  }else{
+   for(let row=0;row<2;row++)for(let j=0;j<3;j++)
+    b.box(p.x+(j-1)*.38,.28+row*.21,p.z,.35,.18,.78,'#d7be92');
+  }
+ });
+}
 
 // Water once per game day; first watering accelerates a planted crop by one day.
 const watering={active:false,index:-1,startedAt:0,duration:1700,token:0,timer:null};
@@ -267,8 +300,8 @@ function updateMoko(now){
  }
 }
 
-const things=[{id:'home',x:-6,z:-2.4,r:2.05,icon:'🏡',name:'わたしの家の入口'}, {id:'shop',x:6,z:-2.4,r:2.05,icon:'🏪',name:'こもれび商店の入口'}, {id:'npc',x:1.9,z:.9,r:2.2,icon:'🐱',name:'住民のミミ'}, mokoThing, {id:'pond',x:-7,z:6,r:3.5,icon:'🎣',name:'おさかな池'}, ...farmPlots.map((p,i)=>({id:'plot'+i,x:p.x,z:p.z,r:1.55,icon:'🥕',name:'畑 '+(i+1)})),...trees.map((p,i)=>({id:'tree'+i,x:p.x,z:p.z,r:1.85,icon:'🌳',name:p.type==='pine'?'木材のとれる木':'実のなる木'})),...shells.map((p,i)=>({id:'shell'+i,x:p.x,z:p.z,r:1.5,icon:'🐚',name:'貝がら'})),...EXPANSION.places,REDEVELOPMENT.marker,...SEA.stations,...SEA.places];
-function hasResource(t){if(t.id.startsWith('tree'))return !state.harvested.includes(Number(t.id.slice(4)));if(t.id.startsWith('shell'))return !state.shells.includes(Number(t.id.slice(5)));return true}
+const things=[{id:'home',x:-6,z:-2.4,r:2.05,icon:'🏡',name:'わたしの家の入口'}, {id:'shop',x:6,z:-2.4,r:2.05,icon:'🏪',name:'こもれび商店の入口'}, {id:'npc',x:1.9,z:.9,r:2.2,icon:'🐱',name:'住民のミミ'}, mokoThing, {id:'pond',x:-7,z:6,r:3.5,icon:'🎣',name:'おさかな池'}, ...farmPlots.map((p,i)=>({id:'plot'+i,x:p.x,z:p.z,r:1.55,icon:'🥕',name:'畑 '+(i+1)})),...resourceSpots.map((p,i)=>({id:'resource'+i,x:p.x,z:p.z,r:1.70,icon:p.type==='fruit'?'🧺':'📦',name:p.name})),...shells.map((p,i)=>({id:'shell'+i,x:p.x,z:p.z,r:1.5,icon:'🐚',name:'貝がら'})),...EXPANSION.places,REDEVELOPMENT.marker,...SEA.stations,...SEA.places];
+function hasResource(t){if(t.id.startsWith('resource'))return !resourceCollected(Number(t.id.slice(8)));if(t.id.startsWith('shell'))return !state.shells.includes(Number(t.id.slice(5)));return true}
 function findNearby(){if(!indoor.room){const station=SEA.nearestStation(state.x,state.z);if(station)return station;}let selected=null,best=1.2;for(const o of indoor.room?roomTargets[indoor.room]:things){if(!hasResource(o))continue;const d=dist(state.x,state.z,o.x,o.z)/o.r;if(d<best){best=d;selected=o}}return selected}
 function buildHouse(b,x,z,shop=false){const walls=shop?'#ffdcaa':'#fce5b9',roof=shop?'#72a5a2':'#e58c80';const w=shop?4.4:3.7,d=shop?3.45:3.4;b.box(x,.98,z,w,1.88,d,walls);b.roof(x,1.91,z,w,d,1.64,roof);b.box(x,.74,z+d/2+.035,1.0,1.49,.095,shop?'#6b958b':'#a37b57');b.box(x,.8,z+d/2+.1,.68,.89,.12,shop?'#d0e8de':'#bd9b73');b.sphere(x+.31,1.07,z+d/2+.22,.07,.07,.07,'#f8d183');for(const xoff of[-w*.33,w*.33]){b.box(x+xoff,1.20,z+d/2+.075,.7,.68,.12,'#fffef2');b.box(x+xoff,1.20,z+d/2+.15,.48,.47,.06,'#8dc8d0');b.box(x+xoff,1.20,z+d/2+.188,.08,.48,.05,'#fffdf2')}
  b.box(x,2.95,z,shop?2.0:1.1,.52,.23,shop?'#ffefca':'#f4e5c4');if(shop){b.box(x,3.03,z+d*.05,1.95,.39,.05,'#e79c68');b.box(x,.18,z+d/2+1.0,4.9,.14,1.5,'#e6c693')} else {b.cylinder(x+1.15,3.2,z-.8,.25,1.3,8,'#d7baa0');b.box(x+1.15,3.8,z-.8,.58,.16,.58,'#bd8984')}
@@ -301,7 +334,7 @@ function buildStatic(){const b=new MeshBuilder();
  for(let i=0;i<6;i++){b.box(-8.25+i*.8,.32,-8.10,.10,.58,.13,'#f8eed4');b.box(3.7+i*.8,.32,-8.0,.10,.58,.13,'#f8eed4')}
  b.box(-6.25,.34,-8.08,4.3,.11,.10,'#f8eed4');b.box(5.7,.33,-7.99,4.3,.11,.10,'#f8eed4');
  // Orchard/woodland and flowers.
- trees.forEach(t=>buildTree(b,t.x,t.z,t.type));
+ drawSupplyStations(b);
  const reserved=(x,z)=>dist(x,z,-6,-5)<4.4||dist(x,z,6,-5)<4.9||dist(x,z,-7,6)<3.7||dist(x,z,6.6,6)<3.4||dist(x,z,0,-2.5)<2.5;
  for(let i=0;i<125;i++){const x=(rnd()-.5)*24,z=(rnd()-.5)*20;if((x*x/154+z*z/103)>1||reserved(x,z))continue;const c=['#faf7e7','#ffd99a','#ecbad0','#bad5fd','#ffe6f3'][Math.floor(rnd()*5)];const r=.09+rnd()*.06;b.cylinder(x,.12,z,.025,.24,4,'#619b69');b.sphere(x,.28,z,r,r*.72,r,c,4,5)}
  for(let i=0;i<42;i++){const x=(rnd()-.5)*24,z=(rnd()-.5)*19;if((x*x/155+z*z/105)>1||reserved(x,z))continue;b.sphere(x,.12,z,.20+rnd()*.12,.11+rnd()*.09,.18+rnd()*.12,rnd()>.5?'#8bba75':'#74b072',4,5)}
@@ -404,7 +437,7 @@ function buildFishingGeometry(b,now){
 
 function buildDynamic(now){const b=new MeshBuilder();if(indoor.room){drawRoomActors(b,now);return b.toFloat()}let bounce=(Math.sin(now*.011)*.045);if(!railRide.active)buildAvatar(b,state.x,state.z,playerFacing,bounce,false);buildAvatar(b,1.9,.9,Math.sin(now*.00031)*.65,Math.sin(now*.002)*.02,true);
  MOKO.draw(b,mokoPose,speech.actor==='moko'?Math.atan2(state.x-mokoPose.x,state.z-mokoPose.z):null,now);
- trees.forEach((t,i)=>{if(t.type!=='fruit'||state.harvested.includes(i))return;for(let j=0;j<3;j++){let a=(j*2.35)+i;let x=t.x+Math.cos(a)*.80,y=2.05+.30*Math.sin(j*2.1),z=t.z+Math.sin(a)*.77;b.sphere(x,y,z,.22,.24,.22,'#ed8c72',5,7);b.leaf(x,y+.23,z,.13,'#79bc78')}});
+ drawAvailableSupplies(b);
  shells.forEach((s,i)=>{if(state.shells.includes(i))return;b.sphere(s.x,.08,s.z,.27,.17,.26,'#fff0d5',5,7);b.sphere(s.x+.12,.20,s.z,.09,.09,.09,'#fae0b3',4,5)});
  farmPlots.forEach((p,i)=>{const f=state.farm[i];if(!f)return;
  const age=Math.min(2,cropGrowth(f)),height=age>=2?.62:age>=1?.32:.16;
@@ -474,7 +507,7 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
  if(!document.hidden&&(lastClockSampleRaf<0||now-lastClockSampleRaf>=900)){lastClockSampleRaf=now;syncRealClock();}
  if(!indoor.room)updateMoko(now);
   if(railRide.active)updateSeaRide(now);
- const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&!railRide.active&&(sx||sy)){if(overviewMode||seaLineOverview){overviewMode=false;seaLineOverview=false;$('redevelopmentViewBtn').classList.remove('active')}let n=Math.hypot(sx,sy);sx/=n;sy/=n;const c=Math.cos(state.angle),s=Math.sin(state.angle);let dx=(indoor.room?sx:(sx*c+sy*s))*speed*dt,dz=(indoor.room?sy:(-sx*s+sy*c))*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);if(SEA.isCommercial(x,z))return SEA.walkable(x,z);if(!EXPANSION.canWalk(x,z)||REDEVELOPMENT.within(x,z))return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;for(const t of trees)if(dist(x,z,t.x,t.z)<.56)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
+ const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&!railRide.active&&(sx||sy)){if(overviewMode||seaLineOverview){overviewMode=false;seaLineOverview=false;$('redevelopmentViewBtn').classList.remove('active')}let n=Math.hypot(sx,sy);sx/=n;sy/=n;const c=Math.cos(state.angle),s=Math.sin(state.angle);let dx=(indoor.room?sx:(sx*c+sy*s))*speed*dt,dz=(indoor.room?sy:(-sx*s+sy*c))*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);if(SEA.isCommercial(x,z))return SEA.walkable(x,z);if(!EXPANSION.canWalk(x,z)||REDEVELOPMENT.within(x,z))return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
  const fishingActive=fishing.stage!=='idle',roomActive=!!indoor.room;
   const travelPoint=railRide.active?SEA.pointAt(railRide.from==='home'?railRide.progress:1-railRide.progress):null;
   const focusX=travelPoint?travelPoint.x:fishingActive?(state.x-7)*.5:(seaLineOverview?31.5:overviewMode&&!roomActive?(state.currentIsland==='commerce'?53.2:1.0):state.x), focusZ=travelPoint?travelPoint.z:fishingActive?(state.z+6)*.5:(seaLineOverview?-2.1:overviewMode&&!roomActive?(state.currentIsland==='commerce'?-4.5:-1.8):state.z);
@@ -594,13 +627,13 @@ function showToast(msg){const el=$('toast');el.textContent=msg;el.classList.add(
 function save(){try{const snapshot=(indoor.room||indoor.transition)&&indoor.original?{...state,x:indoor.original.x,z:indoor.original.z,angle:indoor.original.angle}:state;localStorage.setItem(KEY,JSON.stringify(snapshot));$('saveStatus').textContent='● セーブ済'}catch{$('saveStatus').textContent='⚠ 保存できません'}}
 function updateRedevelopmentHud(){const p=REDEVELOPMENT.clamp(state.redevelopmentProgress);$('redevelopmentPercent').textContent=p+'%';$('redevelopmentLabel').textContent=p>=100?'🏙️ 新しいマンションが完成！':'🏗️ 島の再開発中 · '+REDEVELOPMENT.stage(p);if($('redevelopmentFill').style)$('redevelopmentFill').style.width=p+'%';$('redevelopmentHud').setAttribute?.('aria-label','島の再開発 '+p+'%・詳細を開く')}
 function updateHud(){ updateClockHud();updateRedevelopmentHud();$('coinPill').textContent='🪙 '+state.coins;if($('islandNamePill'))$('islandNamePill').textContent=state.currentIsland==='commerce'?'🛍️ 商業島・みなと島':'🌿 こもれび島';$('redevelopmentViewBtn').textContent=state.currentIsland==='commerce'?'🏙️':'🏗️';
- let msg='🎉 おねがい達成！';if(!state.claimed[0])msg='🍎 木の実を3個集めよう '+Math.min(3,state.questBerries)+'/3';else if(!state.claimed[1])msg='🏪 お店で何か売ってみよう';else if(!state.claimed[2])msg='🥕 畑でにんじんを育てよう';$('missionShort').textContent=msg}
-function setContext(){if(fishing.stage!=='idle'||indoor.transition||watering.active||railRide.active)return;const t=nearest;if(indoor.room){const names={exit:'島に出る',clerk:'店員さんと話す',seeds:'商品を見る',goods:'買取をお願い',bed:'ベッドで休む',dresser:'着替える',table:'作業テーブルを見る'};$('interactHint').textContent=t?t.icon+' '+t.name+' に近づいたよ':'🏠 室内を歩いて探検しよう';$('actionBtn').textContent=t?'✨ '+names[t.id]:'✨ 調べる';return}$('interactHint').textContent=t?t.icon+' '+t.name+' が近くにあるよ':'🌱 島を自由に探検しよう';$('actionBtn').textContent=t?'✨ '+(t.id==='shop'?'お店に入る':(t.id==='npc'||t.id==='moko')?'話しかける':t.id==='home'?'家に入る':t.id==='cottage'?'コテージに入る':t.id==='seaStationHome'||t.id==='seaStationCity'?'列車に乗る':t.id.startsWith('city')?'施設を利用する':t.id==='redevelopment'?'工事現場を見る':t.id==='camp'?'休憩する':t.id==='falls'?'滝を眺める':t.id==='pier'?'海を眺める':t.id==='pond'?'釣りをする':t.id.startsWith('plot')?plotActionLabel(Number(t.id.slice(4))):t.id.startsWith('shell')?'拾う':'採集する'):'✨ 調べる'}
+ let msg='🎉 おねがい達成！';if(!state.claimed[0])msg='🍎 果物を3個集めよう '+Math.min(3,state.questBerries)+'/3';else if(!state.claimed[1])msg='🏪 お店で何か売ってみよう';else if(!state.claimed[2])msg='🥕 畑でにんじんを育てよう';$('missionShort').textContent=msg}
+function setContext(){if(fishing.stage!=='idle'||indoor.transition||watering.active||railRide.active)return;const t=nearest;if(indoor.room){const names={exit:'島に出る',clerk:'店員さんと話す',seeds:'商品を見る',goods:'買取をお願い',bed:'ベッドで休む',dresser:'着替える',table:'作業テーブルを見る'};$('interactHint').textContent=t?t.icon+' '+t.name+' に近づいたよ':'🏠 室内を歩いて探検しよう';$('actionBtn').textContent=t?'✨ '+names[t.id]:'✨ 調べる';return}$('interactHint').textContent=t?t.icon+' '+t.name+' が近くにあるよ':'🌱 島を自由に探検しよう';$('actionBtn').textContent=t?'✨ '+(t.id==='shop'?'お店に入る':(t.id==='npc'||t.id==='moko')?'話しかける':t.id==='home'?'家に入る':t.id==='cottage'?'コテージに入る':t.id==='seaStationHome'||t.id==='seaStationCity'?'列車に乗る':t.id.startsWith('city')?'施設を利用する':t.id==='redevelopment'?'工事現場を見る':t.id==='camp'?'休憩する':t.id==='falls'?'滝を眺める':t.id==='pier'?'海を眺める':t.id==='pond'?'釣りをする':t.id.startsWith('plot')?plotActionLabel(Number(t.id.slice(4))):t.id.startsWith('shell')?'拾う':t.id.startsWith('resource')?'受け取る':'採集する'):'✨ 調べる'}
 function give(id,amount){state.inventory[id]=(state.inventory[id]||0)+amount}
 function price(id){return Math.max(1,Math.round(basePrice[id]*(.86+(state.day*37+id.length*13)%29/100)))}
 function maybeQuest(){if(!state.claimed[0]&&state.questBerries>=3){state.claimed[0]=true;state.coins+=70;showToast('🎉 おねがい達成！ 70コインをゲット');return}if(state.claimed[0]&&!state.claimed[1]&&state.questSold){state.claimed[1]=true;state.coins+=80;showToast('🎉 商売の達人！ 80コインをゲット');return}if(state.claimed[1]&&!state.claimed[2]&&state.questGrown){state.claimed[2]=true;state.coins+=100;showToast('🎉 初めての収穫！ 100コインをゲット')}}
 function interact(){if(paused)return;if(indoor.room){interactInside();return}const t=findNearby();if(!t){showToast('🌿 気になる場所に近づいて「調べる」を押そう');return}const id=t.id;
- if(id.startsWith('tree')){const i=Number(id.slice(4));if(state.harvested.includes(i)){showToast('🌳 今日はもう採集したよ');return}state.harvested.push(i);if(trees[i].type==='pine'){give('wood',2);showToast('🪵 木材を2個手に入れた！')}else{give('berry',2);give('wood',1);state.questBerries+=2;showToast('🍎 木の実2個と木材1個を手に入れた！')}maybeQuest()}
+ if(id.startsWith('resource')){const i=Number(id.slice(8));const p=resourceSpots[i];if(!p||resourceCollected(i))return;state.harvested.push(100+i);if(p.type==='lumber'){give('wood',2);showToast('📦 建設資材から木材2個を受け取った！')}else{give('berry',2);state.questBerries+=2;showToast('🧺 かごから果物2個を受け取った！')}maybeQuest()}
  else if(id.startsWith('shell')){const i=Number(id.slice(5));state.shells.push(i);give('shell',1);showToast('🐚 貝がらを拾った！')}
  else if(id.startsWith('plot')){const i=Number(id.slice(4)),f=state.farm[i];
   if(!f){if(state.inventory.seed<=0){showToast('🌱 種がないよ。お店で買おう！');return}state.inventory.seed--;state.farm[i]={day:state.day};showToast('🌱 種をまいたよ！ 次は水をあげてみよう')}
