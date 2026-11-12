@@ -58,11 +58,6 @@ function path(b,ax,az,bx,bz,w,col='#ead9ba'){
  const x=-dz/len*w*.5,z=dx/len*w*.5;
  b.quad([ax+x,.065,az+z],[bx+x,.065,bz+z],[bx-x,.065,bz-z],[ax-x,.065,az-z],col);
 }
-function tree(b,x,z,f=1){
- b.cylinder(x,.65*f,z,.15*f,1.3*f,6,'#967b5e');
- b.sphere(x,1.82*f,z,.77*f,.94*f,.79*f,'#7ebd82',5,7);
- b.sphere(x+.32*f,2.0*f,z-.2*f,.52*f,.54*f,.51*f,'#a1d5a2',4,6);
-}
 function house(b,x,z,width,height,depth,roof,wall){
  b.box(x,height/2+.05,z,width,height,depth,wall);
  b.roof(x,height+.11,z,width+.18,depth+.18,1.02,roof);
