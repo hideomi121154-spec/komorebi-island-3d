@@ -12,6 +12,7 @@ on:
       - 'styles.css'
       - 'index.html'
       - 'sealine3d.js'
+      - 'world-expansion-v23.js'
       - 'nightfestival.js'
       - 'render-quality.js'
   workflow_dispatch:

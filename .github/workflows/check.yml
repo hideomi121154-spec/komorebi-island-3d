@@ -31,5 +31,10 @@ jobs:
           node --check render-quality.js
       - name: Validate sky gradient shader syntax
         run: node --check sky-gradient.js
+      - name: Validate large-world expansion syntax
+        run: |
+          node --check world-expansion-v23.js
+          node --check sealine3d.js
+          node --check expansion3d.js
       - name: Run smoke tests
         run: node --test tests/*.test.mjs
