@@ -111,6 +111,7 @@ function building(b,progress){
  }
 }
 function craneStatic(b){
+ // The mast never rotates, while the complete jib, trolley and cargo move in drawDynamic.
  const x=16.15,z=-7.05,towerHeight=12.8,crane='#efae30';
  b.box(x,towerHeight/2,z,.43,towerHeight,.43,crane);
  for(let y=.6;y<towerHeight;y+=1.1){
@@ -118,20 +119,7 @@ function craneStatic(b){
   boxBeam(b,x-.28,y-.5,z+.35,x+.28,y+.5,z+.35,.045,'#d38e30');
   boxBeam(b,x+.28,y-.5,z-.35,x-.28,y+.5,z-.35,.045,'#cf8733');
  }
- b.box(x,towerHeight+.15,z,1.1,.35,1.1,'#e5a532');
- b.box(x+.45,towerHeight-.56,z,.83,.66,.68,'#fff1ca');
- b.box(x+.88,towerHeight-.48,z,.08,.47,.53,'#91c3cd');
- // Fixed upper jib, several X-trusses and a counterweight.
- const y=towerHeight+.25;
- b.box(x-.75,y,z,8.2,.16,.25,crane);
- b.box(x+1.60,y,z,3.20,.10,.25,'#de9333');
- for(let xx=x-4.65;xx<x+3.6;xx+=.65){
-  boxBeam(b,xx,y,z,xx+.6,y+.47,z,.07,'#e6ac3b');
-  boxBeam(b,xx,y+.47,z,xx+.6,y,z,.07,'#e8ae3c');
- }
- boxBeam(b,x,y+.6,z,x-4.7,y+.18,z,.065,'#b99363');
- boxBeam(b,x,y+.6,z,x+3.4,y+.18,z,.065,'#b99363');
- b.box(x+3.27,y-.39,z,1.1,.73,.60,'#c3c9b5');
+ b.box(x,towerHeight+.15,z,1.08,.32,1.08,'#e5a532');
 }
 function supplies(b){
  // Organized materials, a safety hut and compact excavator inside the side lot.
@@ -214,30 +202,146 @@ function drawStatic(b,progress){
  if(progress<100){craneStatic(b);supplies(b);}
  fence(b,progress>=100);
 }
-function worker(b,x,z,now,offset){
- const bob=.035*Math.sin(now*.003+offset);
- b.cylinder(x,.4+bob,z,.15,.65,5,'#457d96');
- b.sphere(x,.91+bob,z,.18,.19,.18,'#f0ccb0',5,7);
- b.sphere(x,1.09+bob,z,.23,.11,.23,'#f6c748',5,7);
- for(const dx of[-.1,.1])b.box(x+dx,.13+bob,z,.1,.23,.14,'#697e80');
+// All construction motion is derived from elapsed time and saved progress:
+// no new save keys, no timers and no frame-dependent state.
+function constructionPose(now,progress){
+ const t=Math.max(0,Number(now)||0)*.001,p=clamp(progress);
+ const scaffoldLevel=(completedFloors(p)+1)*1.28+.14;
+ const maxHook=Math.min(11.18,Math.max(7.90,scaffoldLevel+1.62));
+ return {
+  boomAngle:.29*Math.sin(t*.48),
+  trolleyX:-2.68+.98*Math.sin(t*.36+1.15),
+  hookY:maxHook+.32*Math.sin(t*.92+.6),
+  carrierX:11.32+1.24*(.5+.5*Math.sin(t*.84)),
+  carrierStep:Math.sin(t*5.2)*.095,
+  scaffoldLevel,
+  hammerPhase:Math.sin(t*5.6),
+  signalPhase:Math.sin(t*1.6)
+ };
+}
+function rotatedBox(b,at,x,y,z,w,h,d,color){
+ // A proper oriented mesh: the crane jib turns in world space, not just a flat sprite.
+ const x0=x-w/2,x1=x+w/2,y0=y-h/2,y1=y+h/2,z0=z-d/2,z1=z+d/2;
+ const a=at(x0,y0,z0),bb=at(x1,y0,z0),c=at(x1,y0,z1),dd=at(x0,y0,z1);
+ const e=at(x0,y1,z0),f=at(x1,y1,z0),g=at(x1,y1,z1),h0=at(x0,y1,z1);
+ b.quad(e,h0,g,f,color);b.quad(a,bb,c,dd,color);
+ b.quad(h0,dd,c,g,color);b.quad(f,bb,a,e,color);
+ b.quad(e,a,dd,h0,color);b.quad(g,c,bb,f,color);
+}
+function drawCrane(b,pose,now){
+ const cx=16.15,cz=-7.05,y=13.05;
+ const a=pose.boomAngle,cs=Math.cos(a),sn=Math.sin(a);
+ const at=(x,yy,z)=>[cx+x*cs+z*sn,yy,cz-x*sn+z*cs];
+ rotatedBox(b,at,-.72,y,0,8.14,.16,.28,'#e8a42c');
+ rotatedBox(b,at,-.72,y+.48,0,8.12,.10,.15,'#f4bf55');
+ // Truss bracing: the jib and its counterweight yaw together above the mast.
+ for(let x=-4.73;x<3.12;x+=.68){
+  const p=at(x,y,.02),q=at(Math.min(x+.65,3.42),y+.48,.02);
+  const u=at(x,y+.48,.02),v=at(Math.min(x+.65,3.42),y,.02);
+  boxBeam(b,...p,...q,.065,'#d88e31');
+  boxBeam(b,...u,...v,.065,'#efb746');
+ }
+ const stay0=at(0,y+.69,0),stay1=at(-4.72,y+.06,0),stay2=at(3.27,y+.08,0);
+ boxBeam(b,...stay0,...stay1,.065,'#ad8b5d');
+ boxBeam(b,...stay0,...stay2,.065,'#ad8b5d');
+ rotatedBox(b,at,.44,y-.62,.04,.83,.65,.70,'#f4e1a5');
+ rotatedBox(b,at,.54,y-.57,.40,.62,.42,.06,'#93c3d7');
+ rotatedBox(b,at,3.17,y-.45,0,1.05,.76,.66,'#bfc4ba');
+ // A motor trolley travels along the jib; wire length and sling change with progress.
+ const trolley=at(pose.trolleyX,y-.19,0),hy=pose.hookY;
+ rotatedBox(b,at,pose.trolleyX,y-.26,0,.48,.28,.42,'#e5b347');
+ const cableLength=trolley[1]-hy;
+ b.box(trolley[0],hy+cableLength*.5,trolley[2],.040,cableLength,.040,'#5e6a70');
+ b.box(trolley[0],hy-.11,trolley[2],.22,.18,.23,'#d7a536');
+ const sway=.07*Math.sin(now*.0017);
+ const bottom=hy-.79;
+ b.box(trolley[0]+sway,bottom,trolley[2],1.00,.60,.86,'#c8d0d0');
+ b.box(trolley[0]+sway,bottom+.33,trolley[2],1.04,.075,.90,'#8a9c9c');
+ for(const dx of[-.36,.36]){
+  boxBeam(b,trolley[0],hy-.13,trolley[2],
+   trolley[0]+dx+sway,bottom+.30,trolley[2],.035,'#68747a');
+ }
+ // Top warning beacon, flashes more visibly in the dark.
+ if((now%1800)<930)b.sphere(cx,y+.83,cz,.17,.15,.17,'#ffc05a',5,7);
+}
+function drawCrew(b,x,y,z,now,role,id){
+ // Chibi-scale 3D workers deliberately match the island's low-poly characters.
+ const t=now*.001,step=role==='carry'?Math.sin(t*5.2+id)*.105:role==='scaffold'?Math.sin(t*2.6+id)*.045:0;
+ const bob=role==='carry'?Math.abs(Math.sin(t*5.2+id))*.035:0;
+ const skin='#eec7a5',hardHat=id%2?'#f6cc43':'#f9d44e';
+ const vest=id%2?'#ed9449':'#e98545',pants='#426075',boot='#344650';
+ const by=y+bob;
+ // Alternating knees and boots create visible walk cycles, without moving off the walkway.
+ for(const side of[-1,1]){
+  const legY=by+.25+(side===1?step:-step);
+  b.box(x+side*.115,legY,z,.15,.46,.17,pants);
+  b.box(x+side*.115,by+.075+(side===1?step:-step),z+.06,.19,.14,.27,boot);
+ }
+ b.box(x,by+.76,z,.50,.66,.30,'#3b7290');
+ b.box(x,by+.78,z+.165,.46,.55,.065,vest);
+ b.box(x,by+.92,z+.206,.37,.065,.025,'#f7e5b1');
+ b.box(x,by+.69,z+.206,.37,.055,.025,'#f9e9b6');
+ b.box(x,by+1.18,z,.14,.15,.15,skin);
+ b.sphere(x,by+1.38,z,.22,.22,.21,skin,5,8);
+ b.sphere(x,by+1.56,z,.27,.115,.24,hardHat,5,8);
+ b.box(x,by+1.52,z+.19,.54,.063,.14,hardHat);
+ const armSwing=role==='hammer'?.17*Math.sin(t*5.6):role==='signal'?.20*Math.sin(t*2.1):role==='scaffold'?.12*Math.sin(t*4.0):.10*Math.sin(t*5.2);
+ b.box(x-.32,by+.87+(role==='carry'?.07:0),z+.02,.14,.48,.17,skin);
+ b.box(x+.32,by+.87+armSwing,z+.02,.14,.48,.17,skin);
+ if(role==='carry'){
+  // Worker holds a short length of steel and actually transports it across the site.
+  b.box(x,by+.67,z+.29,.72,.18,.30,'#bcc4c3');
+  b.box(x,by+.67,z+.32,.71,.065,.36,'#8b9b9b');
+ } else if(role==='hammer'||role==='scaffold'){
+  const swing=Math.sin(t*5.6+id)*.22;
+  b.box(x+.40,by+1.18+swing,z+.09,.06,.36,.08,'#8e7451');
+  b.box(x+.40,by+1.38+swing,z+.09,.25,.12,.16,'#849597');
+ }else if(role==='signal'){
+  // The banksman's luminous wand swings when the crane changes direction.
+  b.box(x+.37,by+1.16+armSwing,z+.07,.085,.42,.09,'#fb8c44');
+  b.box(x+.37,by+1.36+armSwing,z+.07,.105,.12,.12,'#fff1bc');
+ }
+}
+function drawDust(b,now,px,pz){
+ const cycle=((now*.00028)%1+1)%1;
+ // Fine pale puffs reappear near active material handling and the building entrance.
+ for(let i=0;i<5;i++){
+  const t=(cycle+i*.21)%1;
+  const size=.10+.18*t;
+  const drift=Math.sin(i*2.1+now*.00045)*.21;
+  const x=px+(i-2)*.17+drift,y=.20+t*.67,z=pz+.15*Math.sin(i*2.6);
+  const shade=t>.72?'#d6d8cf':i%2?'#e4ddd0':'#d9d5c8';
+  b.sphere(x,y,z,size,size*.57,size,shade,3,5);
+ }
+}
+function drawSiteActivity(b,now,progress){
+ const p=clamp(progress),pose=constructionPose(now,p);
+ drawCrane(b,pose,now);
+ // Ground crew stays inside the existing fenced area and clear of the main building.
+ drawCrew(b,pose.carrierX,.10,-3.73,now,'carry',0);
+ drawCrew(b,12.70,.10,-3.74,now,'hammer',1);
+ drawCrew(b,16.79,.10,-3.71,now,'signal',2);
+ // Scaffolder always follows the current exposed floor as construction progresses.
+ const scaffoldX=13.70+.30*Math.sin(now*.00047);
+ drawCrew(b,scaffoldX,pose.scaffoldLevel,-3.94,now,'scaffold',3);
+ if(p>=55)drawCrew(b,14.72,pose.scaffoldLevel,-3.94,now,'scaffold',4);
+ const hammerPulse=.5+.5*Math.sin(now*.0056);
+ b.box(12.97,.21,-3.55,.62,.24,.48,'#aeb9bb');
+ if(hammerPulse>.89)for(let i=0;i<3;i++){
+  const a=(now*.007+i*2.1),x=12.82+Math.cos(a)*(.13+i*.05);
+  b.sphere(x,.43+Math.abs(Math.sin(a))*.28,-3.47,.045,.056,.045,'#ffd17a',3,4);
+ }
+ drawDust(b,now,12.40,-3.58);
+ drawDust(b,now+870,16.5,-3.79);
 }
 function drawDynamic(b,now,progress){
- if(progress>=100)return;
- const t=now*.00022,cx=16.15,cz=-7.05,top=13.05;
- // A real rotating jib hook would require another crane; on this crane the hoist
- // travels smoothly along its fixed beam, keeping the materials within the site.
- const hookX=14.8+1.25*Math.sin(t),hang=7.7+.65*Math.sin(t*1.4);
- b.box(hookX,(top+hang)/2,cz,.035,top-hang,.035,'#6f7b79');
- b.box(hookX,hang-.1,cz,.46,.11,.39,'#b7ab9b');
- b.box(hookX,hang-.46,cz,1.02,.56,.81,'#c8c9c7');
- for(const off of[-.35,.35])boxBeam(b,hookX,hang,cz,hookX+off,hang-.29,cz,.03,'#8c8e87');
- // Moving excavator arm and tiny crew.
- const angle=.42+.32*Math.sin(now*.00075);
+ if(clamp(progress)>=100)return;
+ const t=now*.00075,angle=.42+.32*Math.sin(t),pose=constructionPose(now,progress);
+ // Animated excavator remains independent of the rotating tower crane.
  boxBeam(b,16.25,1.2,-4.3,16.0-angle,2.0+angle,-3.9,.17,'#dba13c');
  boxBeam(b,16.0-angle,2.0+angle,-3.9,15.35-angle,1.08,-3.60,.15,'#e8a438');
  b.box(15.35-angle,1.05,-3.6,.45,.34,.50,'#8c9389');
- worker(b,11.45,-3.7,now,0);
- worker(b,16.92,-4.0,now,2.1);
+ drawSiteActivity(b,now,progress);
 }
 function stage(progress){
  const p=clamp(progress);
@@ -245,6 +349,6 @@ function stage(progress){
 }
 function advance(current,days=0){return clamp(clamp(current)+Math.max(0,Math.floor(days))*2);}
 window.KomorebiRedevelopment={
- site,marker,clamp,within,clearTrees,completedFloors,drawStatic,drawDynamic,stage,advance
+ site,marker,clamp,within,clearTrees,completedFloors,constructionPose,drawStatic,drawDynamic,stage,advance
 };
 })();
