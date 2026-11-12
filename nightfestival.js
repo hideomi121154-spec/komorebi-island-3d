@@ -164,7 +164,7 @@ function burstLighting(ms,intensity){
  }
  return {strength:Math.min(.20,brightness*.18*intensity),color:tint};
 }
-function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1){
+function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,lineSegments=null){
  if(intensity<=.005||reducedMotion)return new Float32Array(0);
  const output=[],active=spectacleEventsAt(ms);
  const density=clamp(detail,.45,1);
@@ -224,6 +224,7 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1)
    const arc=spec.kind==='gold'?1.0:1.0;
    const radius=expand*variation*arc;
    const flicker=.76+.24*Math.sin(age*.010+j*3.41);
+   let previousTrailPoint=null;
    for(let k=0;k<trails;k++){
     const relative=1-k*(spec.kind==='gold'?.045:spec.kind==='red'?.060:.071);
     const x=centerX+ux*radius*relative;
@@ -233,8 +234,16 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1)
     const twinkle=(k===0?flicker:1)*(.98-k*.078);
     const white=k===0||j%17===0&&k<2;
     const color=white?[1,1,.87]:spec.color;
-    const pointSize=k===0?(spec.kind==='gold'?8.8:8.3):spec.kind==='gold'?4.4:4.0;
-    add(x,y,z,pointSize,color,fade*twinkle);
+    const pointSize=k===0?(spec.kind==='gold'?12.4:11.5):spec.kind==='gold'?7.4:6.7;
+    const alpha=fade*twinkle;
+    add(x,y,z,pointSize,color,alpha);
+    // Real connected ribbons, so the long golden/red tails never look like a dotted ring.
+    if(lineSegments&&previousTrailPoint&&lineSegments.length<maxPoints*16){
+     const p=previousTrailPoint,brightness=clamp(alpha*1.45);
+     lineSegments.push(p[0],p[1],p[2],1,spec.color[0],spec.color[1],spec.color[2],brightness);
+     lineSegments.push(x,y,z,1,spec.color[0],spec.color[1],spec.color[2],brightness);
+    }
+    previousTrailPoint=[x,y,z];
    }
    // Glitter falls slightly behind the long golden willow tips.
    if(spec.kind==='gold'&&j%3===0){
@@ -248,33 +257,46 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1)
 }
 function createWorldRenderer(gl){
  const vertex="attribute vec4 aWorld;attribute vec4 aTint;uniform mat4 uView;uniform mat4 uProj;uniform float uScale;varying vec4 vTint;void main(){vec4 p=uView*vec4(aWorld.xyz,1.0);gl_Position=uProj*p;float d=max(8.0,-p.z);gl_PointSize=clamp(aWorld.w*uScale*min(2.0,28.0/d),1.5,42.0);vTint=aTint;}";
- const fragment="precision mediump float;varying vec4 vTint;void main(){float r=length(gl_PointCoord-vec2(.5))*2.0;float halo=pow(max(0.0,1.0-r),2.1);float core=1.0-smoothstep(.02,.36,r);float a=(.34*halo+.96*core)*vTint.a;gl_FragColor=vec4(vTint.rgb*(.80+.27*core),a);}";
+ const fragment="precision mediump float;varying vec4 vTint;uniform float uLine;void main(){if(uLine>.5){gl_FragColor=vec4(vTint.rgb*1.15,vTint.a);return;}float r=length(gl_PointCoord-vec2(.5))*2.0;float halo=pow(max(0.0,1.0-r),2.1);float core=1.0-smoothstep(.02,.61,r);float a=(.26*halo+.97*core)*vTint.a;gl_FragColor=vec4(vTint.rgb*(.84+.25*core),a);}";
  const program=gl.createProgram();
  const vs=createShader(gl,gl.VERTEX_SHADER,vertex),fs=createShader(gl,gl.FRAGMENT_SHADER,fragment);
  gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);
  gl.deleteShader(vs);gl.deleteShader(fs);
  if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error('Festival spectacle link: '+gl.getProgramInfoLog(program));
- const buffer=gl.createBuffer(),aWorld=gl.getAttribLocation(program,'aWorld'),aTint=gl.getAttribLocation(program,'aTint');
- const uView=gl.getUniformLocation(program,'uView'),uProj=gl.getUniformLocation(program,'uProj'),uScale=gl.getUniformLocation(program,'uScale');
+ const buffer=gl.createBuffer(),lineBuffer=gl.createBuffer(),aWorld=gl.getAttribLocation(program,'aWorld'),aTint=gl.getAttribLocation(program,'aTint');
+ const uView=gl.getUniformLocation(program,'uView'),uProj=gl.getUniformLocation(program,'uProj'),uScale=gl.getUniformLocation(program,'uScale'),uLine=gl.getUniformLocation(program,'uLine');
  return {
   draw(ms,intensity,origin,view,proj,pixelRatio,reducedMotion=false){
    const detail=(pixelRatio||1)<1.35?.66:1;
-   const points=worldParticles(ms,intensity,origin,reducedMotion,detail);
+   const lineSegments=[];
+   const points=worldParticles(ms,intensity,origin,reducedMotion,detail,lineSegments);
    if(!points.length)return;
    gl.useProgram(program);
    gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
-   gl.bufferData(gl.ARRAY_BUFFER,points,gl.DYNAMIC_DRAW);
-   gl.enableVertexAttribArray(aWorld);gl.vertexAttribPointer(aWorld,4,gl.FLOAT,false,32,0);
-   gl.enableVertexAttribArray(aTint);gl.vertexAttribPointer(aTint,4,gl.FLOAT,false,32,16);
    gl.uniformMatrix4fv(uView,false,view);gl.uniformMatrix4fv(uProj,false,proj);
    gl.uniform1f(uScale,Math.max(1,pixelRatio||1));
    gl.enable(gl.DEPTH_TEST);gl.depthMask(false);
    gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);
+   gl.enableVertexAttribArray(aWorld);
+   gl.enableVertexAttribArray(aTint);
+   if(lineSegments.length){
+    gl.bindBuffer(gl.ARRAY_BUFFER,lineBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(lineSegments),gl.DYNAMIC_DRAW);
+    gl.vertexAttribPointer(aWorld,4,gl.FLOAT,false,32,0);
+    gl.vertexAttribPointer(aTint,4,gl.FLOAT,false,32,16);
+    gl.uniform1f(uLine,1);
+    gl.drawArrays(gl.LINES,0,lineSegments.length/8);
+   }
+   gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+   gl.bufferData(gl.ARRAY_BUFFER,points,gl.DYNAMIC_DRAW);
+   gl.vertexAttribPointer(aWorld,4,gl.FLOAT,false,32,0);
+   gl.vertexAttribPointer(aTint,4,gl.FLOAT,false,32,16);
+   gl.uniform1f(uLine,0);
    gl.drawArrays(gl.POINTS,0,points.length/8);
    gl.disable(gl.BLEND);gl.depthMask(true);
    gl.disableVertexAttribArray(aWorld);gl.disableVertexAttribArray(aTint);
   },
-  destroy(){gl.deleteBuffer(buffer);gl.deleteProgram(program)}
+  destroy(){gl.deleteBuffer(buffer);gl.deleteBuffer(lineBuffer);gl.deleteProgram(program)}
  };
 }
 function drawCanvas(ctx,width,height,ms,intensity,reducedMotion=false){
