@@ -3,7 +3,7 @@
 'use strict';
 const E=window.KomorebiExpansion;
 if(!E||!E.extendedDistricts)throw Error('world-expansion-v23.js must load before spaceport3d.js');
-const bounds={x:-6,z:-1,rx:31.6,rz:26.1};
+const bounds={x:-7,z:-1,rx:34,rz:28};
 const pad={x:-24,z:-13,r:4.55};
 const marker={id:'spaceport',x:-24,z:-6.5,r:2.65,icon:'🚀',name:'こもれび宇宙港'};
 const hangar={x:-32,z:-7.1,w:5.25,d:4.1};
