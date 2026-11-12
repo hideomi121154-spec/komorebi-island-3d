@@ -23,9 +23,9 @@ function geometry(){
  }
  a.setTransform=()=>{};a.clearTransform=()=>{};return a;
 }
-function boot(){
- const nodes=new Map(),events=new Map(),storage=new Map();
- let created=0,now=0;
+function boot({reload=false}={}){
+ const nodes=new Map(),events=new Map(),storage=new Map(),windowEvents=new Map();
+ let created=0,now=0,reloadCount=0;
  const old={version:1,coins:87,day:4,welcomeSeen:true,x:0,z:3,
   inventory:{berry:1,wood:3,seed:2},harvested:[0,2],claimed:[false,false,false]};
  const key='komorebi_island_3d_v01';
@@ -39,7 +39,7 @@ function boot(){
    addEventListener:(k,f)=>handlers.set(k,f),_handlers:handlers,
    appendChild(child){this.children.push(child);return child},
    append(...items){this.children.push(...items)},replaceChildren(...items){this.children=[...items]},
-   setAttribute(k,v){this[k]=v},focus(){},
+   setAttribute(k,v){this[k]=v},focus(){},click(){},
    getContext(type){if(type!=='2d')return null;if(id==='gameCanvas')return {};
     if(id.endsWith('-canvas'))return new Proxy({},{get(){return()=>{}},set(){return true}});
     return null;}
@@ -49,7 +49,9 @@ function boot(){
  const document={readyState:'loading',hidden:false,getElementById:node,activeElement:null,
   addEventListener:(k,f)=>events.set(k,f),createElement:t=>node('created-'+(++created)+'-'+t),
   querySelectorAll:()=>[],querySelector:()=>node('bottom-ui')};
- const context={window:{addEventListener(){},devicePixelRatio:1},document,navigator:{},console,
+ const win={addEventListener:(k,f)=>windowEvents.set(k,f),devicePixelRatio:1};
+ if(reload)win.location={reload(){reloadCount++;windowEvents.get('pagehide')?.()}};
+ const context={window:win,document,navigator:{},console,
   performance:{now:()=>now},requestAnimationFrame(){},setTimeout(){return 1},clearTimeout(){},
   localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)}};
  for(const p of ['daynight.js','moko3d.js','expansion3d.js','redevelopment3d.js',
@@ -58,7 +60,7 @@ function boot(){
  const start=events.get('DOMContentLoaded');assert.ok(start);start();
  const api=context.window.__komorebiTest;assert.ok(api);
  node('startBtn')._handlers.get('click')();
- return {api,node,storage,key,initial:old};
+ return {api,node,storage,key,initial:old,reloads:()=>reloadCount,findInput:()=>[...nodes.values()].find(x=>x.id.endsWith('-input'))};
 }
 function action(node,label){
  const control=node('panelContent').children.find(e=>String(e.textContent||'').includes(label));
@@ -140,4 +142,35 @@ test('restart can be cancelled without deleting any inventory',()=>{
  action(node,'やめる（現在の島に戻る）');
  assert.equal(storage.get(key),before);
  assert.equal(api.getState().coins,87);
+});
+
+test('pagehide autosave cannot restore previous progress during a browser restart',()=>{
+ const {api,node,storage,key,reloads}=boot({reload:true});
+ api.openPanel('bag');
+ action(node,'新しい木のない島をはじめる');
+ action(node,'初期化して新しい島を始める');
+ assert.equal(reloads(),1,'browser reload requested');
+ const saved=JSON.parse(storage.get(key));
+ assert.equal(saved.coins,120,'old 87 coins do not come back on pagehide');
+ assert.equal(saved.day,1);
+ assert.equal(saved.welcomeSeen,false);
+ assert.equal(api.getState().coins,120);
+});
+test('JSON backup import survives pagehide autosave and restores player data',async()=>{
+ const {api,node,storage,key,reloads,findInput}=boot({reload:true});
+ const restored={version:1,coins:340,day:8,welcomeSeen:true,x:0,z:3,
+  inventory:{berry:7,wood:8,seed:2},harvested:[100],claimed:[true,false,false]};
+ api.openPanel('bag');
+ action(node,'バックアップを読み込む');
+ const picker=findInput();assert.ok(picker);
+ picker.files=[{text:async()=>JSON.stringify(restored)}];
+ const handler=picker._handlers.get('change');assert.equal(typeof handler,'function');
+ await handler();
+ assert.equal(reloads(),1);
+ const saved=JSON.parse(storage.get(key));
+ assert.equal(saved.coins,340);
+ assert.equal(saved.day,8);
+ assert.equal(saved.inventory.berry,7);
+ assert.deepEqual(Array.from(saved.harvested),[100]);
+ assert.equal(api.getState().coins,340);
 });
