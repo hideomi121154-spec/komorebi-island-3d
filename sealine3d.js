@@ -255,16 +255,17 @@ function paintMap(canvas,state){
  c.fillStyle='#98d2db';c.fillRect(0,0,w,h);
  c.save();
  // Wider home island and new city districts both fit on this map.
- const scale=Math.min((w-28)/107,(h-40)/46),sx=31,sz=23;
+ const scale=Math.min((w-28)/119,(h-40)/63),sx=41,sz=31;
  c.translate(14,18);c.scale(scale,scale);c.translate(sx,sz);
  function ellipse(x,z,rx,rz,color){c.fillStyle=color;c.beginPath();c.ellipse(x,z,rx,rz,0,0,Math.PI*2);c.fill();}
- ellipse(-2.6,0,24.4,20.9,'#f5dfad');ellipse(-2.6,0,23.3,19.8,'#a3d48e');
+ const home=window.KomorebiExpansion,origin=home.landCenter||{x:-2.6,z:0};
+ ellipse(origin.x,origin.z,home.sand[0],home.sand[1],'#f5dfad');ellipse(origin.x,origin.z,home.grass[0],home.grass[1],'#a3d48e');
  ellipse(CENTER.x,CENTER.z,RADII.x+1,RADII.z+1,'#f5dfad');
  ellipse(CENTER.x,CENTER.z,RADII.x,RADII.z,'#a3d48e');
  c.strokeStyle='#f9f0e2';c.lineWidth=.9;c.beginPath();c.moveTo(A.x,A.z);c.lineTo(B.x,B.z);c.stroke();
  c.strokeStyle='#647f8a';c.lineWidth=.29;c.stroke();
  ellipse(0,0,2.4,2.0,'#eee2c5');ellipse(48,-1.6,3,2.7,'#eee2c5');
- for(const [x,z,icon] of [[-6,-5,'🏡'],[6,-5,'🏪'],[-7,6,'🎣'],[14,-5,'🏗️'],[-21,-5,'🏘️'],[-18,9.3,'🏡'],[-12.4,15.3,'🌄'],[17.4,2.8,'🚉'],
+ for(const [x,z,icon] of [[-6,-5,'🏡'],[6,-5,'🏪'],[-7,6,'🎣'],[14,-5,'🏗️'],[-21,-5,'🏘️'],[-18,9.3,'🏡'],[-12.4,15.3,'🌄'],[-24,-13,'🚀'],[17.4,2.8,'🚉'],
   [43.6,-2.8,'🚉'],[52,-4.6,'🛍️'],[59,-1,'☕'],[51.6,-10,'🏨'],[63.6,5,'🎡'],[65.1,-9.8,'🏙️'],[42.3,-10.8,'🏘️'],[58.5,-15.5,'📚'],[43.5,7.5,'🏞️'],[68,-1.8,'⛵']]){
   c.save();c.translate(x,z);c.scale(1/scale,1/scale);c.font='18px system-ui';c.textAlign='center';c.textBaseline='middle';c.fillText(icon,0,0);c.restore();
  }
