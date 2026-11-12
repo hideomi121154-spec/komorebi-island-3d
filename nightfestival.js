@@ -136,8 +136,8 @@ function createRenderer(gl){
  */
 const SHOW_CYCLE=6800;
 const showPattern=[
- {at:140,x:0,y:29,z:-3,r:5.8,color:[1,.72,.31],rays:248,life:5450,kind:'gold'},
- {at:500,x:1,y:18,z:2,r:4.3,color:[1,.23,.32],rays:185,life:4520,kind:'red'},
+ {at:140,x:0,y:26,z:-3,r:5.7,color:[1,.72,.31],rays:248,life:5450,kind:'gold'},
+ {at:500,x:1,y:17,z:2,r:4.1,color:[1,.23,.32],rays:185,life:4520,kind:'red'},
  {at:760,x:-3.9,y:20,z:0,r:1.9,color:[1,.30,.72],rays:83,life:3600,kind:'pink'},
  {at:970,x:-3.0,y:17,z:-2,r:1.6,color:[.38,1,.63],rays:70,life:3420,kind:'green'},
  {at:1250,x:-4.5,y:15,z:1,r:1.9,color:[1,.40,.67],rays:76,life:3670,kind:'pink'},
