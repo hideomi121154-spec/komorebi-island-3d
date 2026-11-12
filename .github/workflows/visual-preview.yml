@@ -121,7 +121,7 @@ jobs:
           test -s "$RUNNER_TEMP/sea-train-ride.png"
           "$CHROME" --headless --no-sandbox --disable-dev-shm-usage \
             --enable-webgl --enable-unsafe-swiftshader --use-angle=swiftshader \
-            --hide-scrollbars --window-size=414,896 --virtual-time-budget=8600 \
+            --hide-scrollbars --window-size=414,896 --virtual-time-budget=6600 \
             "--screenshot=$RUNNER_TEMP/night-fireworks.png" \
             http://127.0.0.1:8765/preview-seed-fireworks.html
           test -s "$RUNNER_TEMP/night-fireworks.png"
