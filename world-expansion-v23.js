@@ -12,13 +12,13 @@ const cityPlaces=[
  {id:'cityTower',x:65.1,z:-6.1,r:2,icon:'🏙️',name:'みなと高層街区'},
  {id:'cityHomes',x:42.3,z:-7.1,r:2,icon:'🏘️',name:'新しい住宅街'},
  {id:'cityLibrary',x:58.5,z:-11.6,r:2,icon:'📚',name:'みなと市民センター'},
- {id:'cityPark',x:45.0,z:9.1,r:2.5,icon:'🌳',name:'海風公園'},
+ {id:'cityPark',x:45.0,z:9.1,r:2.5,icon:'🏞️',name:'海風公園'},
  {id:'cityMarina',x:68.0,z:-.3,r:2.1,icon:'⛵',name:'マリーナ広場'}
 ];
 const homePlaces=[
  {id:'westVillage',x:-21.1,z:-2.25,r:2.25,icon:'🏘️',name:'こもれび西町'},
  {id:'westResidences',x:-18.0,z:11.7,r:2.2,icon:'🏡',name:'丘の住宅街'},
- {id:'hillPark',x:-12.4,z:15.3,r:2.2,icon:'🌲',name:'見晴らし公園'}
+ {id:'hillPark',x:-12.4,z:15.3,r:2.2,icon:'🌄',name:'見晴らし公園'}
 ];
 S.places.push(...cityPlaces);E.places.push(...homePlaces);
 E.grass.splice(0,2,homeBounds.rx,homeBounds.rz);
@@ -95,11 +95,7 @@ E.objects=b=>{
  // Six and eight metre buildings stand several times taller than the avatar.
  house(b,-21.1,-5.0,4.70,5.95,3.86,'#d4a17f','#eed7b4');
  house(b,-18.0,9.3,5.70,8.25,4.20,'#93b7b5','#e4e2d3');
- for(const [x,z] of [[-23,-9.0],[-22,1.1],[-19.8,4.2],[-22.6,8.7],
-                       [-14.5,14.3],[-10.5,17.3],[-6.8,17],[-19,-13.8],
-                       [-12.7,-17.2],[-4,-17.0]]){
-  if((x-homeBounds.x)**2/23.3**2+z*z/19.8**2<.93)tree(b,x,z,.8+(Math.abs(x)*.035)% .32);
- }
+ // Keep the expanded western districts open for future player construction.
  // Village fountain and seating; all placed away from the old collectible trees.
  b.ellipseDisc(-21,.10,-.36,1.18,.93,'#e4d6b9',18);
  b.ellipseDisc(-21,.13,-.36,.80,.65,'#81bfcb',18);
@@ -167,8 +163,11 @@ function cityPark(b){
  b.ellipseDisc(43.5,.086,7.5,3.64,2.94,'#91cf99',28);
  b.ellipseDisc(43.7,.093,7.5,1.20,.95,'#77bcc8',22);
  b.ellipseDisc(43.7,.10,7.5,.75,.60,'#b8e0df',18);
- for(const [x,z] of [[41.5,7.5],[46.0,8.9],[44.0,4.9],[46.4,5.8]])
-  tree(b,x,z,.79);
+ // Benches and low flowerbeds replace park trees; sight lines stay open.
+ for(const [x,z] of [[41.5,7.5],[46.0,8.9],[44.0,4.9],[46.4,5.8]]){
+  b.box(x,.18,z,.88,.21,.64,'#c9bc9a');
+  for(const q of[-.23,.23])b.sphere(x+q,.34,z,.14,.14,.14,'#e6afc9',4,6);
+ }
  for(const [x,z] of [[41.5,5.5],[45.5,9.4],[42.7,10.1]]){
   b.box(x,.45,z,1.45,.16,.48,'#bf9970');
   for(const q of[-.49,.49])b.box(x+q,.25,z,.12,.41,.32,'#947a60');
@@ -189,12 +188,7 @@ const oldCityStatic=S.drawStatic;
 S.drawStatic=b=>{
  oldCityStatic(b);
  cityTower(b);cityHomes(b);civicCenter(b);cityPark(b);cityMarina(b);
- // Peripheral low-poly greenery gives the enlarged island genuine districts and depth.
- for(const [x,z] of [[36,-5],[37,1.5],[39,8],[47,10],[53,9],[56,8.3],
-                       [69,-4.8],[64,-15],[59,-17.1],[46,-14.5],[39,-12],
-                       [62,-1.4],[68,2.5]]){
-  if(S.isCommercial(x,z)&&S.walkable(x,z))tree(b,x,z,.65+(Math.abs(x)*.17)% .4);
- }
+ // Peripheral open lawns leave room for future roads and player-built facilities.
 };
 window.KomorebiWorldExpansion={
  homeBounds,cityPlaces,homePlaces,cityBlockers,homeBlockers,
