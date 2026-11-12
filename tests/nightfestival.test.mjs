@@ -23,9 +23,9 @@ test('HD night effects are injected before the island engine',()=>{
  const iGame=html.indexOf('src="game.js');
  assert.ok(iFestival>0&&iQuality>iFestival&&iGame>iQuality);
  const game=source('game.js');
- assert.match(game,/festivalRenderer\.draw\(now,fireworksIntensity/);
+ assert.match(game,/festivalRenderer\.draw\(festivalClock,fireworksIntensity/);
  assert.match(game,/gl\.useProgram\(prog\)/);
- assert.match(game,/FESTIVAL\.burstLighting\(now,fireworksIntensity\)/);
+ assert.match(game,/FESTIVAL\.burstLighting\(festivalClock,fireworksIntensity\)/);
  assert.match(game,/renderQuality\.ratio\(cssW,cssH/);
  assert.match(game,/FESTIVAL\?\.drawCanvas/);
 });
@@ -96,9 +96,74 @@ test('3D fireworks exist above the island and can be viewed from overhead',()=>{
  assert.equal(festival.worldParticles(1250,0,[5,-3]).length,0);
  assert.equal(festival.worldParticles(1250,1,[5,-3],true).length,0);
  const game=source('game.js');
- assert.match(game,/worldFestivalRenderer\.draw\(now,fireworksIntensity/);
+ assert.match(game,/worldFestivalRenderer\.draw\(festivalClock,fireworksIntensity/);
  assert.match(game,/canvas\.addEventListener\('wheel'/);
  assert.match(game,/cameraPitch=clamp/);
  assert.match(game,/pointers\.size===2/);
  assert.match(game,/festivalViewBtn/);
+});
+
+test('The grand show contains a massive gold top burst, lower red and colored satellites',()=>{
+ const pattern=festival.showPattern;
+ assert.ok(pattern.length>=9);
+ assert.equal(pattern[0].kind,'gold');
+ assert.equal(pattern[1].kind,'red');
+ assert.ok(pattern[0].y>pattern[1].y);
+ assert.ok(pattern[0].r>pattern[1].r);
+ assert.ok(pattern.filter(p=>p.kind==='pink').length>=3);
+ assert.ok(pattern.filter(p=>p.kind==='green').length>=3);
+ assert.ok(pattern.some(p=>p.x<0)&&pattern.some(p=>p.x>0));
+ assert.ok(pattern.every(p=>p.r>0&&p.life>2500&&p.y>10));
+ const frame=festival.worldParticles(1800,1,[5,-3]);
+ assert.ok(frame.length/8>5000,'many layered streaks rather than one faint 100-dot ring');
+ const colors=new Set();
+ let fountainCount=0,highCount=0;
+ for(let i=0;i<frame.length;i+=8){
+  const x=frame[i],y=frame[i+1],z=frame[i+2];
+  assert.ok(Number.isFinite(x)&&Number.isFinite(y)&&Number.isFinite(z));
+  assert.ok(frame[i+7]>=0&&frame[i+7]<=1);
+  colors.add([Math.round(frame[i+4]*10),Math.round(frame[i+5]*10),Math.round(frame[i+6]*10)].join('-'));
+  if(y<12)fountainCount++;
+  if(y>23)highCount++;
+ }
+ assert.ok(colors.size>=5,'gold, red, green, pink and white sparks must coexist');
+ assert.ok(fountainCount>=150,'launch fountains should be clearly visible');
+ assert.ok(highCount>=800,'upper golden chrysanthemum is a large visible shell');
+});
+test('Festival loop, phone detail scaling and reduced motion are deterministic',()=>{
+ const ms=1800;
+ const first=festival.worldParticles(ms,1,[5,-3]);
+ assert.deepEqual(Array.from(first),Array.from(festival.worldParticles(ms,1,[5,-3])));
+ assert.deepEqual(Array.from(first),Array.from(festival.worldParticles(ms+festival.SHOW_CYCLE,1,[5,-3])));
+ const low=festival.worldParticles(ms,1,[5,-3],false,.6);
+ assert.ok(low.length<first.length&&low.length>0,'lower-end phones render fewer sparks');
+ assert.equal(festival.worldParticles(ms,0,[5,-3]).length,0);
+ assert.equal(festival.worldParticles(ms,1,[5,-3],true).length,0);
+ assert.ok(festival.burstLighting(ms,1).strength>0);
+ const game=source('game.js');
+ const html=source('index.html');
+ assert.match(game,/festivalStartedAt=performance\.now\(\)/);
+ assert.match(game,/get\('demo'\)==='fireworks'/);
+ assert.match(game,/festivalShow&&!roomActive\?festivalOrigin/);
+ assert.match(game,/cameraPitch=1\.23/);
+ assert.match(html,/nightfestival\.js\?v=20261112-v25/);
+ assert.match(html,/game\.js\?v=20261112-v25/);
+});
+
+test('Spark trails form continuous luminous 3D line segments',()=>{
+ const lines=[];
+ const points=festival.worldParticles(1850,1,[11,-5],false,1,lines);
+ assert.ok(points.length/8>6000);
+ assert.ok(lines.length/16>2500,'every shell has real continuous line segments');
+ assert.equal(lines.length%16,0);
+ for(let i=0;i<lines.length;i+=16){
+  const length=Math.hypot(lines[i]-lines[i+8],lines[i+1]-lines[i+9],lines[i+2]-lines[i+10]);
+  assert.ok(length>0&&length<1.3,'successive streak samples connect without jumps');
+  assert.ok(lines[i+7]>=0&&lines[i+7]<=1);
+ }
+ const source=String.raw;
+ const fireworksModule=readFileSync(resolve(root,'nightfestival.js'),'utf8');
+ assert.match(fireworksModule,/gl\.drawArrays\(gl\.LINES/);
+ assert.match(fireworksModule,/gl\.drawArrays\(gl\.POINTS/);
+ assert.match(fireworksModule,/uniform float uLine/);
 });

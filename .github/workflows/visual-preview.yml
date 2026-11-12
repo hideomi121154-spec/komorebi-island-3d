@@ -15,6 +15,12 @@ on:
       - 'world-expansion-v23.js'
       - 'nightfestival.js'
       - 'render-quality.js'
+  pull_request:
+    paths:
+      - '.github/workflows/visual-preview.yml'
+      - 'nightfestival.js'
+      - 'game.js'
+      - 'index.html'
   workflow_dispatch:
 permissions:
   contents: read
@@ -65,6 +71,15 @@ jobs:
           location.replace('/index.html?demo=train');
           </script></body></html>
           EOF
+          cat > preview-seed-fireworks.html <<'EOF'
+          <!doctype html><html><head><meta charset="utf-8"></head><body><script>
+          localStorage.setItem('komorebi_island_3d_v01',JSON.stringify({
+            version:1,day:3,coins:97,x:7,z:-3,angle:0,welcomeSeen:true,
+            inventory:{berry:0,wood:1,seed:2},redevelopmentProgress:34
+          }));
+          location.replace('/index.html?demo=fireworks');
+          </script></body></html>
+          EOF
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/komorebi-http.log 2>&1 &
           sleep 2
       - name: Install Japanese font for a faithful iPhone-like text layout
@@ -104,6 +119,13 @@ jobs:
             "--screenshot=$RUNNER_TEMP/sea-train-ride.png" \
             http://127.0.0.1:8765/preview-seed-train.html
           test -s "$RUNNER_TEMP/sea-train-ride.png"
+          "$CHROME" --headless --no-sandbox --disable-dev-shm-usage \
+            --enable-webgl --enable-unsafe-swiftshader --use-angle=swiftshader \
+            --hide-scrollbars --window-size=414,896 --virtual-time-budget=6600 \
+            "--screenshot=$RUNNER_TEMP/night-fireworks.png" \
+            http://127.0.0.1:8765/preview-seed-fireworks.html
+          test -s "$RUNNER_TEMP/night-fireworks.png"
+          file "$RUNNER_TEMP/night-fireworks.png"
       - name: Upload screenshot
         uses: actions/upload-artifact@v4
         with:
@@ -113,4 +135,5 @@ jobs:
             ${{ runner.temp }}/commercial-island.png
             ${{ runner.temp }}/sea-line-panorama.png
             ${{ runner.temp }}/sea-train-ride.png
+            ${{ runner.temp }}/night-fireworks.png
           retention-days: 3

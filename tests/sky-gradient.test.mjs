@@ -40,7 +40,7 @@ test('GPU scene actually paints the sky gradient before fireworks and island',()
  assert.ok(html.indexOf('src="sky-gradient.js')>0);
  assert.ok(html.indexOf('src="sky-gradient.js')<html.indexOf('src="game.js'));
  assert.match(game,/skyRenderer\.draw\(lighting\.top,lighting\.horizon\)/);
- assert.ok(game.indexOf('skyRenderer.draw(lighting.top,lighting.horizon)')<game.indexOf('festivalRenderer.draw(now,fireworksIntensity'));
+ assert.ok(game.indexOf('skyRenderer.draw(lighting.top,lighting.horizon)')<game.indexOf('festivalRenderer.draw(festivalClock,fireworksIntensity'));
  assert.doesNotThrow(()=>new Script(file('sky-gradient.js')));
 });
 
