@@ -835,7 +835,8 @@ function paragraph(parent,text,cls){let p=document.createElement('p');p.textCont
 function tag(parent,name,txt){let e=document.createElement(name);e.textContent=txt;parent.appendChild(e);return e}
 function addButton(parent,label,fn,cls='primary'){const el=document.createElement('button');el.textContent=label;el.className=cls;el.addEventListener('click',fn);parent.appendChild(el);return el}
 function openPanel(type){panelType=type;paused=true;for(let dir of Object.keys(input))input[dir]=false;document.querySelectorAll('[data-dir]').forEach(e=>e.classList.remove('pressed'));const overlay=$('panelOverlay'),title=$('panelTitle'),content=$('panelContent');content.replaceChildren();overlay.hidden=false;
- if(type==='bag'){title.textContent='🎒 持ち物';for(let id of Object.keys(itemLabels)){let count=state.inventory[id];content.appendChild(row(itemIcons[id],itemLabels[id],count+' 個',null,null))}paragraph(content,'📦 収集したアイテムは、商店へ行くと売れるよ。','tip-box');addButton(content,'セーブデータをバックアップ',exportSave,'secondary')}
+ if(type==='bag'){title.textContent='🎒 持ち物';for(let id of Object.keys(itemLabels)){let count=state.inventory[id];content.appendChild(row(itemIcons[id],itemLabels[id],count+' 個',null,null))}paragraph(content,'📦 果物と木材は、島の収穫かごと資材置き場でも毎日受け取れるよ。','tip-box');addButton(content,'セーブデータをバックアップ',exportSave,'secondary');addButton(content,'📂 バックアップを読み込む',importSave,'secondary');addButton(content,'🏝️ 新しい木のない島をはじめる',()=>openPanel('restart'),'secondary')}
+ else if(type==='restart'){title.textContent='🏝️ 木のない島を最初から始める';paragraph(content,'現在のコイン・持ち物・建設進捗・依頼達成・日数はすべて初期状態に戻ります。現在のセーブはこの画面を開くだけでは消えません。','tip-box');paragraph(content,'必要なら先にバックアップを保存してください。操作後は新しい島から遊び直せます。');addButton(content,'💾 先にバックアップを保存',exportSave,'secondary');addButton(content,'やめる（現在の島に戻る）',()=>openPanel('bag'),'secondary');addButton(content,'初期化して新しい島を始める',restartIsland,'danger')}
  else if(type==='shop'){title.textContent='🏪 こもれび商店';paragraph(content,'いらっしゃいませ！ 今日の買取価格はこちら。');for(let id of ['berry','wood','shell','fish','carrot']){const count=state.inventory[id],p=price(id);content.appendChild(row(itemIcons[id],itemLabels[id]+' ×'+count,'1個 '+p+'コイン','1個売る',()=>{if(state.inventory[id]<=0)return;state.inventory[id]--;state.coins+=p;state.questSold=true;maybeQuest();save();updateHud();openPanel('shop');showToast('🪙 '+p+'コインで売れた！')},count<1))}
  tag(content,'h3','🛍️ お買い物');content.appendChild(row('🌱','にんじんの種','30コイン','買う',()=>{if(state.coins<30)return;state.coins-=30;give('seed',1);save();updateHud();openPanel('shop');showToast('🌱 種を1つ買ったよ！')},state.coins<30));content.appendChild(row('🪑','お庭のベンチ','160コイン・家の前に置かれる','買う',()=>{if(state.coins<160||state.furniture>=1)return;state.coins-=160;state.furniture=1;save();updateHud();openPanel('shop');showToast('🪑 お庭にベンチを置いたよ！')},state.coins<160||state.furniture>=1));paragraph(content,'価格は日によって少し変わるよ。木の実は毎朝また採れるから、少しずつ貯めてね。','tip-box')}
  else if(type==='home'){title.textContent='🏡 わたしの家';paragraph(content,'木の香りがする小さなおうち。お庭をもっと素敵にしてみよう。');content.appendChild(row('🏠','おうちレベル '+state.houseLevel,'島の暮らしを充実させよう',null,null));content.appendChild(row('🔨','おうちを増築する','400コイン・庭に飾りが増える','増築',()=>{if(state.houseLevel>=2||state.coins<400)return;state.coins-=400;state.houseLevel=2;save();updateHud();openPanel('home');showToast('🏠 おうちを増築したよ！')},state.houseLevel>=2||state.coins<400));paragraph(content,'今後は家の中に入れる機能や家具の配置も増やしていく予定です。','tip-box')}
@@ -847,6 +848,46 @@ function openPanel(type){panelType=type;paused=true;for(let dir of Object.keys(i
   else if(type==='quests'){title.textContent='📋 島のおねがい';const quests=[{done:state.questBerries>=3,claimed:state.claimed[0],txt:'🍎 木の実を3個集めよう',progress:Math.min(3,state.questBerries)+'/3',reward:70},{done:state.questSold,claimed:state.claimed[1],txt:'🏪 商店で何か売ろう',progress:state.questSold?'達成':'未達成',reward:80},{done:state.questGrown,claimed:state.claimed[2],txt:'🥕 にんじんを育てて収穫しよう',progress:state.questGrown?'達成':'未達成',reward:100}];for(const q of quests){content.appendChild(row(q.claimed?'✅':'⭐',q.txt,q.progress+' ・報酬 '+q.reward+'コイン',null,null))}paragraph(content,'おねがいは自動で達成・報酬受け取りになるよ。','tip-box')}
  updateHud()}
 function closePanel(){$('panelOverlay').hidden=true;paused=false;panelType='';setContext()}
+// Explicit two-stage restart: opening the bag never erases old progress.
+function restartIsland(){
+ const fresh=structuredCloneSafe(initial);
+ try{localStorage.setItem(KEY,JSON.stringify(fresh))}
+ catch{showToast('⚠️ セーブを初期化できませんでした。ストレージを確認してください。');return false}
+ if(typeof window.location?.reload==='function'){window.location.reload();return true}
+ // In-memory fallback used by non-browser test environments.
+ state=readSave();railRide.active=false;nearest=null;
+ camFocus.x=state.x;camFocus.z=state.z;
+ overviewMode=true;seaLineOverview=false;cameraZoom=1;cameraPitch=0;cameraYaw=0;
+ rebuildWorld();updateHud();closePanel();
+ $('welcomeOverlay').hidden=false;paused=true;
+ showToast('🏝️ 新しい木のない島を始めよう！');
+ return true;
+}
+function importSave(){
+ const picker=document.createElement('input');picker.type='file';picker.accept='.json,application/json';
+ picker.addEventListener('change',async()=>{
+  try{
+   const file=picker.files?.[0];if(!file)return;
+   const imported=JSON.parse(await file.text());
+   if(!imported||imported.version!==1||!imported.inventory||typeof imported.inventory!=='object'||!Array.isArray(imported.harvested))throw Error('形式が違います');
+   const safe=structuredCloneSafe(initial);
+   for(const key of Object.keys(initial)){
+    if(key==='inventory')continue;
+    if(Object.prototype.hasOwnProperty.call(imported,key))safe[key]=imported[key];
+   }
+   for(const key of Object.keys(initial.inventory)){
+    const amount=Number(imported.inventory[key]);
+    safe.inventory[key]=Number.isFinite(amount)?Math.max(0,Math.floor(amount)):0;
+   }
+   if(!Array.isArray(safe.claimed)||!Array.isArray(safe.farm))throw Error('セーブ内容が不正です');
+   localStorage.setItem(KEY,JSON.stringify(safe));
+   if(typeof window.location?.reload==='function'){window.location.reload();return}
+   state=readSave();rebuildWorld();updateHud();closePanel();
+   showToast('💾 バックアップを復元しました');
+  }catch(error){showToast('⚠️ バックアップを読み込めません: '+String(error.message||error))}
+ });
+ picker.click();
+}
 function exportSave(){const data=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const url=URL.createObjectURL(data),a=document.createElement('a');a.href=url;a.download='komorebi-save-day'+state.day+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);showToast('セーブデータを書き出したよ')}
 function bindControls(){const dirs=document.querySelectorAll('[data-dir]');dirs.forEach(btn=>{const dir=btn.dataset.dir;btn.addEventListener('pointerdown',e=>{e.preventDefault();input[dir]=true;btn.classList.add('pressed');try{btn.setPointerCapture(e.pointerId)}catch{}});const release=e=>{input[dir]=false;btn.classList.remove('pressed')};btn.addEventListener('pointerup',release);btn.addEventListener('pointercancel',release);btn.addEventListener('lostpointercapture',release)});
  const codes={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};
