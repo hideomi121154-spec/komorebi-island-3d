@@ -209,10 +209,8 @@ function bridge(b){
  }
 }
 function townDetails(b){
- // Trees, flowerbeds, seating and lanterns. Sparse to protect iPhone performance.
- for(const [x,z,r] of [[45.8,-7,0.85],[47.4,-8.9,1],[48,-12,.8],[55.7,-11.9,.9],[60.7,-5.4,.8],[46.3,.65,.8],[54.8,1.55,.74],[56.5,3.6,.9]]){
-  seasideTree(b,x,z,r);
- }
+ // Treeless public spaces: open grass, flowers, benches and street lighting.
+ // The old trees are deliberately NOT generated in the commercial district.
  for(let i=0;i<40;i++){
   const x=44+(i*2.37)%17,z=-12+(i*3.71)%17;
   if(!walkable(x,z))continue;
