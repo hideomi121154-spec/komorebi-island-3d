@@ -86,11 +86,6 @@ function drawTerrain(b){
  // Patterned shopping plaza.
  for(let i=0;i<6;i++)b.box(47.35+i*.44,.062,-1.4,.06,.017,3.1,'#e6d8bc');
 }
-function seasideTree(b,x,z,r=1){
- b.cylinder(x,.62*r,z,.17*r,1.23*r,6,'#a3825b');
- b.sphere(x,1.73*r,z,.98*r,.92*r,.98*r,'#73b98a',5,7);
- b.sphere(x+.38*r,1.86*r,z-.3*r,.54*r,.50*r,.54*r,'#92cd90',4,7);
-}
 function windowRow(b,x,z,y,width,count){
  for(let i=0;i<count;i++){
   const xx=x+(i-(count-1)/2)*(width/count);
@@ -269,7 +264,7 @@ function paintMap(canvas,state){
  c.strokeStyle='#f9f0e2';c.lineWidth=.9;c.beginPath();c.moveTo(A.x,A.z);c.lineTo(B.x,B.z);c.stroke();
  c.strokeStyle='#647f8a';c.lineWidth=.29;c.stroke();
  ellipse(0,0,2.4,2.0,'#eee2c5');ellipse(48,-1.6,3,2.7,'#eee2c5');
- for(const [x,z,icon] of [[-6,-5,'🏡'],[6,-5,'🏪'],[-7,6,'🎣'],[14,-5,'🏗️'],[-21,-5,'🏘️'],[-18,9.3,'🏡'],[-12.4,15.3,'🌲'],[17.4,2.8,'🚉'],
+ for(const [x,z,icon] of [[-6,-5,'🏡'],[6,-5,'🏪'],[-7,6,'🎣'],[14,-5,'🏗️'],[-21,-5,'🏘️'],[-18,9.3,'🏡'],[-12.4,15.3,'🌄'],[17.4,2.8,'🚉'],
   [43.6,-2.8,'🚉'],[52,-4.6,'🛍️'],[59,-1,'☕'],[51.6,-10,'🏨'],[63.6,5,'🎡'],[65.1,-9.8,'🏙️'],[42.3,-10.8,'🏘️'],[58.5,-15.5,'📚'],[43.5,7.5,'🌳'],[68,-1.8,'⛵']]){
   c.save();c.translate(x,z);c.scale(1/scale,1/scale);c.font='18px system-ui';c.textAlign='center';c.textBaseline='middle';c.fillText(icon,0,0);c.restore();
  }
