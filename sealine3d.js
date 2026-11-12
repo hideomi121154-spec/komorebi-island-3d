@@ -258,8 +258,8 @@ function paintMap(canvas,state){
  const scale=Math.min((w-28)/119,(h-40)/63),sx=41,sz=31;
  c.translate(14,18);c.scale(scale,scale);c.translate(sx,sz);
  function ellipse(x,z,rx,rz,color){c.fillStyle=color;c.beginPath();c.ellipse(x,z,rx,rz,0,0,Math.PI*2);c.fill();}
- const home=window.KomorebiExpansion,origin=home.landCenter||{x:-2.6,z:0};
- ellipse(origin.x,origin.z,home.sand[0],home.sand[1],'#f5dfad');ellipse(origin.x,origin.z,home.grass[0],home.grass[1],'#a3d48e');
+ const home=window.KomorebiExpansion,origin=home?.landCenter||{x:-2.6,z:0};
+ ellipse(origin.x,origin.z,home?.sand?.[0]??24.4,home?.sand?.[1]??20.9,'#f5dfad');ellipse(origin.x,origin.z,home?.grass?.[0]??23.3,home?.grass?.[1]??19.8,'#a3d48e');
  ellipse(CENTER.x,CENTER.z,RADII.x+1,RADII.z+1,'#f5dfad');
  ellipse(CENTER.x,CENTER.z,RADII.x,RADII.z,'#a3d48e');
  c.strokeStyle='#f9f0e2';c.lineWidth=.9;c.beginPath();c.moveTo(A.x,A.z);c.lineTo(B.x,B.z);c.stroke();
