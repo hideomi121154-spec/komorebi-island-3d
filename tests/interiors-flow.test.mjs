@@ -122,12 +122,12 @@ test('Enter shop, converse with clerk, buy seed and leave the 3D room',()=>{
 
 test('Trade collected fruit with shopkeeper inside, no outside trade panel',()=>{
  const {api,enter,press,el}=createGame();
- api.moveTo(-10.2,-7);api.interact();
+ api.moveTo(-3.10,2.35);api.interact();
  assert.equal(api.getState().inventory.berry,2);
  enter('shop');
  api.moveTo(0,-.4);api.interact();
  press('roomDialogActions','買取');
- const offer=el('roomDialogBody').children.find(x=>x.children?.[0]?.children?.[0]?.textContent.includes('木の実'));
+ const offer=el('roomDialogBody').children.find(x=>x.children?.[0]?.children?.[0]?.textContent.includes('果物'));
  assert.ok(offer,'berry sale offer');
  offer.children[1]._events.get('click')();
  assert.equal(api.getState().inventory.berry,1);
