@@ -39,18 +39,6 @@ function eventsAt(ms){
  }
  return events;
 }
-function burstLighting(ms,intensity){
- if(intensity<=.02)return {strength:0,color:[1,.8,.5]};
- let strongest=0,tint=[1,.8,.5];
- for(const e of eventsAt(ms)){
-  const age=e.age-ROCKET_MS;
-  if(age>=0&&age<BURST_MS){
-   const glow=Math.pow(1-age/BURST_MS,2.2);
-   if(glow>strongest){strongest=glow;tint=e.color;}
-  }
- }
- return {strength:Math.min(.20,strongest*.18*intensity),color:tint};
-}
 function makeParticles(ms,intensity,reducedMotion=false,starsOnly=false){
  if(intensity<=.005)return new Float32Array(0);
  const result=[];
@@ -148,17 +136,16 @@ function createRenderer(gl){
  */
 const SHOW_CYCLE=6800;
 const showPattern=[
- // Burst delay, x offset, height, depth offset, radius, RGB, spokes, lifetime, behavior.
- {at:140,x:0,y:31,z:-3,r:12.3,color:[1,.72,.31],rays:248,life:5450,kind:'gold'},
- {at:500,x:2.0,y:18,z:2,r:8.6,color:[1,.23,.32],rays:185,life:4520,kind:'red'},
- {at:760,x:-8.3,y:20,z:0,r:4.0,color:[1,.30,.72],rays:83,life:3600,kind:'pink'},
- {at:970,x:-5.7,y:17,z:-2,r:3.4,color:[.38,1,.63],rays:70,life:3420,kind:'green'},
- {at:1250,x:-10.0,y:15,z:1,r:3.9,color:[1,.40,.67],rays:76,life:3670,kind:'pink'},
- {at:590,x:9.2,y:21,z:-4,r:4.6,color:[.42,1,.67],rays:86,life:3900,kind:'green'},
- {at:1780,x:10.8,y:19,z:1,r:5.1,color:[1,.64,.32],rays:93,life:4150,kind:'gold'},
- {at:2050,x:-3.9,y:23,z:3,r:3.5,color:[1,.32,.71],rays:78,life:3320,kind:'pink'},
- {at:2540,x:6.7,y:14,z:-1,r:3.6,color:[.35,.94,1],rays:73,life:3200,kind:'green'},
- {at:3030,x:-8.8,y:23,z:-4,r:4.4,color:[1,.75,.38],rays:82,life:3630,kind:'gold'}
+ {at:140,x:0,y:29,z:-3,r:5.8,color:[1,.72,.31],rays:248,life:5450,kind:'gold'},
+ {at:500,x:1,y:18,z:2,r:4.3,color:[1,.23,.32],rays:185,life:4520,kind:'red'},
+ {at:760,x:-3.9,y:20,z:0,r:1.9,color:[1,.30,.72],rays:83,life:3600,kind:'pink'},
+ {at:970,x:-3.0,y:17,z:-2,r:1.6,color:[.38,1,.63],rays:70,life:3420,kind:'green'},
+ {at:1250,x:-4.5,y:15,z:1,r:1.9,color:[1,.40,.67],rays:76,life:3670,kind:'pink'},
+ {at:590,x:4.0,y:21,z:-4,r:2.1,color:[.42,1,.67],rays:86,life:3900,kind:'green'},
+ {at:1780,x:4.9,y:19,z:1,r:2.4,color:[1,.64,.32],rays:93,life:4150,kind:'gold'},
+ {at:2050,x:-2.0,y:23,z:3,r:1.8,color:[1,.32,.71],rays:78,life:3320,kind:'pink'},
+ {at:2540,x:3.2,y:14,z:-1,r:1.8,color:[.35,.94,1],rays:73,life:3200,kind:'green'},
+ {at:3030,x:-4.5,y:23,z:-4,r:2.1,color:[1,.75,.38],rays:82,life:3630,kind:'gold'}
 ];
 const showPalette={gold:[1,.72,.31],red:[1,.23,.32],pink:[1,.30,.72],green:[.38,1,.63]};
 function spectacleEventsAt(ms){
@@ -209,7 +196,7 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1)
   const expand=spec.r*Math.pow(Math.min(1,t*1.70),.57)*(1+.09*t);
   const fall=(spec.kind==='gold'?5.3:2.8)*t*t;
   const rays=Math.max(32,Math.floor(spec.rays*density));
-  const trails=spec.kind==='gold'?9:7;
+  const trails=spec.kind==='gold'?12:spec.kind==='red'?10:8;
   if(t<.19)add(centerX,spec.y,centerZ,27,[1,1,.9],fade*(1-t/.19));
   for(let j=0;j<rays;j++){
    const latitude=1-2*((j+.5)/rays);
@@ -223,7 +210,7 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1)
    const radius=expand*variation*arc;
    const flicker=.76+.24*Math.sin(age*.010+j*3.41);
    for(let k=0;k<trails;k++){
-    const relative=1-k*(spec.kind==='gold'?.071:.078);
+    const relative=1-k*(spec.kind==='gold'?.045:spec.kind==='red'?.060:.071);
     const x=centerX+ux*radius*relative;
     const z=centerZ+uz*radius*relative;
     const gravity=fall*(1+(1-relative)*.36);
