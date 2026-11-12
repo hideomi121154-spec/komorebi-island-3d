@@ -854,9 +854,12 @@ function restartIsland(){
  const fresh=structuredCloneSafe(initial);
  try{localStorage.setItem(KEY,JSON.stringify(fresh))}
  catch{showToast('⚠️ セーブを初期化できませんでした。ストレージを確認してください。');return false}
+ // Adopt the fresh snapshot BEFORE reload: pagehide/visibilitychange save handlers
+ // must not overwrite the new island with the previous in-memory state.
+ state=readSave();indoor.original=null;indoor.room=null;indoor.transition=false;
+ railRide.active=false;nearest=null;
  if(typeof window.location?.reload==='function'){window.location.reload();return true}
  // In-memory fallback used by non-browser test environments.
- state=readSave();railRide.active=false;nearest=null;
  camFocus.x=state.x;camFocus.z=state.z;
  overviewMode=true;seaLineOverview=false;cameraZoom=1;cameraPitch=0;cameraYaw=0;
  rebuildWorld();updateHud();closePanel();
@@ -882,8 +885,11 @@ function importSave(){
    }
    if(!Array.isArray(safe.claimed)||!Array.isArray(safe.farm))throw Error('セーブ内容が不正です');
    localStorage.setItem(KEY,JSON.stringify(safe));
+   // Prevent the pagehide autosave from replacing an imported backup.
+   state=readSave();indoor.original=null;indoor.room=null;indoor.transition=false;
+   railRide.active=false;
    if(typeof window.location?.reload==='function'){window.location.reload();return}
-   state=readSave();rebuildWorld();updateHud();closePanel();
+   rebuildWorld();updateHud();closePanel();
    showToast('💾 バックアップを復元しました');
   }catch(error){showToast('⚠️ バックアップを読み込めません: '+String(error.message||error))}
  });
