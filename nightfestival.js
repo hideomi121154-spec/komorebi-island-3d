@@ -175,7 +175,7 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1)
  }
  // Two near-white launch fountains continuously spray from the shore.
  // The spark jets are staggered so the lower scene never looks static.
- const phase=Math.max(0,ms)*.001;
+ const phase=(Math.max(0,ms)%SHOW_CYCLE)*.001;
  for(let fountain=0;fountain<3;fountain++){
   const fx=origin[0]+(fountain-1)*2.25-1.9,fz=origin[1]+4.2;
   for(let j=0;j<100*density;j++){
@@ -198,7 +198,7 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1)
    for(let i=0;i<22;i++){
     const u=i/22,dy=u*(2.5+5*t);
     const a=.95*(1-u)*intensity;
-    add(centerX+.19*Math.sin(seed+i*1.5+t*3),head-dy,centerZ,
+    add(centerX+.19*Math.sin(seed+i*1.5+t*3),Math.max(.07,head-dy),centerZ,
       i===0?13:4.0,i%4===0?[1,1,.96]:[1,.72,.35],a);
    }
    continue;
