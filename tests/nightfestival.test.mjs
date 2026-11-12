@@ -149,3 +149,21 @@ test('Festival loop, phone detail scaling and reduced motion are deterministic',
  assert.match(html,/nightfestival\.js\?v=20261112-v25/);
  assert.match(html,/game\.js\?v=20261112-v25/);
 });
+
+test('Spark trails form continuous luminous 3D line segments',()=>{
+ const lines=[];
+ const points=festival.worldParticles(1850,1,[11,-5],false,1,lines);
+ assert.ok(points.length/8>6000);
+ assert.ok(lines.length/16>2500,'every shell has real continuous line segments');
+ assert.equal(lines.length%16,0);
+ for(let i=0;i<lines.length;i+=16){
+  const length=Math.hypot(lines[i]-lines[i+8],lines[i+1]-lines[i+9],lines[i+2]-lines[i+10]);
+  assert.ok(length>0&&length<1.3,'successive streak samples connect without jumps');
+  assert.ok(lines[i+7]>=0&&lines[i+7]<=1);
+ }
+ const source=String.raw;
+ const fireworksModule=readFileSync(resolve(root,'nightfestival.js'),'utf8');
+ assert.match(fireworksModule,/gl\.drawArrays\(gl\.LINES/);
+ assert.match(fireworksModule,/gl\.drawArrays\(gl\.POINTS/);
+ assert.match(fireworksModule,/uniform float uLine/);
+});
