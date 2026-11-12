@@ -12,7 +12,7 @@ const cityPlaces=[
  {id:'cityTower',x:65.1,z:-6.1,r:2,icon:'🏙️',name:'みなと高層街区'},
  {id:'cityHomes',x:42.3,z:-7.1,r:2,icon:'🏘️',name:'新しい住宅街'},
  {id:'cityLibrary',x:58.5,z:-11.6,r:2,icon:'📚',name:'みなと市民センター'},
- {id:'cityPark',x:43.5,z:7.7,r:2.5,icon:'🌳',name:'海風公園'},
+ {id:'cityPark',x:45.0,z:9.1,r:2.5,icon:'🌳',name:'海風公園'},
  {id:'cityMarina',x:68.0,z:-.3,r:2.1,icon:'⛵',name:'マリーナ広場'}
 ];
 const homePlaces=[
