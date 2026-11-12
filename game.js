@@ -307,7 +307,6 @@ function buildHouse(b,x,z,shop=false){const walls=shop?'#ffdcaa':'#fce5b9',roof=
  b.box(x,2.95,z,shop?2.0:1.1,.52,.23,shop?'#ffefca':'#f4e5c4');if(shop){b.box(x,3.03,z+d*.05,1.95,.39,.05,'#e79c68');b.box(x,.18,z+d/2+1.0,4.9,.14,1.5,'#e6c693')} else {b.cylinder(x+1.15,3.2,z-.8,.25,1.3,8,'#d7baa0');b.box(x+1.15,3.8,z-.8,.58,.16,.58,'#bd8984')}
  for(let i=0;i<3;i++){b.box(x,0.10+(i*.13),z+d/2+.35+i*.36,1.5,.15,.43,'#d2ae86')}
 }
-function buildTree(b,x,z,type){if(type==='pine'){b.cylinder(x,.74,z,.27,1.5,7,'#926c54');b.cylinder(x,2.2,z,1.45,2.45,8,'#3f9875',0);b.cylinder(x,3.15,z,1.08,2.25,8,'#4aaa81',0);b.cylinder(x,4.12,z,.67,1.55,8,'#6fbd8c',0)}else{b.cylinder(x,.80,z,.30,1.6,8,'#98724f');b.sphere(x,2.27,z,1.44,1.25,1.45,'#77bf76',6,9);b.sphere(x-.7,2.0,z+.27,.80,.85,.82,'#83cb7e',5,7);b.sphere(x+.53,2.52,z-.39,.83,.83,.8,'#5dab6c',5,7)}}
 function buildBench(b,x,z){b.box(x,.58,z,1.9,.22,.65,'#ba8c67');b.box(x,.93,z-.31,1.9,.67,.19,'#ba8c67');for(const q of[-.75,.75]){b.box(x+q,.28,z,0.15,.55,.48,'#7e7661')}}
 let softwareGroundCount=0,softwareTerrainCount=0,softwareSandCount=0,softwareSeaCount=0;
 function buildStatic(){const b=new MeshBuilder();
