@@ -172,3 +172,7 @@
 .festival-controls button{pointer-events:auto;border:1px solid #ffffff75;border-radius:18px;padding:9px 11px;background:#182e58e8;color:#fff;font-size:12px;font-weight:700;box-shadow:0 3px 12px #0005;touch-action:manipulation}
 #gameCanvas{touch-action:none}
 @media(max-width:420px){.festival-controls{top:124px;right:7px}.festival-controls button{font-size:11px;padding:8px}}
+
+/* v2.4: deliberate fresh start requires a confirmation panel. */
+.panel button.danger{display:block;width:100%;margin-top:14px;padding:12px 14px;border-radius:13px;background:#ab4945;color:#fff;font-weight:800;white-space:normal;}
+.panel>button.secondary{display:block;width:100%;margin-top:10px;white-space:normal;}
