@@ -173,6 +173,21 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1)
   if(alpha<.025||output.length>=maxPoints*8)return;
   output.push(x,y,z,size,col[0],col[1],col[2],clamp(alpha));
  }
+ // Two near-white launch fountains continuously spray from the shore.
+ // The spark jets are staggered so the lower scene never looks static.
+ const phase=Math.max(0,ms)*.001;
+ for(let fountain=0;fountain<3;fountain++){
+  const fx=origin[0]+(fountain-1)*2.25-1.9,fz=origin[1]+4.2;
+  for(let j=0;j<100*density;j++){
+   const fraction=(phase*.37+j*.6180339887+fountain*.29)%1;
+   const age=fraction;
+   const spread=(.18+1.05*age*age)*(random(j*191+fountain*73)-.5);
+   const y=1+age*16.2-3.8*age*age;
+   const alpha=(1-age*.77)*intensity*(.68+.32*random(j*97+fountain*9));
+   add(fx+spread,y,fz+.30*Math.sin(j*4.8),j%9===0?7.6:3.8,
+     j%5===0?[1,1,.96]:[1,.83,.48],alpha);
+  }
+ }
  for(const {spec,age} of active){
   const centerX=origin[0]+spec.x,centerZ=origin[1]+spec.z;
   const seed=showPattern.indexOf(spec)+12;
@@ -227,21 +242,6 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1)
     add(centerX+ux*radius*a,spec.y+uy*radius*a-fall-1.4*t,centerZ+uz*radius*a,
       3.0,[1,.87,.54],fade*(.50+.3*random(j*47)));
    }
-  }
- }
- // Two near-white launch fountains continuously spray from the shore.
- // The spark jets are staggered so the lower scene never looks static.
- const phase=Math.max(0,ms)*.001;
- for(let fountain=0;fountain<3;fountain++){
-  const fx=origin[0]+(fountain-1)*2.25-1.9,fz=origin[1]+4.2;
-  for(let j=0;j<100*density;j++){
-   const fraction=(phase*.37+j*.6180339887+fountain*.29)%1;
-   const age=fraction;
-   const spread=(.18+1.05*age*age)*(random(j*191+fountain*73)-.5);
-   const y=1+age*16.2-3.8*age*age;
-   const alpha=(1-age*.77)*intensity*(.68+.32*random(j*97+fountain*9));
-   add(fx+spread,y,fz+.30*Math.sin(j*4.8),j%9===0?7.6:3.8,
-     j%5===0?[1,1,.96]:[1,.83,.48],alpha);
   }
  }
  return new Float32Array(output);
