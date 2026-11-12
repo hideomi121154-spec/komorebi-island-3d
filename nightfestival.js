@@ -255,6 +255,133 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,
  }
  return new Float32Array(output);
 }
+/* Procedurally generated transparent glow sprites.
+ * Standard VFX technique: animated camera-facing quads are positioned in the
+ * same 3D world as the glowing streaks, so they also work from overhead.
+ * No external textures, copyright assets, images or network calls required.
+ */
+function createBurstBillboards(gl){
+ if(typeof document==='undefined'||!document.createElement)return null;
+ const canvas=document.createElement('canvas');
+ canvas.width=canvas.height=512;
+ const c=canvas.getContext('2d');
+ if(!c)return null;
+ const schemes={
+  gold:{base:'255,181,52',hot:'255,243,184',rays:270},
+  red:{base:'255,56,86',hot:'255,225,234',rays:210},
+  pink:{base:'255,69,176',hot:'255,222,245',rays:160},
+  green:{base:'72,255,146',hot:'223,255,232',rays:160}
+ };
+ const textures={};
+ const textureProgram=gl.createProgram();
+ const vs=createShader(gl,gl.VERTEX_SHADER,"attribute vec3 aPos;attribute vec2 aUv;uniform mat4 uView;uniform mat4 uProj;varying vec2 vUv;void main(){vUv=aUv;gl_Position=uProj*uView*vec4(aPos,1.0);}");
+ const fs=createShader(gl,gl.FRAGMENT_SHADER,"precision mediump float;varying vec2 vUv;uniform sampler2D uTexture;uniform float uOpacity;void main(){vec4 color=texture2D(uTexture,vUv);gl_FragColor=vec4(color.rgb,color.a*uOpacity);}");
+ gl.attachShader(textureProgram,vs);gl.attachShader(textureProgram,fs);gl.linkProgram(textureProgram);
+ gl.deleteShader(vs);gl.deleteShader(fs);
+ if(!gl.getProgramParameter(textureProgram,gl.LINK_STATUS))throw Error('Firework glow texture shader: '+gl.getProgramInfoLog(textureProgram));
+ const vertexBuffer=gl.createBuffer();
+ const pos=gl.getAttribLocation(textureProgram,'aPos'),uv=gl.getAttribLocation(textureProgram,'aUv');
+ const viewLoc=gl.getUniformLocation(textureProgram,'uView'),projLoc=gl.getUniformLocation(textureProgram,'uProj');
+ const textureLoc=gl.getUniformLocation(textureProgram,'uTexture'),opacityLoc=gl.getUniformLocation(textureProgram,'uOpacity');
+ for(const kind of Object.keys(schemes)){
+  const scheme=schemes[kind];
+  c.clearRect(0,0,512,512);
+  c.save();c.translate(256,256);c.globalCompositeOperation='lighter';c.lineCap='round';
+  const seed=kind==='gold'?113:kind==='red'?379:kind==='pink'?719:991;
+  // Curved luminous filaments, variable thickness, colored cores and glitter.
+  for(let j=0;j<scheme.rays;j++){
+   const angle=TWO_PI*(j+random(seed+j*31)*.45)/scheme.rays;
+   const reach=170+49*random(seed*7+j*53);
+   const start=9+random(seed*11+j*23)*35;
+   const droop=kind==='gold'?(random(seed*41+j*19)*17+4):random(seed*41+j*19)*5;
+   const x0=Math.cos(angle)*start,y0=Math.sin(angle)*start;
+   const x1=Math.cos(angle)*reach,y1=Math.sin(angle)*reach+droop;
+   const sx=Math.cos(angle)*reach*.55,sy=Math.sin(angle)*reach*.55+droop*.2;
+   const gradient=c.createLinearGradient(x0,y0,x1,y1);
+   gradient.addColorStop(0,'rgba('+scheme.hot+',.05)');
+   gradient.addColorStop(.25,'rgba('+scheme.base+',.63)');
+   gradient.addColorStop(.67,'rgba('+scheme.base+',.91)');
+   gradient.addColorStop(1,'rgba('+scheme.hot+',.10)');
+   c.strokeStyle=gradient;
+   c.shadowColor='rgba('+scheme.base+',.85)';
+   c.shadowBlur=kind==='gold'?6.7:5.8;
+   c.lineWidth=(kind==='gold'?.7:1.05)+random(seed*17+j*29)*1.0;
+   c.beginPath();c.moveTo(x0,y0);
+   c.quadraticCurveTo(sx,sy,x1,y1);c.stroke();
+   if(j%2===0){
+    c.shadowBlur=3;c.fillStyle='rgba('+scheme.hot+',.85)';
+    const rad=.9+1.2*random(seed*3+j*71);
+    c.beginPath();c.arc(x1,y1,rad,0,TWO_PI);c.fill();
+   }
+  }
+  // Bright white-hot central ignition, smoothly dissipating into colored light.
+  const glow=c.createRadialGradient(0,0,0,0,0,43);
+  glow.addColorStop(0,'rgba(255,255,247,.95)');
+  glow.addColorStop(.16,'rgba('+scheme.hot+',.70)');
+  glow.addColorStop(.42,'rgba('+scheme.base+',.26)');
+  glow.addColorStop(1,'rgba('+scheme.base+',0)');
+  c.shadowBlur=0;c.fillStyle=glow;c.fillRect(-45,-45,90,90);
+  // Fine random residual sparkles build a textured photographic glow.
+  for(let j=0;j<150;j++){
+   const a=random(seed*97+j*19)*TWO_PI,rad=45+176*random(seed*131+j*43);
+   const x=Math.cos(a)*rad,y=Math.sin(a)*rad;
+   c.fillStyle='rgba('+scheme.hot+','+(.15+random(seed*17+j*7)*.55)+')';
+   c.beginPath();c.arc(x,y,.36+random(j*67)*.68,0,TWO_PI);c.fill();
+  }
+  c.restore();
+  const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,canvas);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  textures[kind]=texture;
+ }
+ gl.bindTexture(gl.TEXTURE_2D,null);
+ return {
+  draw(ms,intensity,origin,view,proj){
+   if(intensity<=.005)return;
+   const cameraRight=[view[0],view[4],view[8]],cameraUp=[view[1],view[5],view[9]];
+   gl.useProgram(textureProgram);
+   gl.uniformMatrix4fv(viewLoc,false,view);
+   gl.uniformMatrix4fv(projLoc,false,proj);
+   gl.activeTexture(gl.TEXTURE0);gl.uniform1i(textureLoc,0);
+   gl.enableVertexAttribArray(pos);gl.enableVertexAttribArray(uv);
+   gl.enable(gl.DEPTH_TEST);gl.depthMask(false);
+   gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);
+   for(const {spec,age} of spectacleEventsAt(ms)){
+    if(age<0||age>spec.life)continue;
+    const t=clamp(age/spec.life);
+    const grow=.22+.83*Math.pow(Math.min(1,t*1.8),.60);
+    const opacity=intensity*Math.pow(1-t,spec.kind==='gold'?.60:.80)*.86;
+    if(opacity<.025)continue;
+    const radius=spec.r*1.10*grow;
+    const center=[origin[0]+spec.x,spec.y-(spec.kind==='gold'?3.0:1.6)*t*t,origin[1]+spec.z];
+    const vertices=[];
+    for(const [ix,iy,u,v] of [[-1,-1,0,0],[1,-1,1,0],[-1,1,0,1],[1,1,1,1]]){
+     vertices.push(center[0]+radius*(cameraRight[0]*ix+cameraUp[0]*iy),
+      center[1]+radius*(cameraRight[1]*ix+cameraUp[1]*iy),
+      center[2]+radius*(cameraRight[2]*ix+cameraUp[2]*iy),u,v);
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.DYNAMIC_DRAW);
+    gl.vertexAttribPointer(pos,3,gl.FLOAT,false,20,0);
+    gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);
+    gl.bindTexture(gl.TEXTURE_2D,textures[spec.kind]);
+    gl.uniform1f(opacityLoc,opacity);
+    gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+   }
+   gl.disable(gl.BLEND);gl.depthMask(true);
+   gl.disableVertexAttribArray(pos);gl.disableVertexAttribArray(uv);
+   gl.bindTexture(gl.TEXTURE_2D,null);
+  },
+  destroy(){
+   for(const t of Object.values(textures))gl.deleteTexture(t);
+   gl.deleteBuffer(vertexBuffer);gl.deleteProgram(textureProgram);
+  }
+ };
+}
 function createWorldRenderer(gl){
  const vertex="attribute vec4 aWorld;attribute vec4 aTint;uniform mat4 uView;uniform mat4 uProj;uniform float uScale;varying vec4 vTint;void main(){vec4 p=uView*vec4(aWorld.xyz,1.0);gl_Position=uProj*p;float d=max(8.0,-p.z);gl_PointSize=clamp(aWorld.w*uScale*min(2.0,28.0/d),1.5,42.0);vTint=aTint;}";
  const fragment="precision mediump float;varying vec4 vTint;uniform float uLine;void main(){if(uLine>.5){gl_FragColor=vec4(vTint.rgb*1.15,vTint.a);return;}float r=length(gl_PointCoord-vec2(.5))*2.0;float halo=pow(max(0.0,1.0-r),2.1);float core=1.0-smoothstep(.02,.61,r);float a=(.26*halo+.97*core)*vTint.a;gl_FragColor=vec4(vTint.rgb*(.84+.25*core),a);}";
@@ -265,12 +392,15 @@ function createWorldRenderer(gl){
  if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error('Festival spectacle link: '+gl.getProgramInfoLog(program));
  const buffer=gl.createBuffer(),lineBuffer=gl.createBuffer(),aWorld=gl.getAttribLocation(program,'aWorld'),aTint=gl.getAttribLocation(program,'aTint');
  const uView=gl.getUniformLocation(program,'uView'),uProj=gl.getUniformLocation(program,'uProj'),uScale=gl.getUniformLocation(program,'uScale'),uLine=gl.getUniformLocation(program,'uLine');
+ let billboards=null;
+ try{billboards=createBurstBillboards(gl)}catch(error){console.warn('Procedural firework glows disabled:',error)}
  return {
   draw(ms,intensity,origin,view,proj,pixelRatio,reducedMotion=false){
    const detail=(pixelRatio||1)<1.35?.66:1;
    const lineSegments=[];
    const points=worldParticles(ms,intensity,origin,reducedMotion,detail,lineSegments);
    if(!points.length)return;
+   billboards?.draw(ms,intensity,origin,view,proj);
    gl.useProgram(program);
    gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
    gl.uniformMatrix4fv(uView,false,view);gl.uniformMatrix4fv(uProj,false,proj);
@@ -296,7 +426,7 @@ function createWorldRenderer(gl){
    gl.disable(gl.BLEND);gl.depthMask(true);
    gl.disableVertexAttribArray(aWorld);gl.disableVertexAttribArray(aTint);
   },
-  destroy(){gl.deleteBuffer(buffer);gl.deleteBuffer(lineBuffer);gl.deleteProgram(program)}
+  destroy(){billboards?.destroy();gl.deleteBuffer(buffer);gl.deleteBuffer(lineBuffer);gl.deleteProgram(program)}
  };
 }
 function drawCanvas(ctx,width,height,ms,intensity,reducedMotion=false){
