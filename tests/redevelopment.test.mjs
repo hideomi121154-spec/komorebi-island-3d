@@ -67,3 +67,45 @@ test('all procedural construction geometry is finite, even at completion',()=>{
  build.drawDynamic(complete,12500,100);
  assert.equal(complete.count,0);
 });
+
+test('active construction has moving crane, hoist, crew and scaffold workers at 34%',()=>{
+ const start=build.constructionPose(0,34);
+ const later=build.constructionPose(8100,34);
+ assert.notEqual(start.boomAngle,later.boomAngle,'crane yaw should animate');
+ assert.notEqual(start.trolleyX,later.trolleyX,'trolley should travel along the crane');
+ assert.notEqual(start.hookY,later.hookY,'hoist should move vertically');
+ assert.notEqual(start.carrierX,later.carrierX,'material worker should actually walk');
+ assert.ok(start.scaffoldLevel>5&&start.scaffoldLevel<9,'worker stands on unfinished 5th level');
+ assert.ok(start.carrierX>11&&start.carrierX<13,'crew stays within the fenced work area');
+});
+
+test('3D construction activity changes over time and respects the completed floor',()=>{
+ function snapshot(time,progress){
+  const points=[],kinds={box:0,quad:0,sphere:0},rec=mockMesh();
+  for(const name of ['box','quad','sphere']){
+   const old=rec[name];
+   rec[name]=(...args)=>{old(...args);kinds[name]++;if(name==='quad'&&points.length<5)points.push(args.flat().filter(v=>typeof v==='number'));};
+  }
+  build.drawDynamic(rec,time,progress);
+  return {points,kinds,invalid:rec.invalid};
+ }
+ const a=snapshot(200,34),b=snapshot(5100,34),late=snapshot(5100,78);
+ assert.ok(a.kinds.box>45,'crew members, truss and cargo create real 3D parts');
+ assert.ok(a.kinds.quad>=60,'rotated crane must be 3D geometry');
+ assert.ok(a.kinds.sphere>=20,'helmets, heads, dust and warning lights should exist');
+ assert.notDeepEqual(a.points,b.points,'jib rotates instead of being a frozen static model');
+ assert.equal(a.invalid+b.invalid+late.invalid,0);
+ assert.ok(build.constructionPose(5000,78).scaffoldLevel>build.constructionPose(5000,34).scaffoldLevel,'crew ascends as floors complete');
+ const done=mockMesh();
+ build.drawDynamic(done,5000,100);
+ assert.equal(done.count,0,'construction activity stops at 100%');
+});
+
+test('construction asset update leaves saved progression and script integration unchanged',()=>{
+ const game=readFileSync(new URL('../game.js',import.meta.url),'utf8');
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ assert.match(game,/REDEVELOPMENT\.drawDynamic\(b,now,state\.redevelopmentProgress\)/);
+ assert.match(html,/src="redevelopment3d\.js\?v=20261112-v22"/);
+ assert.equal(build.advance(34,1),36,'daily +2% progression continues');
+ assert.equal(build.advance(34,0),34,'animations never grant fake progress');
+});
