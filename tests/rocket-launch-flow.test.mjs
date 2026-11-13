@@ -65,17 +65,58 @@ test('single action tap counts down and activates the rocket tracking camera',()
  assert.equal(api.getSpaceport().phase.active,true);
  assert.equal(api.getSpaceport().phase.countdown,0,'repeated taps do not reset the launch');
 });
-test('right-side rocket menu can still teleport to pad and start a launch',()=>{
+test('factory launch from rocket button preserves player position and shows distant rocket',()=>{
+ const {api,node,storage,time}=boot();
+ api.moveTo(29.4,20.5);
+ const before=api.getState();
+ node('spaceportBtn')._handlers.get('click')();
+ const launch=node('panelContent').children.find(c=>String(c.textContent).includes('ここからロケット発射を見る'));
+ assert.ok(launch,'rocket menu must offer launch from current location');
+ launch._handlers.get('click')();
+ const after=api.getState(),space=api.getSpaceport();
+ assert.equal(space.phase.active,true);
+ assert.equal(space.camera,true);
+ assert.equal(space.view,'remote');
+ assert.equal(space.origin.x,before.x);
+ assert.equal(space.origin.z,before.z);
+ assert.equal(after.x,before.x,'must NOT teleport to rocketpad');
+ assert.equal(after.z,before.z);
+ assert.equal(after.coins,before.coins);
+ assert.equal(after.day,before.day);
+ const pose=api.getDistantRocketPose(0,.5,{x:before.x,z:before.z});
+ assert.ok(pose.eye[0]>before.x&&pose.eye[2]>before.z,'camera stays behind factory visitor');
+ assert.ok(pose.fov<50,'distant launch must be framed closer');
+ assert.equal(pose.center[0],-24);
+ assert.equal(pose.center[2],-13);
+ const climbed=api.getDistantRocketPose(55,.5,{x:before.x,z:before.z});
+ assert.deepEqual(Array.from(pose.eye),Array.from(climbed.eye),'the factory camera stays put while looking up');
+ assert.ok(climbed.center[1]>pose.center[1]);
+ time(4000);
+ assert.equal(api.getSpaceport().phase.countdown,3);
+ const saved=JSON.parse(storage.get('komorebi_island_3d_v01'));
+ assert.equal(saved.x,before.x);assert.equal(saved.z,before.z);
+});
+test('explicit near-pad option still travels to rocket viewing plaza',()=>{
+ const {api,node}=boot();
+ api.moveTo(29.4,20.5);
+ node('spaceportBtn')._handlers.get('click')();
+ const local=node('panelContent').children.find(c=>String(c.textContent).includes('発射台の近くで打ち上げを見る'));
+ assert.ok(local);
+ local._handlers.get('click')();
+ assert.equal(api.getSpaceport().view,'pad');
+ assert.equal(api.getSpaceport().phase.active,true);
+ assert.equal(api.getState().x,-24);
+ assert.equal(api.getState().z,-6.5);
+});
+test('launch from elsewhere on the island does not warp the user either',()=>{
  const {api,node}=boot();
  api.moveTo(0,3);
  node('spaceportBtn')._handlers.get('click')();
- const launch=node('panelContent').children.find(c=>String(c.textContent).includes('カウントダウン・発射'));
- assert.ok(launch,'rocket launch action must remain accessible from right-hand menu');
+ const launch=node('panelContent').children.find(c=>String(c.textContent).includes('ここからロケット発射を見る'));
  launch._handlers.get('click')();
- assert.equal(api.getSpaceport().phase.active,true);
- assert.equal(api.getSpaceport().camera,true);
- assert.equal(api.getState().x,-24);
- assert.equal(api.getState().z,-6.5);
+ assert.equal(api.getState().x,0);
+ assert.equal(api.getState().z,3);
+ assert.equal(api.getSpaceport().view,'remote');
 });
 test('camera reset can stop tracking without stopping the actual rocket',()=>{
  const {api,node}=boot();api.moveTo(-20,-11);api.interact();
@@ -103,6 +144,6 @@ test('camera is independent of rocket height, and game save format remains uncha
  assert.match(game,/spectator\?spectator\.center/);
  assert.match(game,/function beginRocketLaunch\(\)/);
  assert.match(game,/komorebi_island_3d_v01/);
- assert.match(html,/game\.js\?v=20261113-v3[012]/);
+ assert.match(html,/game\.js\?v=20261113-v3[0123]/);
  assert.match(html,/spaceport3d\.js\?v=20261113-v30/);
 });
