@@ -6,6 +6,9 @@ if(!E||!E.extendedDistricts)throw Error('world-expansion-v23.js must load before
 const bounds={x:-7,z:-1,rx:34,rz:28};
 const pad={x:-24,z:-13,r:4.55};
 const marker={id:'spaceport',x:-24,z:-6.5,r:2.65,icon:'🚀',name:'こもれび宇宙港'};
+// Elevated-but-human-height viewing position with clear sightline: west-village
+// house bounds x[-23.45,-18.75],z[-6.93,-3.07] must never contain this camera.
+const viewpoint={x:-26,z:-4.5,y:1.72};
 const hangar={x:-32,z:-7.1,w:5.25,d:4.1};
 const oldBounds=window.KomorebiWorldExpansion.homeBounds;
 E.grass.splice(0,2,bounds.rx,bounds.rz);
@@ -208,5 +211,5 @@ function drawCloudBreak(b,now){
  }
 }
 function drawDynamic(b,now){rocket(b,now);drawCloudBreak(b,now);}
-window.KomorebiSpaceport={bounds,pad,marker,hangar,phase,startLaunch,drawDynamic,isActive:now=>phase(now).active,reset:()=>{startedAt=-1;}};
+window.KomorebiSpaceport={bounds,pad,marker,hangar,viewpoint,phase,startLaunch,drawDynamic,isActive:now=>phase(now).active,reset:()=>{startedAt=-1;}};
 })();
