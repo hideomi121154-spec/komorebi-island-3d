@@ -1,0 +1,44 @@
+:root{color-scheme:dark;font-family:ui-rounded,"Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;--ink:#fdf9e9;--dark:#15374e;--gold:#ffd773}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
+button,a{-webkit-tap-highlight-color:transparent}
+button{cursor:pointer;font:inherit;touch-action:manipulation}
+#raceApp{position:fixed;inset:0;background:linear-gradient(#70c9f1 0%,#78c8c6 66%,#3b8e9d 100%);overflow:hidden}
+#raceCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+[hidden]{display:none!important}
+.splash{position:absolute;inset:0;display:grid;place-items:center;padding:24px;background:linear-gradient(155deg,#13394a82,#0b47528a);z-index:60}
+.splash-card{max-width:min(560px,95vw);text-align:center;border-radius:30px;padding:32px 25px;background:#12364ee8;border:2px solid #fdf8eeba;box-shadow:0 25px 70px #052d3d88;backdrop-filter:blur(12px)}
+.super,.eyebrow{font-size:11px;letter-spacing:.18em;color:#ffdd86;font-weight:900}
+.splash h1{font-size:clamp(27px,7vw,46px);letter-spacing:.01em;margin:9px 0 10px;font-weight:1000;color:#fff6de;text-shadow:0 3px 3px #072a35}
+.splash h1 em{display:block;font-style:normal;color:#ffcf6a}
+.splash p{line-height:1.75;margin:7px 0 16px}
+#loadMessage{font-size:13px;color:#d9e9e5;min-height:28px}
+#startRace,.finish-card button{display:block;width:100%;border:0;padding:14px 20px;border-radius:20px;color:#533b28;background:linear-gradient(#ffe7a0,#f8b859);font-size:18px;font-weight:1000;box-shadow:0 6px 0 #bd8755}
+#startRace:disabled{filter:grayscale(.7);opacity:.55}
+.sub-link,.finish-card a{color:#fff2ce;display:inline-block;padding:12px}
+.race-hud{position:absolute;top:max(9px,env(safe-area-inset-top));left:10px;right:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;pointer-events:none}
+.title-group{display:flex;flex-direction:column;gap:2px;background:#173c51d9;padding:8px 12px;border:1px solid #ffffff8a;border-radius:15px;box-shadow:0 4px 14px #133b5366}
+.title-group strong{font-size:clamp(17px,4vw,24px);white-space:nowrap}
+.status-group{display:grid;grid-template-columns:repeat(2,auto);gap:3px 10px;background:#fff4dfe7;color:#294c5a;border-radius:15px;padding:8px 13px;font-size:clamp(11px,2.8vw,15px);font-weight:1000;box-shadow:0 4px 16px #1c435c58}
+.race-actions{position:absolute;top:calc(max(9px,env(safe-area-inset-top)) + 79px);left:10px;display:flex;gap:5px;flex-wrap:wrap;max-width:63vw}
+.race-actions button,.race-actions a{text-decoration:none;background:#1b4960df;color:#fdf5e1;border:1px solid #ffffffb3;border-radius:14px;min-height:33px;padding:6px 9px;font-size:11px;font-weight:900}
+#trackMap{position:absolute;top:calc(max(9px,env(safe-area-inset-top)) + 91px);right:9px;width:clamp(100px,25vw,150px);height:clamp(92px,22vw,134px);border:2px solid #ffffffd0;border-radius:19px;background:#e6fcf8d9;box-shadow:0 4px 20px #10445e55}
+.toast{position:absolute;top:29%;left:50%;transform:translateX(-50%);padding:7px 14px;color:#fff4d7;background:#174b64cc;border:1px solid #c0e7e7;border-radius:25px;font-weight:900;text-align:center;max-width:80vw;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.visible{opacity:1}
+.pad{position:absolute;left:0;right:0;bottom:calc(max(9px,env(safe-area-inset-bottom)) + 4px);display:flex;justify-content:space-between;align-items:flex-end;padding:0 7px;gap:6px;touch-action:none;pointer-events:none}
+.steer,.action{display:flex;align-items:flex-end;gap:5px;pointer-events:none}
+.pad button{pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;background:#fff4e4ec;color:#234c65;border-radius:18px;border:2px solid #fff;box-shadow:0 5px 0 #294a58a6;min-height:67px;min-width:clamp(47px,13vw,72px);padding:5px;font-size:clamp(12px,3vw,18px);font-weight:1000}
+.steer button{font-size:26px}
+#drift{background:#b2d4fbeb;color:#1d4976}
+#item{background:#ffe4a0;color:#674322}
+#brake{background:#f7b6a0;color:#793e34}
+#rescue{background:#e3eee7}
+.pad button:active,.pad button.pressed{transform:translateY(4px);box-shadow:0 1px 0 #294a58a6}
+.pad button:disabled{opacity:.6;filter:grayscale(.3)}
+.finish-screen{position:absolute;inset:0;background:#082f42a8;display:grid;place-items:center;z-index:50}
+.finish-card{padding:28px;border-radius:26px;background:#193e55;border:2px solid #fff;color:#fff5d8;text-align:center;max-width:88vw}
+.finish-card h2{font-size:38px;margin:6px 0}
+.errors{position:absolute;z-index:75;top:20%;left:5%;width:90%;padding:22px;background:#432e32ee;border:2px solid #ffc59d;border-radius:20px;text-align:center;color:white}
+.errors a{color:#ffe8af}
+@media(max-width:400px){.race-hud{left:7px;right:7px}.title-group{padding:6px}.eyebrow{font-size:8px}.race-actions{top:calc(max(9px,env(safe-area-inset-top)) + 73px)}.pad button{min-width:43px;font-size:12px}.steer button{min-width:45px}.pad{gap:3px}.steer,.action{gap:4px}}
+@media(orientation:landscape) and (max-height:470px){.title-group{padding:3px 8px}.title-group strong{font-size:14px}.status-group{padding:3px 8px}.race-actions{top:calc(max(5px,env(safe-area-inset-top)) + 43px)}#trackMap{top:calc(max(5px,env(safe-area-inset-top)) + 55px);height:95px;width:110px}.pad{bottom:calc(env(safe-area-inset-bottom) + 4px)}.pad button{min-height:52px;font-size:11px}.steer button{font-size:20px}}
