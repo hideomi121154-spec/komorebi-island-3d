@@ -292,16 +292,19 @@ function step(dt){
  if(road.offset>WIDTH+1.8){race.offTrackTime+=dt;if(race.offTrackTime>1.10)rescue();}
  else race.offTrackTime=0;
  for(const ai of race.opponents){
-  ai.distance+=ai.targetSpeed*dt;
+  ai.hitTimer=Math.max(0,ai.hitTimer-dt);
+   ai.distance+=ai.targetSpeed*(ai.hitTimer>0?.49:1)*dt;
   const path=at(ai.distance);
   const lane=((ai.style%3)-1)*.85+.16*Math.sin(ai.distance*.08+ai.style);
   ai.x=path.x+Math.cos(path.yaw)*lane;
   ai.z=path.z-Math.sin(path.yaw)*lane;
-  ai.yaw=path.yaw;ai.speed=ai.targetSpeed;
+  ai.yaw=path.yaw;ai.speed=ai.targetSpeed*(ai.hitTimer>0?.49:1);
   const dx=p.x-ai.x,dz=p.z-ai.z,d=Math.hypot(dx,dz);
-  if(d<1.04&&d>.001){p.speed*=.96;p.x+=dx/d*.10;p.z+=dz/d*.10;}
+  if(d<1.04&&d>.001){if(race.shield<=0&&race.star<=0)p.speed*=.96;p.x+=dx/d*.10;p.z+=dz/d*.10;}
  }
- race.placement=1+race.opponents.filter(ai=>ai.distance>p.distance).length;
+ collectItem(p,road.offset);
+  if(road.offset<WIDTH*.8&&[.16,.39,.63,.87].some(t=>Math.abs(mod(p.distance,length)-t*length)<1.3))p.boost=Math.max(p.boost,.85);
+  race.placement=1+race.opponents.filter(ai=>ai.distance>p.distance).length;
  if(p.distance>=START+length*LAPS){
   race.finished=true;race.finishPlace=race.placement;
   const retry=document.getElementById('kartRestart');if(retry)retry.hidden=false;
@@ -315,8 +318,10 @@ function updateHud(force=false){
  if(!force&&now-race.lastHud<85)return;
  race.lastHud=now;
  const p=race.player;const label=document.getElementById('kartStatus'),meta=document.getElementById('kartRaceMeta');
+  const itemBtn=document.getElementById('kartItem');
+  if(itemBtn){itemBtn.textContent=race.item?ITEM_ICONS[race.item]+' '+ITEM_NAMES[race.item]:'🎁 アイテム';itemBtn.disabled=!race.item||race.countdown>0||race.finished;}
  const lap=Math.min(LAPS,Math.max(1,1+Math.floor((p.distance-START)/length)));
- if(label)label.textContent=race.finished?'🏁 GOAL！ '+race.finishPlace+'位 / 8台':race.countdown>0?'🏎️ '+Math.ceil(race.countdown)+'…':race.rescueFlash>0?'🔄 コースに復帰！':p.boost>0?'⚡ ターボ加速！':p.drift>.7?'💨 ドリフトチャージ！':'🏎️ こもれびカート';
+ if(label)label.textContent=race.finished?'🏁 GOAL！ '+race.finishPlace+'位 / 8台':race.countdown>0?'🏎️ '+Math.ceil(race.countdown)+'…':race.rescueFlash>0?'🔄 コースに復帰！':race.star>0?'🌟 スター無敵！':race.shield>0?'🫧 バリア展開中！':race.item?'🎁 '+ITEM_NAMES[race.item]+'を使おう':p.boost>0?'⚡ ターボ加速！':p.drift>.7?'💨 ドリフトチャージ！':'🏎️ こもれびカート';
  if(meta)meta.textContent='順位 '+race.placement+'/8 · '+lap+'/'+LAPS+'周 · '+Math.round(p.speed*9)+' km/h · '+timeString(race.elapsed);
  drawMiniMap();
 }
@@ -324,8 +329,8 @@ function drawMiniMap(){
  const canvas=document.getElementById('kartMiniMap');
  if(!canvas||typeof canvas.getContext!=='function'||!race.player)return;
  const c=canvas.getContext('2d');if(!c)return;
- const W=canvas.width,H=canvas.height,s=Math.min(W/(LAND.rx*2+15),H/(LAND.rz*2+13));
- const xy=(x,z)=>[W/2+(x-LAND.x)*s,H/2+(z-LAND.z)*s];
+ const W=canvas.width,H=canvas.height,s=Math.min((W-12)/(COURSE_BOUNDS.maxX-COURSE_BOUNDS.minX),(H-12)/(COURSE_BOUNDS.maxZ-COURSE_BOUNDS.minZ));
+ const xy=(x,z)=>[W/2+(x-(COURSE_BOUNDS.minX+COURSE_BOUNDS.maxX)/2)*s,H/2+(z-(COURSE_BOUNDS.minZ+COURSE_BOUNDS.maxZ)/2)*s];
  c.clearRect(0,0,W,H);
  c.lineJoin='round';c.lineCap='round';c.strokeStyle='#b9e3e3';c.lineWidth=11;
  c.beginPath();points.forEach((p,i)=>{const [x,y]=xy(p.x,p.z);if(!i)c.moveTo(x,y);else c.lineTo(x,y)});c.closePath();c.stroke();
@@ -334,15 +339,22 @@ function drawMiniMap(){
  const p=race.player,[x,y]=xy(p.x,p.z);
  c.save();c.translate(x,y);c.rotate(-p.yaw);c.fillStyle='#ffe16f';c.strokeStyle='#172b37';c.lineWidth=1.7;c.beginPath();c.moveTo(0,-7);c.lineTo(-5,6);c.lineTo(5,6);c.closePath();c.fill();c.stroke();c.restore();
 }
-function drawDynamic(b){
+function drawDynamic(b,now=0){
  if(!race.active)return;
- for(let i=0;i<race.opponents.length;i++){const a=race.opponents[i];drawKart(b,a.x,a.z,a.yaw,COLORS[i+1]);}
- const p=race.player;drawKart(b,p.x,p.z,p.yaw,COLORS[0],true,p.drift>.7);
+ for(let i=0;i<ITEM_DISTANCES.length;i++){
+  const pt=at(ITEM_DISTANCES[i]);b.setTransform(pt.x,1.2+.14*Math.sin(now*.003+i),pt.z,now*.0007);
+  b.box(0,0,0,.90,.91,.90,['#97dfdf','#f4c68f','#bdafe7'][i%3]);
+  b.sphere(0,0,0,.32,.32,.33,'#fff5cc',4,6);b.clearTransform();
+ }
+ for(let i=0;i<race.opponents.length;i++){
+  const ai=race.opponents[i];drawKart(b,ai.x,ai.z,ai.yaw,COLORS[i+1],false,false,i);
+ }
+ const p=race.player;drawKart(b,p.x,p.z,p.yaw,COLORS[0],true,p.drift>.7,0,{boost:p.boost,shield:race.shield,star:race.star});
 }
-function camera(){
+ function camera(){
  if(!race.active||!race.player)return null;
  const p=race.player,si=Math.sin(p.yaw),co=Math.cos(p.yaw);
- return {eye:[p.x-si*7.8,4.0,p.z-co*7.8],center:[p.x+si*8,1.25,p.z+co*8],fov:58};
+ return {eye:[p.x-si*5.6,3.3,p.z-co*5.6],center:[p.x+si*9,1.28,p.z+co*9],fov:63};
 }
 function bindControls(onQuit){
  const names={kartSteerLeft:'left',kartSteerRight:'right',kartBrake:'brake',kartDrift:'drift'};
@@ -352,11 +364,12 @@ function bindControls(onQuit){
   for(const event of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(event,()=>{setInput(k,false);btn.classList.remove('pressed');});
  }
  document.getElementById('kartRescue')?.addEventListener('click',rescue);
+  document.getElementById('kartItem')?.addEventListener('click',useItem);
  document.getElementById('kartAutoToggle')?.addEventListener('click',toggleAuto);
  document.getElementById('kartQuit')?.addEventListener('click',onQuit);
  document.getElementById('kartRestart')?.addEventListener('click',start);
  if(typeof window!=='undefined')window.addEventListener('blur',()=>Object.keys(controls).forEach(k=>controls[k]=false));
 }
-const places=[{id:'kartTrack',x:36,z:46,r:3.0,icon:'🏎️',name:'こもれびサーキット'}];
-window.KomorebiKart={CENTER,LAND,WIDTH,LAPS,length,places,at,roadNearest,drawTerrain,drawStatic,drawDynamic,start,stop,rescue,toggleAuto,setInput,active:()=>race.active,finished:()=>race.finished,camera,step,bindControls,keyInput,getState:()=>({active:race.active,finished:race.finished,lap:race.player?Math.min(LAPS,1+Math.floor((race.player.distance-START)/length)):0,autoDrive:race.autoDrive,offTrackTime:race.offTrackTime,place:race.placement,elapsed:race.elapsed,player:race.player&&{...race.player},opponents:race.opponents.map(a=>({...a}))})};
+const places=[{id:'kartTrack',x:34,z:60,r:3.0,icon:'🏎️',name:'こもれび群島グランプリ'}];
+window.KomorebiKart={CENTER,LAND,WIDTH,LAPS,length,COURSE_BOUNDS,ITEM_DISTANCES,ITEM_TYPES,places,at,roadNearest,useItem,drawTerrain,drawStatic,drawDynamic,start,stop,rescue,toggleAuto,setInput,active:()=>race.active,finished:()=>race.finished,camera,step,bindControls,keyInput,getState:()=>({active:race.active,finished:race.finished,item:race.item,pickups:race.pickups,shield:race.shield,star:race.star,lap:race.player?Math.min(LAPS,1+Math.floor((race.player.distance-START)/length)):0,autoDrive:race.autoDrive,offTrackTime:race.offTrackTime,place:race.placement,elapsed:race.elapsed,player:race.player&&{...race.player},opponents:race.opponents.map(a=>({...a}))})};
 })();
