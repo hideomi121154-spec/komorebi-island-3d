@@ -99,19 +99,20 @@ function drawKart(b,x,z,yaw,color,isPlayer=false,drift=false){
  b.clearTransform();
 }
 const controls={left:false,right:false,accelerate:false,brake:false,drift:false};
-const race={active:false,finished:false,elapsed:0,countdown:0,player:null,opponents:[],lastHud:0,placement:1,finishPlace:0};
+const race={active:false,finished:false,elapsed:0,countdown:0,player:null,opponents:[],lastHud:0,placement:1,finishPlace:0,autoDrive:true,offTrackTime:0,rescueFlash:0};
 function spawn(offset,index){
  const distance=START-offset,p=at(distance),side=index%2===0?-.80:.80;
  return {x:p.x+Math.cos(p.yaw)*side,z:p.z-Math.sin(p.yaw)*side,yaw:p.yaw,speed:0,distance,drift:0,boost:0,place:index+1};
 }
 function start(){
- race.active=true;race.finished=false;race.elapsed=0;race.countdown=3.2;race.lastHud=0;race.placement=1;race.finishPlace=0;
+ race.active=true;race.finished=false;race.elapsed=0;race.countdown=3.2;race.lastHud=0;race.placement=1;race.finishPlace=0;race.autoDrive=true;race.offTrackTime=0;race.rescueFlash=0;
  race.player=spawn(0,0);
  race.opponents=Array.from({length:AI_COUNT},(_,i)=>({...spawn(3.5*(i+1),i+1),targetSpeed:12.2+(i*13%5)*1.25,style:i}));
  Object.keys(controls).forEach(k=>controls[k]=false);
  const root=document.getElementById('app');root?.classList.add('kart-racing');
  const hud=document.getElementById('kartHud');if(hud)hud.hidden=false;
  const restart=document.getElementById('kartRestart');if(restart)restart.hidden=true;
+ const auto=document.getElementById('kartAutoToggle');if(auto)auto.textContent='🚗 オート加速 ON';
  updateHud(true);
  return true;
 }
@@ -127,29 +128,62 @@ function keyInput(code,on){
  if(keys[code]){setInput(keys[code],on);return true}
  return false;
 }
+function rescue(){
+ if(!race.active||!race.player||race.finished)return false;
+ const p=race.player,target=at(p.distance);
+ p.x=target.x;p.z=target.z;p.yaw=target.yaw;p.speed=7;p.drift=0;p.boost=0;
+ race.offTrackTime=0;race.rescueFlash=2;
+ updateHud(true);return true;
+}
+function toggleAuto(){
+ race.autoDrive=!race.autoDrive;
+ const button=document.getElementById('kartAutoToggle');
+ if(button)button.textContent=race.autoDrive?'🚗 オート加速 ON':'🎮 手動加速';
+ return race.autoDrive;
+}
 function step(dt){
  if(!race.active||race.finished)return;
  dt=clamp(dt,0,.05);
  if(race.countdown>0){race.countdown=Math.max(0,race.countdown-dt);updateHud();return;}
- race.elapsed+=dt;
- const p=race.player,acc=controls.accelerate,brake=controls.brake,steer=Number(controls.right)-Number(controls.left),drifting=controls.drift&&Math.abs(steer)>.2&&p.speed>6;
+ race.elapsed+=dt;race.rescueFlash=Math.max(0,race.rescueFlash-dt);
+ const p=race.player,acc=race.autoDrive||controls.accelerate,brake=controls.brake,steer=Number(controls.right)-Number(controls.left);
+ const drifting=controls.drift&&Math.abs(steer)>.2&&p.speed>5;
  const oldDrift=p.drift;
  if(drifting)p.drift=Math.min(2,p.drift+dt);
- else if(oldDrift>.70){p.boost=1.8;p.speed=Math.max(p.speed,21);p.drift=0;}
+ else if(oldDrift>.65){p.boost=1.65;p.speed=Math.max(p.speed,16);p.drift=0;}
  else p.drift=0;
- if(p.boost>0)p.boost-=dt;
- p.speed=clamp(p.speed+(acc?17:-5)*dt-(brake?23*dt:0),0,p.boost>0?27:18.5);
- p.yaw+=steer*(.9+p.speed*.049)*(drifting?1.3:1)*dt;
+ if(p.boost>0)p.boost=Math.max(0,p.boost-dt);
+ p.speed=clamp(p.speed+(acc?12:-6)*dt-(brake?22*dt:0),0,p.boost>0?21:13.7);
+ // With our rear-follow camera, positive yaw points to screen-LEFT.
+ // Thus RIGHT steering must DECREASE yaw (opposite the old version).
+ p.yaw-=steer*(.95+p.speed*.093)*(drifting?1.22:1)*dt;
  p.x+=Math.sin(p.yaw)*p.speed*dt;
  p.z+=Math.cos(p.yaw)*p.speed*dt;
  const road=roadNearest(p.x,p.z);
- if(road.offset>WIDTH-.1){p.speed=Math.min(p.speed,road.offset>WIDTH+2?7.5:12);
-  if(road.offset>WIDTH+4){const dest=at(road.distance);p.x+=(dest.x-p.x)*Math.min(1,dt*1.5);p.z+=(dest.z-p.z)*Math.min(1,dt*1.5);}}
+ // Mario Kart-style smart steering: help the driver remain on asphalt.
+ const ahead=at(road.distance+Math.max(3,p.speed*.48));
+ const desired=Math.atan2(ahead.x-p.x,ahead.z-p.z);
+ const error=mod(desired-p.yaw+Math.PI,Math.PI*2)-Math.PI;
+ const assist=clamp((road.offset-WIDTH*.40)/(WIDTH*.9),0,1);
+ if(!drifting&&assist>0){
+  const pull=steer?assist*.50:assist*.95;
+  p.yaw+=clamp(error,-dt*2.7,dt*2.7)*pull;
+ }
+ if(road.offset>WIDTH-.45){
+  p.speed=Math.min(p.speed,road.offset>WIDTH+1.8?8.5:11.5);
+ }
+ // Keep the lap counter tied to real FORWARD travel near the road.
+ // A jump in closest segment or being stationary can no longer add laps.
  let difference=road.distance-mod(p.distance,length);
  if(difference>length/2)difference-=length;
  if(difference< -length/2)difference+=length;
- // Jumping across the course cannot grant multiple laps.
- if(Math.abs(difference)<8)p.distance+=difference;
+ const aligned=Math.cos(p.yaw-at(road.distance).yaw);
+ const maxMove=Math.max(.03,p.speed*dt*1.4+.03);
+ if(road.offset<WIDTH+1.1&&aligned>.20&&Math.abs(difference)<5&&p.speed>.30){
+  p.distance+=clamp(difference,-maxMove,maxMove);
+ }
+ if(road.offset>WIDTH+1.8){race.offTrackTime+=dt;if(race.offTrackTime>1.10)rescue();}
+ else race.offTrackTime=0;
  for(const ai of race.opponents){
   ai.distance+=ai.targetSpeed*dt;
   const path=at(ai.distance);
@@ -158,10 +192,13 @@ function step(dt){
   ai.z=path.z-Math.sin(path.yaw)*lane;
   ai.yaw=path.yaw;ai.speed=ai.targetSpeed;
   const dx=p.x-ai.x,dz=p.z-ai.z,d=Math.hypot(dx,dz);
-  if(d<1.04&&d>.001){p.speed*=.94;p.x+=dx/d*.18;p.z+=dz/d*.18;}
+  if(d<1.04&&d>.001){p.speed*=.96;p.x+=dx/d*.10;p.z+=dz/d*.10;}
  }
  race.placement=1+race.opponents.filter(ai=>ai.distance>p.distance).length;
- if(p.distance>=START+length*LAPS){race.finished=true;race.finishPlace=race.placement;const retry=document.getElementById('kartRestart');if(retry)retry.hidden=false;}
+ if(p.distance>=START+length*LAPS){
+  race.finished=true;race.finishPlace=race.placement;
+  const retry=document.getElementById('kartRestart');if(retry)retry.hidden=false;
+ }
  updateHud();
 }
 function timeString(sec){const m=Math.floor(sec/60),s=Math.floor(sec%60);return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
@@ -172,8 +209,23 @@ function updateHud(force=false){
  race.lastHud=now;
  const p=race.player;const label=document.getElementById('kartStatus'),meta=document.getElementById('kartRaceMeta');
  const lap=Math.min(LAPS,Math.max(1,1+Math.floor((p.distance-START)/length)));
- if(label)label.textContent=race.finished?'🏁 GOAL！ '+race.finishPlace+'位 / 8台':race.countdown>0?'🏎️ '+Math.ceil(race.countdown)+'…':p.boost>0?'⚡ ターボ加速！':p.drift>.7?'💨 ドリフトチャージ！':'🏎️ こもれびカート';
+ if(label)label.textContent=race.finished?'🏁 GOAL！ '+race.finishPlace+'位 / 8台':race.countdown>0?'🏎️ '+Math.ceil(race.countdown)+'…':race.rescueFlash>0?'🔄 コースに復帰！':p.boost>0?'⚡ ターボ加速！':p.drift>.7?'💨 ドリフトチャージ！':'🏎️ こもれびカート';
  if(meta)meta.textContent='順位 '+race.placement+'/8 · '+lap+'/'+LAPS+'周 · '+Math.round(p.speed*9)+' km/h · '+timeString(race.elapsed);
+ drawMiniMap();
+}
+function drawMiniMap(){
+ const canvas=document.getElementById('kartMiniMap');
+ if(!canvas||typeof canvas.getContext!=='function'||!race.player)return;
+ const c=canvas.getContext('2d');if(!c)return;
+ const W=canvas.width,H=canvas.height,s=Math.min(W/(LAND.rx*2+15),H/(LAND.rz*2+13));
+ const xy=(x,z)=>[W/2+(x-LAND.x)*s,H/2+(z-LAND.z)*s];
+ c.clearRect(0,0,W,H);
+ c.lineJoin='round';c.lineCap='round';c.strokeStyle='#b9e3e3';c.lineWidth=11;
+ c.beginPath();points.forEach((p,i)=>{const [x,y]=xy(p.x,p.z);if(!i)c.moveTo(x,y);else c.lineTo(x,y)});c.closePath();c.stroke();
+ c.strokeStyle='#4e626f';c.lineWidth=6;c.stroke();
+ for(const ai of race.opponents){const [x,y]=xy(ai.x,ai.z);c.fillStyle='#f7b69d';c.beginPath();c.arc(x,y,2.6,0,Math.PI*2);c.fill();}
+ const p=race.player,[x,y]=xy(p.x,p.z);
+ c.save();c.translate(x,y);c.rotate(-p.yaw);c.fillStyle='#ffe16f';c.strokeStyle='#172b37';c.lineWidth=1.7;c.beginPath();c.moveTo(0,-7);c.lineTo(-5,6);c.lineTo(5,6);c.closePath();c.fill();c.stroke();c.restore();
 }
 function drawDynamic(b){
  if(!race.active)return;
@@ -186,16 +238,18 @@ function camera(){
  return {eye:[p.x-si*10,5.4,p.z-co*10],center:[p.x+si*7,1.4,p.z+co*7],fov:60};
 }
 function bindControls(onQuit){
- const names={kartSteerLeft:'left',kartSteerRight:'right',kartAccelerate:'accelerate',kartBrake:'brake',kartDrift:'drift'};
+ const names={kartSteerLeft:'left',kartSteerRight:'right',kartBrake:'brake',kartDrift:'drift'};
  for(const [id,k] of Object.entries(names)){
   const btn=document.getElementById(id);if(!btn)continue;
   btn.addEventListener('pointerdown',e=>{if(!race.active)return;e.preventDefault();setInput(k,true);btn.classList.add('pressed');try{btn.setPointerCapture(e.pointerId)}catch{}});
   for(const event of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(event,()=>{setInput(k,false);btn.classList.remove('pressed');});
  }
+ document.getElementById('kartRescue')?.addEventListener('click',rescue);
+ document.getElementById('kartAutoToggle')?.addEventListener('click',toggleAuto);
  document.getElementById('kartQuit')?.addEventListener('click',onQuit);
  document.getElementById('kartRestart')?.addEventListener('click',start);
  if(typeof window!=='undefined')window.addEventListener('blur',()=>Object.keys(controls).forEach(k=>controls[k]=false));
 }
 const places=[{id:'kartTrack',x:36,z:46,r:3.0,icon:'🏎️',name:'こもれびサーキット'}];
-window.KomorebiKart={CENTER,LAND,WIDTH,LAPS,length,places,at,roadNearest,drawTerrain,drawStatic,drawDynamic,start,stop,active:()=>race.active,finished:()=>race.finished,camera,step,bindControls,keyInput,getState:()=>({active:race.active,finished:race.finished,lap:race.player?Math.min(LAPS,1+Math.floor((race.player.distance-START)/length)):0,place:race.placement,elapsed:race.elapsed,player:race.player&&{...race.player},opponents:race.opponents.map(a=>({...a}))})};
+window.KomorebiKart={CENTER,LAND,WIDTH,LAPS,length,places,at,roadNearest,drawTerrain,drawStatic,drawDynamic,start,stop,rescue,toggleAuto,setInput,active:()=>race.active,finished:()=>race.finished,camera,step,bindControls,keyInput,getState:()=>({active:race.active,finished:race.finished,lap:race.player?Math.min(LAPS,1+Math.floor((race.player.distance-START)/length)):0,autoDrive:race.autoDrive,offTrackTime:race.offTrackTime,place:race.placement,elapsed:race.elapsed,player:race.player&&{...race.player},opponents:race.opponents.map(a=>({...a}))})};
 })();
