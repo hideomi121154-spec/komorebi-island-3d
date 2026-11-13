@@ -127,18 +127,41 @@ function drawStatic(b){
    b.sphere(x,2.55,z,1.38,.95,1.39,col,5,7);
   }
 }
-function drawKart(b,x,z,yaw,color,isPlayer=false,drift=false){
- b.setTransform(x,.11,z,yaw);
- b.box(0,.31,0,1.15,.31,1.95,color);
- b.box(0,.55,-.10,.83,.28,.92,'#fff0d2');
- b.box(0,.71,-.15,.63,.17,.45,'#8aaeca');
- b.box(0,.50,.75,1.12,.12,.27,'#fff0e4');
- for(const xx of[-.67,.67])for(const zz of[-.59,.65])b.box(xx,.22,zz,.26,.37,.37,'#2d3541');
- b.box(0,.38,-.99,.81,.10,.14,'#e7eaf0');
- b.box(0,.42,1.01,1.00,.13,.15,'#f7dc95');
- b.sphere(0,.97,-.07,.28,.26,.26,isPlayer?'#f9d68d':'#eee4d5',4,7);
- b.box(0,1.02,-.35,.38,.10,.16,isPlayer?'#b14e50':'#536779');
- if(drift){for(const xx of[-.42,.42])b.sphere(xx,.18,1.45,.29,.15,.33,'#d1d6d4',3,4);}
+function drawKart(b,x,z,yaw,color,isPlayer=false,drift=false,variation=0,effects=null){
+ const hop=effects?.hop||0;
+ b.setTransform(x,.10+hop,z,yaw);
+ // Visible driver, chassis, wide wheels and a recognizable kart silhouette.
+ b.box(0,.32,0,1.48,.41,2.30,effects?.star>0?'#ffe46e':color);
+ b.box(0,.39,.95,1.54,.29,.37,'#f4ead5');
+ b.box(0,.52,-.72,1.40,.26,.35,'#d8dfe2');
+ for(const xx of[-.87,.87])for(const zz of[-.71,.79]){
+  b.box(xx,.32,zz,.35,.57,.54,'#2a343b');
+  b.box(xx+(xx>0?.18:-.18),.32,zz,.05,.28,.20,'#dfe2dc');
+ }
+ b.box(0,.62,-.24,.91,.29,.88,'#314752');
+ const suit=isPlayer?'#f07e5b':['#719fcb','#a48ddb','#75bea2','#e4b76c','#d887ac','#87b6c6','#9ab478'][variation%7];
+ const hat=isPlayer?'#ffe4a1':['#b9e4ee','#d7c4ed','#bde3c6','#ffe1ac','#f2b7cc','#d7eeee','#e5e6a9'][variation%7];
+ b.box(0,1.05,-.31,.67,.68,.57,suit);
+ b.sphere(0,1.64,-.32,.53,.48,.53,hat,7,9); // helmet
+ b.box(0,1.70,.15,.73,.25,.10,'#40546a');  // visor
+ b.box(0,1.47,.23,.51,.12,.09,'#e6bda0');
+ for(const xx of[-.14,.14])b.sphere(xx,1.50,.285,.055,.060,.047,'#253545',4,5);
+ b.box(0,2.06,-.40,.55,.18,.43,isPlayer?'#eda268':'#e7f0e6'); // crest
+ for(const xx of[-.48,.48]){
+  b.box(xx,.98,.04,.22,.43,.20,suit); // arms
+  b.sphere(xx,.78,.19,.16,.15,.18,'#faf0d4',4,6); // gloves
+ }
+ b.cylinder(0,.78,.36,.34,.10,9,'#394b56'); // steering wheel
+ b.box(0,.52,1.18,1.05,.15,.18,'#f4d8a7');
+ b.box(0,.43,-1.16,1.25,.15,.18,'#afcbd2');
+ b.box(0,.49,-1.11,.12,.55,.12,'#edece1');
+ b.sphere(0,.83,-1.11,.16,.16,.16,isPlayer?'#f3c85e':'#b7d9da',4,6);
+ if(drift)for(const xx of[-.58,.58]){
+  b.sphere(xx,.22,-1.42,.27,.17,.35,'#ffe4a9',4,6);
+  b.sphere(xx*1.1,.20,-1.66,.17,.13,.21,'#f2a3a5',4,5);
+ }
+ if(effects?.boost>0)for(const xx of[-.46,.46])b.sphere(xx,.35,-1.37,.25,.22,.42,'#fdd279',4,6);
+ if(effects?.shield>0)b.sphere(0,1.03,-.12,1.43,1.20,1.71,'#b0dfe2',5,7);
  b.clearTransform();
 }
 const controls={left:false,right:false,accelerate:false,brake:false,drift:false};
