@@ -10,6 +10,102 @@ const COURSE_BOUNDS={minX:-48,maxX:101,minZ:-41,maxZ:76};
 const ITEM_TYPES=['turbo','bubble','seed','gust','star'];
 const ITEM_ICONS={turbo:'⚡',bubble:'🫧',seed:'🌰',gust:'🍃',star:'🌟'};
 const ITEM_NAMES={turbo:'ターボ',bubble:'バリア',seed:'木の実ショット',gust:'追い風',star:'スター'};
+// Fictional event partners, unrelated to real companies or their trademarks.
+const SPONSORS=[
+ {code:'KOMO',name:'こもれびモーターズ',color:'#69afb0',accent:'#ffe6a8'},
+ {code:'MINT',name:'ミントエナジー',color:'#79b88b',accent:'#f7edb7'},
+ {code:'NOVA',name:'ノヴァテック',color:'#7d9abb',accent:'#f9d7cd'},
+ {code:'WAVE',name:'ウェーブマリン',color:'#73b7ce',accent:'#e9ebd0'},
+ {code:'SUN',name:'サンベーカリー',color:'#d8a267',accent:'#fff0bb'}
+];
+const VENUES=[
+ {fraction:.02,side:1,brand:0},{fraction:.20,side:1,brand:1},
+ {fraction:.38,side:-1,brand:2},{fraction:.56,side:-1,brand:3},
+ {fraction:.75,side:1,brand:4},{fraction:.92,side:1,brand:0}
+];
+const FONT={
+ A:['010','101','111','101','101'],E:['111','100','110','100','111'],
+ I:['111','010','010','010','111'],K:['101','101','110','101','101'],
+ M:['101','111','111','101','101'],N:['101','111','111','111','101'],
+ O:['111','101','101','101','111'],S:['111','100','111','001','111'],
+ T:['111','010','010','010','010'],U:['101','101','101','101','111'],
+ V:['101','101','101','101','010'],W:['101','101','111','111','101']
+};
+function sponsorText(b,code,y,z,color,unit=.24){
+ const w=(code.length*4-1)*unit;
+ for(let i=0;i<code.length;i++)for(let row=0;row<5;row++)for(let col=0;col<3;col++){
+  if(FONT[code[i]]?.[row]?.[col]==='1')
+   b.box(-w/2+(i*4+col)*unit,y+(4-row)*unit,z,unit*.86,unit*.86,.10,color);
+ }
+}
+function venuePosition(v){
+ const p=at(v.fraction*length),nx=Math.cos(p.yaw),nz=-Math.sin(p.yaw);
+ return {x:p.x+nx*v.side*(WIDTH+10),z:p.z+nz*v.side*(WIDTH+10),yaw:p.yaw,side:v.side};
+}
+function drawGrandstand(b,v,index){
+ const p=venuePosition(v),sponsor=SPONSORS[v.brand];
+ b.setTransform(p.x,0,p.z,p.yaw);
+ // The grandstand is supported by a solid platform even over the sea.
+ b.box(0,.45,0,7.5,.90,21,'#c7d5cf');
+ b.box(0,1.10,0,7.9,.23,21,'#a1babd');
+ for(let row=0;row<3;row++){
+  const x=(row-1)*p.side*2.05,y=1.26+row*.55;
+  b.box(x,y-.28,0,2.1,.50,19.5,row%2?'#d6e3de':'#a6c7cb');
+  for(let seat=0;seat<8;seat++){
+   const z=-8.1+seat*2.32+.24*(row%2),k=index*24+row*8+seat;
+   const color=['#e5a8a3','#9fc8d3','#b6aad7','#efcb91','#a9cea7','#dcb4b4'][k%6];
+   b.box(x,y+.35,z,.59,.68,.48,color);
+   b.sphere(x,y+.84,z,.33,.32,.33,k%4?'#f1caaa':'#bd8d72',5,6);
+   b.box(x,y+1.12,z,.66,.15,.56,k%3?'#7f9db4':'#f2d47b');
+   b.box(x-.42,y+.68,z,.16,k%3===0?.63:.35,.17,'#eac8a7');
+   b.box(x+.42,y+.68,z,.16,k%4===0?.62:.35,.17,'#eac8a7');
+  }
+ }
+ // Canopy, floodlights, guardrails and sponsor-color flags.
+ b.box(0,4.18,0,8.5,.30,22.0,'#f3e2bd');
+ for(const z of[-9.5,0,9.5]){
+  b.box(0,2.35,z,.18,3.4,.18,'#93b2b8');
+  b.box(0,4.36,z,.90,.15,.65,'#fff0c6');
+ }
+ b.box(-p.side*3.9,1.55,0,.22,2.0,19,sponsor.color);
+ for(let i=0;i<5;i++)b.box(-p.side*4.03,1.60,-8+i*4,.24,1.6,1.3,sponsor.accent);
+ b.clearTransform();
+ // Trackside advertisement faces the driving direction.
+ const road=at(v.fraction*length),nx=Math.cos(road.yaw),nz=-Math.sin(road.yaw);
+ b.setTransform(road.x-nx*v.side*(WIDTH+7),0,road.z-nz*v.side*(WIDTH+7),road.yaw);
+ b.box(0,2.13,0,6.8,3.2,.30,sponsor.color);
+ b.box(0,3.82,0,7.1,.23,.38,sponsor.accent);
+ sponsorText(b,sponsor.code,1.72,-.23,'#fff8de',.30);
+ for(const x of[-2.8,2.8])b.box(x,.5,0,.30,1.0,.35,'#8da8aa');
+ b.clearTransform();
+}
+function sponsorBridge(b,fraction,id){
+ const p=at(length*fraction),sponsor=SPONSORS[id];
+ b.setTransform(p.x,0,p.z,p.yaw);
+ for(const side of[-1,1]){
+  b.box(side*(WIDTH+1.45),2.90,0,.32,5.80,.35,sponsor.color);
+  b.box(side*(WIDTH+1.45),.28,0,.75,.44,.72,sponsor.accent);
+ }
+ b.box(0,5.56,0,WIDTH*2+3.4,1.88,.40,sponsor.color);
+ b.box(0,4.60,-.24,WIDTH*2+3.4,.15,.32,sponsor.accent);
+ sponsorText(b,sponsor.code,5.06,-.28,'#fff8df',.28);
+ b.clearTransform();
+}
+function drawCheeringFlags(b,now){
+ if(!race.active||!race.player)return;
+ for(const venue of VENUES){
+  const p=venuePosition(venue);
+  if(Math.hypot(race.player.x-p.x,race.player.z-p.z)>50)continue;
+  b.setTransform(p.x,0,p.z,p.yaw);
+  for(let i=0;i<4;i++){
+   const x=i%2?2.0:-2.0,z=-7.0+i*4.5,y=3.05+.24*Math.sin(now*.008+i*1.8);
+   b.box(x,y-.65,z,.11,1.25,.11,'#f5f2df');
+   b.box(x+.36,y,z,.70,.39,.10,SPONSORS[venue.brand].accent);
+  }
+  b.clearTransform();
+ }
+}
+
 const COLORS=['#f8c65a','#ec7185','#70b8dc','#9f9ad9','#84c49a','#f3a76c','#69bec3','#d6bb77'];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mod=(x,n)=>((x%n)+n)%n;
@@ -99,6 +195,8 @@ function drawTerrain(b){
  }
 }
 function drawStatic(b){
+  for(let i=0;i<VENUES.length;i++)drawGrandstand(b,VENUES[i],i);
+  for(let i=0;i<5;i++)sponsorBridge(b,[.10,.30,.50,.70,.89][i],i);
  // Low grandstand, pits, lamp posts and arches stay away from the racing line.
  b.box(43,.42,76,17,.75,4.2,'#b7c9c6');
  b.box(43,1.25,77,17,1.1,1.75,'#d7dee1');
@@ -343,7 +441,7 @@ function updateHud(force=false){
   const itemBtn=document.getElementById('kartItem');
   if(itemBtn){itemBtn.textContent=race.item?ITEM_ICONS[race.item]+' '+ITEM_NAMES[race.item]:'🎁 アイテム';itemBtn.disabled=!race.item||race.countdown>0||race.finished;}
  const lap=Math.min(LAPS,Math.max(1,1+Math.floor((p.distance-START)/length)));
- if(label)label.textContent=race.finished?'🏁 GOAL！ '+race.finishPlace+'位 / 8台':race.countdown>0?'🏎️ '+Math.ceil(race.countdown)+'…':race.rescueFlash>0?'🔄 コースに復帰！':race.jumpTimer>0?'🪽 海風ジャンプ！':race.star>0?'🌟 スター無敵！':race.shield>0?'🫧 バリア展開中！':race.item?'🎁 '+ITEM_NAMES[race.item]+'を使おう':p.boost>0?'⚡ ターボ加速！':p.drift>.7?'💨 ドリフトチャージ！':'🏎️ こもれびカート';
+ if(label)label.textContent=race.finished?'🏁 GOAL！ '+race.finishPlace+'位 / 8台':race.countdown>0?'🏎️ '+Math.ceil(race.countdown)+'…':race.rescueFlash>0?'🔄 コースに復帰！':race.jumpTimer>0?'🪽 海風ジャンプ！':race.star>0?'🌟 スター無敵！':race.shield>0?'🫧 バリア展開中！':race.item?'🎁 '+ITEM_NAMES[race.item]+'を使おう':VENUES.some(v=>{const spot=venuePosition(v);return Math.hypot(p.x-spot.x,p.z-spot.z)<23})?'📣 観客席から大歓声！':p.boost>0?'⚡ ターボ加速！':p.drift>.7?'💨 ドリフトチャージ！':'🏎️ こもれびカート';
  if(meta)meta.textContent='順位 '+race.placement+'/8 · '+lap+'/'+LAPS+'周 · '+Math.round(p.speed*9)+' km/h · '+timeString(race.elapsed);
  drawMiniMap();
 }
@@ -363,6 +461,7 @@ function drawMiniMap(){
 }
 function drawDynamic(b,now=0){
  if(!race.active)return;
+ drawCheeringFlags(b,now);
  for(let i=0;i<ITEM_DISTANCES.length;i++){
   const pt=at(ITEM_DISTANCES[i]);b.setTransform(pt.x,1.2+.14*Math.sin(now*.003+i),pt.z,now*.0007);
   b.box(0,0,0,.90,.91,.90,['#97dfdf','#f4c68f','#bdafe7'][i%3]);
@@ -393,5 +492,5 @@ function bindControls(onQuit){
  if(typeof window!=='undefined')window.addEventListener('blur',()=>Object.keys(controls).forEach(k=>controls[k]=false));
 }
 const places=[{id:'kartTrack',x:34,z:60,r:3.0,icon:'🏎️',name:'こもれび群島グランプリ'}];
-window.KomorebiKart={CENTER,LAND,WIDTH,LAPS,length,COURSE_BOUNDS,ITEM_DISTANCES,JUMP_DISTANCES,ITEM_TYPES,places,at,roadNearest,useItem,drawTerrain,drawStatic,drawDynamic,start,stop,rescue,toggleAuto,setInput,active:()=>race.active,finished:()=>race.finished,camera,step,bindControls,keyInput,getState:()=>({active:race.active,finished:race.finished,item:race.item,pickups:race.pickups,shield:race.shield,star:race.star,jumpTimer:race.jumpTimer,jumps:race.jumps,lap:race.player?Math.min(LAPS,1+Math.floor((race.player.distance-START)/length)):0,autoDrive:race.autoDrive,offTrackTime:race.offTrackTime,place:race.placement,elapsed:race.elapsed,player:race.player&&{...race.player},opponents:race.opponents.map(a=>({...a}))})};
+window.KomorebiKart={CENTER,LAND,WIDTH,LAPS,length,COURSE_BOUNDS,ITEM_DISTANCES,JUMP_DISTANCES,ITEM_TYPES,SPONSORS,VENUES,venuePosition,places,at,roadNearest,useItem,drawTerrain,drawStatic,drawDynamic,start,stop,rescue,toggleAuto,setInput,active:()=>race.active,finished:()=>race.finished,camera,step,bindControls,keyInput,getState:()=>({active:race.active,finished:race.finished,item:race.item,pickups:race.pickups,shield:race.shield,star:race.star,jumpTimer:race.jumpTimer,jumps:race.jumps,lap:race.player?Math.min(LAPS,1+Math.floor((race.player.distance-START)/length)):0,autoDrive:race.autoDrive,offTrackTime:race.offTrackTime,place:race.placement,elapsed:race.elapsed,player:race.player&&{...race.player},opponents:race.opponents.map(a=>({...a}))})};
 })();

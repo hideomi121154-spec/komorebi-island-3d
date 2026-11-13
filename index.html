@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#e1f6e6">
   <meta name="description" content="こもれび島 3D — 島で歩く、集める、育てる。オリジナルの小さな生活ゲーム。">
   <title>こもれび島 3D | 小さな島の暮らし</title>
-  <link rel="stylesheet" href="styles.css?v=20261113-v37">
+  <link rel="stylesheet" href="styles.css?v=20261113-v38">
 </head>
 <body>
 <div id="app">
@@ -29,7 +29,7 @@
   <div id="spaceHud" class="space-launch-hud" role="status" aria-live="polite" hidden></div>
   <div id="trainHud" class="sea-train-hud" hidden><span id="trainHudText">🚆 こもれびシーラインで移動中…</span><span class="sea-train-progress" aria-hidden="true"><span></span></span></div>
   <div id="kartHud" class="kart-hud" hidden aria-label="こもれび群島グランプリのレース画面">
-    <div class="kart-hud-panel"><strong id="kartStatus">🏁 こもれび群島グランプリ</strong><span id="kartRaceMeta">順位 1/8 · 1/3周 · 0 km/h · 00:00</span><div class="kart-race-actions"><button id="kartAutoToggle" type="button">🚗 オート加速 ON</button><button id="kartRestart" type="button" hidden>🔁 もう一度</button><button id="kartQuit" type="button">🏝️ 島へ戻る</button></div></div>
+    <div class="kart-hud-panel"><strong id="kartStatus">🏁 こもれび群島グランプリ</strong><span id="kartRaceMeta">順位 1/8 · 1/3周 · 0 km/h · 00:00</span><div id="kartSponsors" class="kart-sponsor-strip" aria-label="こもれびグランプリのスポンサー">🏁 PRESENTED BY <b>KOMO MOTOR</b> <span>✦</span> <b>MINT ENERGY</b> <span>✦</span> <b>NOVA TECH</b></div><div class="kart-race-actions"><button id="kartAutoToggle" type="button">🚗 オート加速 ON</button><button id="kartRestart" type="button" hidden>🔁 もう一度</button><button id="kartQuit" type="button">🏝️ 島へ戻る</button></div></div>
     <canvas id="kartMiniMap" class="kart-minimap" width="150" height="150" aria-label="コースとカートの現在位置"></canvas>
     <div class="kart-touch-controls" aria-label="カート操作">
       <div class="kart-steering"><button id="kartSteerLeft" type="button" aria-label="左にハンドル">◀</button><button id="kartSteerRight" type="button" aria-label="右にハンドル">▶</button></div>
@@ -81,7 +81,7 @@
 <script src="spaceport3d.js?v=20261113-v34" defer></script>
 <script src="launch-audio.js?v=20261113-v30" defer></script>
 <script src="industry3d.js?v=20261113-v31" defer></script>
-<script src="kart3d.js?v=20261113-v37" defer></script>
+<script src="kart3d.js?v=20261113-v38" defer></script>
 <script src="nightfestival.js?v=20261112-v25" defer></script>
 <script src="render-quality.js?v=20261113-v32" defer></script>
 <script src="camera-gestures.js?v=20261113-v32" defer></script>

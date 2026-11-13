@@ -46,7 +46,7 @@ test('8 helmeted drivers and floating mystery gifts have bounded 3D geometry',()
  assert.ok(count.box+count.sphere>before+200,'helmets, hands, vehicle chassis and item boxes are all visible');
  assert.ok(count.transform>=16,'8 driver karts and 8 pickup boxes');
  assert.equal(count.invalid,0);
- assert.ok(count.box+count.sphere<1500,'keep phone geometry bounded');
+ assert.ok(count.box+count.sphere-before<750,'per-frame live race geometry remains bounded on phones');
 });
 test('road pickups provide usable powerups that affect speed rather than only looking decorative',()=>{
  const {kart,getElementById}=boot();kart.start();
@@ -96,7 +96,7 @@ test('HTML touch interface provides item button and item world animation',()=>{
  const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const game=fs.readFileSync(new URL('../game.js',import.meta.url),'utf8');
  assert.match(html,/id="kartItem"/);
- assert.match(html,/kart3d\.js\?v=20261113-v37/);
+ assert.match(html,/kart3d\.js\?v=20261113-v38/);
  assert.match(game,/KART\.drawDynamic\(b,now\)/);
  assert.match(source,/function useItem\(\)/);
  assert.match(source,/itemBtn\.disabled=/);

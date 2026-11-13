@@ -243,3 +243,10 @@
  #kartDrift{min-width:61px}
 }
 @media(max-width:360px){#kartItem{min-width:58px}.kart-touch-controls button{min-width:42px}.kart-pedals button{min-width:51px}}
+
+/* v38: fictional Grand Prix sponsor ribbon without covering the steering area. */
+.kart-sponsor-strip{max-width:100%;display:flex;flex-wrap:wrap;gap:4px 7px;align-items:center;justify-content:center;padding:3px 6px;color:#e5edf1;font-weight:700;font-size:clamp(9px,2.6vw,11px);line-height:1.35;letter-spacing:.01em}
+.kart-sponsor-strip b{color:#fff0b8;font-weight:950}
+.kart-sponsor-strip span{color:#bce6d7}
+@media(max-width:430px){.kart-sponsor-strip{font-size:9px;gap:2px 5px}.kart-hud-panel{padding-bottom:7px}}
+@media(orientation:landscape) and (max-height:460px){.kart-sponsor-strip{font-size:8px;line-height:1.05;padding:0}}
