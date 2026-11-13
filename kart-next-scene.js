@@ -119,10 +119,10 @@ function makeDriverKart(color,index){
 }
 function billboard(scene,x,z,yaw,text,bg,accent,w=6.8,h=2.25){
  const holder=new THREE.Group();holder.position.set(x,0,z);holder.rotation.y=yaw;scene.add(holder);
- for(const sx of[-w*.43,w*.43])rect(holder,.24,3.0,.25,'#c0d1cb',sx,1.55,0);
+ for(const sx of[-w*.43,w*.43])rect(holder,.24,4.5,.25,'#c0d1cb',sx,2.27,0);
  const signMaterial=colorBillboard(text,bg,accent);
- const front=mesh(holder,new THREE.PlaneGeometry(w,h),signMaterial,0,3.2,.14,false);
- const back=mesh(holder,new THREE.PlaneGeometry(w,h),signMaterial,0,3.2,-.14,false);
+ const front=mesh(holder,new THREE.PlaneGeometry(w,h),signMaterial,0,5.05,.14,false);
+ const back=mesh(holder,new THREE.PlaneGeometry(w,h),signMaterial,0,5.05,-.14,false);
  back.rotation.y=Math.PI;front.castShadow=false;back.castShadow=false;
  return holder;
 }
@@ -159,7 +159,7 @@ function createStand(scene,kart,venue,index,cheers){
  for(const z of[-11,0,11])rect(root,.17,3.1,.18,'#aac6bd',0,2.05,z);
  // Banner and occasional animated flags, not 144 independent animations.
  const p2=kart.at(kart.length*venue.fraction);
- billboard(scene,p2.x-Math.cos(p2.yaw)*(kart.WIDTH+7)*side,p2.z+Math.sin(p2.yaw)*(kart.WIDTH+7)*side,p2.yaw,BRANDS[venue.brand],theme.color,theme.accent,7.3,2.0);
+ billboard(scene,p2.x-Math.cos(p2.yaw)*(kart.WIDTH+15)*side,p2.z+Math.sin(p2.yaw)*(kart.WIDTH+15)*side,p2.yaw,BRANDS[venue.brand],theme.color,theme.accent,5.8,1.8);
  for(let k=0;k<3;k++){
   const flag=new THREE.Group();flag.position.set((k-1)*2.4,3.72,-8+k*7.8);root.add(flag);
   rect(flag,.07,1.15,.08,'#cddad0',0,.58,0);
@@ -287,9 +287,12 @@ export async function createRaceView(kart,canvas){
    flag.rotation.z=Math.sin(now*.004+index)*.13;
   });
   clouds.forEach(c=>{c.group.position.x+=dt*(.15+(c.index%5)*.06);if(c.group.position.x>170)c.group.position.x=-123;});
-  const p=state.player,sin=Math.sin(p.yaw),cos=Math.cos(p.yaw),speed=Math.max(0,p.speed||0);
-  target.set(p.x-sin*(8.6+speed*.035),4.9+speed*.018,p.z-cos*(8.6+speed*.035));
-  look.set(p.x+sin*(14+speed*.12),1.65+speed*.006,p.z+cos*(14+speed*.12));
+  const p=state.player,speed=Math.max(0,p.speed||0);
+  // Anchor the chase camera above the actual road behind the player instead
+  // of pushing it off-track into trees/billboards in sharp hairpin turns.
+  const behind=kart.at(p.distance-9.5),ahead=kart.at(p.distance+17);
+  target.set(behind.x,4.7+speed*.015,behind.z);
+  look.set(ahead.x,1.58+speed*.006,ahead.z);
   const alpha=1-Math.exp(-Math.max(dt,.0001)*6.6);
   camera.position.lerp(target,alpha);
   camera.lookAt(look);
