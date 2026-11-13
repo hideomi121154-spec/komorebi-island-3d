@@ -235,7 +235,7 @@ function drawDynamic(b){
 function camera(){
  if(!race.active||!race.player)return null;
  const p=race.player,si=Math.sin(p.yaw),co=Math.cos(p.yaw);
- return {eye:[p.x-si*10,5.4,p.z-co*10],center:[p.x+si*7,1.4,p.z+co*7],fov:60};
+ return {eye:[p.x-si*7.8,4.0,p.z-co*7.8],center:[p.x+si*8,1.25,p.z+co*8],fov:58};
 }
 function bindControls(onQuit){
  const names={kartSteerLeft:'left',kartSteerRight:'right',kartBrake:'brake',kartDrift:'drift'};
