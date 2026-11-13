@@ -87,7 +87,9 @@ function drawTerrain(b){
   }
   for(const frac of[.16,.39,.63,.87]){
    const p=at(frac*length);
-   b.box(p.x,.145,p.z,3.5,.04,1.1,'#f7d271');
+   b.setTransform(p.x,0,p.z,p.yaw);
+   b.box(0,.145,0,3.5,.04,1.1,'#f7d271');
+   b.clearTransform();
   }
   // Starting grid crosses the tangent, not the world's X axis.
  const st=at(START),nx=Math.cos(st.yaw),nz=-Math.sin(st.yaw);
@@ -125,7 +127,9 @@ function drawStatic(b){
     b.box(x,3.1,z,.30,6.1,.30,'#87c9cb');
     b.sphere(x,6.3,z,.65,.60,.65,t<.5?'#ffe095':'#ec9cb4',5,7);
    }
-   b.box(p.x,6.20,p.z,WIDTH*2+2.3,.48,.41,'#ffe5aa');
+   b.setTransform(p.x,0,p.z,p.yaw);
+   b.box(0,6.20,0,WIDTH*2+2.3,.48,.41,'#ffe5aa');
+   b.clearTransform();
   }
   for(let i=0;i<18;i++){
    const p=at(length*(i+.3)/18),nx=Math.cos(p.yaw),nz=-Math.sin(p.yaw);
