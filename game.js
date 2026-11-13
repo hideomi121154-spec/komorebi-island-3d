@@ -545,7 +545,7 @@ function rocketSpectatorPose(lift,aspect){
  return {
   // West-village house occupies the former camera position (-21.3,-4.2).
   // View from a clear observation spot outside the house, hangar and tower.
-  eye:[SPACE.viewpoint?.x??-26,SPACE.viewpoint?.y??1.72,SPACE.viewpoint?.z??-4.5],
+  eye:[SPACE.viewpoint?.x??-26,SPACE.viewpoint?.y??1.72,SPACE.viewpoint?.z??1.1],
   center:[SPACE.pad.x,7+Math.min(49,ascent*.67),SPACE.pad.z],
   fov:aspect<.70?56:52
  };
