@@ -13,7 +13,7 @@ const geometryCache=new Map(),materialCache=new Map();
 function box(w,h,d){const key='b'+w+','+h+','+d;if(!geometryCache.has(key))geometryCache.set(key,new THREE.BoxGeometry(w,h,d));return geometryCache.get(key);}
 function sphere(r=1,seg=14){const key='s'+r+','+seg;if(!geometryCache.has(key))geometryCache.set(key,new THREE.SphereGeometry(r,seg,Math.max(8,Math.round(seg*.7))));return geometryCache.get(key);}
 function material(color){if(!materialCache.has(color))materialCache.set(color,MAT(color));return materialCache.get(color);}
-function mesh(parent,geo,mat,x=0,y=0,z=0,shadow=true){
+function mesh(parent,geo,mat,x=0,y=0,z=0,shadow=false){
  const obj=new THREE.Mesh(geo,typeof mat==='string'?material(mat):mat);obj.position.set(x,y,z);
  obj.castShadow=!!shadow;obj.receiveShadow=true;parent.add(obj);return obj;
 }
@@ -65,7 +65,7 @@ function makeDriverKart(color,index){
  const suit=material(index===0?'#ed6e56':['#6a9ee0','#9d91d8','#79c6a0','#e1b068','#d888aa','#8fc8d4','#98b77d'][index%7]);
  const helmet=material(index===0?'#ffe18a':['#bce2f3','#e0c6ed','#b9ebcf','#f9dda6','#f3b9d1','#c6e8e5','#e6edb4'][index%7]);
  const paint=MAT(color,.38,.24);
- const frame=mesh(shell,CAR_BODY,paint,0,.47,0);frame.receiveShadow=true;
+ const frame=mesh(shell,CAR_BODY,paint,0,.47,0);frame.receiveShadow=true;frame.castShadow=true;
  const hood=mesh(shell,new THREE.CapsuleGeometry(.59,.55,8,16),paint,0,.59,.70);hood.rotation.x=Math.PI/2;hood.scale.set(1,.55,.8);
  rect(shell,1.55,.18,.31,CHROME,0,.38,-1.03);
  rect(shell,1.47,.12,.21,'#fff5e4',0,.39,1.12);
@@ -92,7 +92,7 @@ function makeDriverKart(color,index){
  const torso=mesh(shell,new THREE.CapsuleGeometry(.36,.30,5,12),suit,0,1.21,-.46);torso.rotation.x=-.10;
  ball(shell,.41,'#f4cba5',0,1.91,-.38,20);
  const cap=mesh(shell,new THREE.SphereGeometry(.48,22,14),helmet,0,2.00,-.38);
- cap.scale.set(1.15,1.02,1.08);
+ cap.scale.set(1.15,1.02,1.08);cap.castShadow=true;
  const visor=mesh(shell,new THREE.SphereGeometry(.45,18,10),MAT('#29455b',.12,.10),0,2.01,.003);
  visor.scale.set(.94,.43,.22);
  for(const x of[-.155,.155]){
