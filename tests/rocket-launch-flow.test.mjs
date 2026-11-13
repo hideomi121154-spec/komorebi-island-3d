@@ -83,11 +83,26 @@ test('camera reset can stop tracking without stopping the actual rocket',()=>{
  assert.equal(api.getSpaceport().camera,false);
  assert.equal(api.getSpaceport().phase.active,true);
 });
-test('rocket-follow view locks onto rocket at each stage and save format is unchanged',()=>{
+test('launch viewpoint stays at human eye height while gaze tilts toward the sky',()=>{
+ const {api}=boot();
+ const start=api.getRocketSpectatorPose(0);
+ const rising=api.getRocketSpectatorPose(45);
+ const high=api.getRocketSpectatorPose(110);
+ assert.deepEqual(Array.from(start.eye),Array.from(rising.eye),'ground camera must not rise with rocket');
+ assert.deepEqual(Array.from(rising.eye),Array.from(high.eye),'spectator must remain on the ground');
+ assert.equal(start.eye[1],1.72);
+ assert.ok(rising.center[1]>start.center[1],'the visitor looks up during ascent');
+ assert.ok(high.center[1]<=56,'view should cap its pitch so rocket may fly out of frame');
+ assert.ok(high.eye[1]<high.center[1]);
+ assert.equal(start.fov,56,'phone uses wide field of view for the launch');
+});
+test('camera is independent of rocket height, and game save format remains unchanged',()=>{
  const game=file('game.js'),html=file('index.html');
- assert.match(game,/launchView\?\[SPACE\.pad\.x,7\+spacePhase\.lift,SPACE\.pad\.z\]/);
- assert.match(game,/launchView\?\[SPACE\.pad\.x\+24,18\+spacePhase\.lift,SPACE\.pad\.z\+24\]/);
+ assert.match(game,/function rocketSpectatorPose\(lift,aspect\)/);
+ assert.match(game,/spectator\?spectator\.eye/);
+ assert.match(game,/spectator\?spectator\.center/);
  assert.match(game,/function beginRocketLaunch\(\)/);
  assert.match(game,/komorebi_island_3d_v01/);
- assert.match(html,/game\.js\?v=20261113-v28/);
+ assert.match(html,/game\.js\?v=20261113-v29/);
+ assert.match(html,/spaceport3d\.js\?v=20261113-v29/);
 });
