@@ -33,7 +33,7 @@ function builder(){
 test('industrial island joins existing home while preserving spaceport and old city land',()=>{
  const w=setup(),E=w.KomorebiExpansion,S=w.KomorebiSeaLine,I=w.KomorebiIndustry;
  assert.deepEqual(Array.from([I.land.x,I.land.z]),[30,31]);
- assert.equal(E.canWalk(14,24),true,'new land is walkable from old coast');
+ assert.equal(E.canWalk(12.7,21.5),true,'shoreline connection remains walkable outside factory walls');
  assert.equal(E.canWalk(35,39),true,'yard is walkable');
  assert.equal(E.canWalk(I.factory.x,I.factory.z),false,'factory has walls');
  assert.equal(E.canWalk(20,39),false,'active steelwork is off-limits');
