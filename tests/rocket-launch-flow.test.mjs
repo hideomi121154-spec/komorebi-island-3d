@@ -176,6 +176,6 @@ test('camera is independent of rocket height, and game save format remains uncha
  assert.match(game,/spectator\?spectator\.center/);
  assert.match(game,/function beginRocketLaunch\(\)/);
  assert.match(game,/komorebi_island_3d_v01/);
- assert.match(html,/game\.js\?v=20261113-v3[012345]/);
+ assert.match(html,/game\.js\?v=20261113-v3[0123456]/);
  assert.match(html,/spaceport3d\.js\?v=20261113-v3[04]/);
 });
