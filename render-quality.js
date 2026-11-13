@@ -34,7 +34,7 @@ function create(options={}){
   const gestureCap=interactive?1.14:3;
   return clamp(Math.min(deviceRatio||1,limit,pixelCap,gestureCap),.75,3);
  }
- function current(){return {mode,limit,pixelBudget:budget};}
+ function current(){return {mode,limit,pixelBudget:budget,interactive};}
  return {observe,ratio,current,setInteractive,isInteractive:()=>interactive};
 }
 function modeFromSearch(search=''){
