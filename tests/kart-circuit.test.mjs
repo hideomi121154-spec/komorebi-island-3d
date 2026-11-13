@@ -43,7 +43,7 @@ test('kart steering, throttle and boost controls work and game exits safely',()=
  kart.keyInput('ArrowUp',true);
  kart.keyInput('ArrowRight',true);
  let first=kart.getState().player;
- for(let i=0;i<180;i++)kart.step(1/60);
+ for(let i=0;i<360;i++)kart.step(1/60);
  const after=kart.getState();
  assert.ok(after.elapsed>0);
  assert.ok(after.player.speed>0);
