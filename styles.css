@@ -183,3 +183,8 @@
 .space-launch-hud[hidden]{display:none}
 .space-launch-hud{position:absolute;z-index:6;top:calc(env(safe-area-inset-top) + 182px);left:50%;transform:translateX(-50%);min-width:180px;max-width:65vw;text-align:center;background:#fff8e9ed;color:#99612c;border:2px solid #f7d49b;border-radius:17px;padding:9px 12px;font-size:13px;font-weight:900;box-shadow:0 6px 24px #514d4050;pointer-events:none}
 @media(max-height:700px){.space-launch-hud{top:calc(env(safe-area-inset-top) + 150px)}}
+
+/* v31 — automotive export district, compact mobile factory shortcut. */
+#industryBtn{font-size:21px;touch-action:manipulation}
+#app.indoors #industryBtn{display:none}
+@media(max-height:700px){.edge-buttons{gap:5px}.edge-buttons button{width:39px;height:39px}}
