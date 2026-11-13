@@ -64,3 +64,49 @@ test('lap routing is periodic and closest road projection returns a finite locat
  assert.ok(closest.offset<.05);
  assert.ok(Number.isFinite(closest.distance));
 });
+
+test('right touch steering turns right on screen from the follow camera; left turns left',()=>{
+ function drive(direction){
+  const {kart}=makeKart();kart.start();
+  for(let i=0;i<205;i++)kart.step(1/60);
+  const from=kart.getState().player;
+  kart.setInput(direction,true);
+  for(let i=0;i<36;i++)kart.step(1/60);
+  const to=kart.getState().player;
+  // Camera-right is -cos(yaw) in X and +sin(yaw) in Z.
+  const screenRight=-(to.x-from.x)*Math.cos(from.yaw)+(to.z-from.z)*Math.sin(from.yaw);
+  kart.stop();return screenRight;
+ }
+ assert.ok(drive('right')>.1,'right button must move toward screen-right');
+ assert.ok(drive('left')<-.1,'left button must move toward screen-left');
+});
+test('auto acceleration is ON by default and can be switched to manual',()=>{
+ const {kart,el}=makeKart();kart.start();
+ assert.equal(kart.getState().autoDrive,true);
+ assert.equal(el('kartAutoToggle').textContent,'🚗 オート加速 ON');
+ for(let i=0;i<250;i++)kart.step(1/60);
+ assert.ok(kart.getState().player.speed>1,'hands-free auto acceleration');
+ assert.equal(kart.toggleAuto(),false);
+ assert.equal(el('kartAutoToggle').textContent,'🎮 手動加速');
+ assert.equal(kart.toggleAuto(),true);
+ kart.stop();
+});
+test('braking in place cannot advance race laps or trigger a false finish',()=>{
+ const {kart}=makeKart();kart.start();kart.setInput('brake',true);
+ for(let i=0;i<1000;i++)kart.step(1/60);
+ const state=kart.getState();
+ assert.equal(state.player.speed,0);
+ assert.equal(state.lap,1);
+ assert.equal(state.finished,false);
+ kart.stop();
+});
+test('reset returns player to the race course without changing lap and without warping the island',()=>{
+ const {kart}=makeKart();kart.start();
+ for(let i=0;i<350;i++)kart.step(1/60);
+ const before=kart.getState();assert.equal(kart.rescue(),true);
+ const after=kart.getState();
+ assert.ok(kart.roadNearest(after.player.x,after.player.z).offset<.1);
+ assert.equal(after.lap,before.lap);
+ assert.equal(after.player.boost,0);
+ kart.stop();
+});
