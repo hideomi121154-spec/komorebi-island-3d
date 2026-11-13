@@ -165,15 +165,15 @@ function drawKart(b,x,z,yaw,color,isPlayer=false,drift=false,variation=0,effects
  b.clearTransform();
 }
 const controls={left:false,right:false,accelerate:false,brake:false,drift:false};
-const race={active:false,finished:false,elapsed:0,countdown:0,player:null,opponents:[],lastHud:0,placement:1,finishPlace:0,autoDrive:true,offTrackTime:0,rescueFlash:0};
+const race={active:false,finished:false,elapsed:0,countdown:0,player:null,opponents:[],lastHud:0,placement:1,finishPlace:0,autoDrive:true,offTrackTime:0,rescueFlash:0,item:null,pickups:0,lastItemBox:null,shield:0,star:0,itemMessage:''};
 function spawn(offset,index){
  const distance=START-offset,p=at(distance),side=index%2===0?-.80:.80;
  return {x:p.x+Math.cos(p.yaw)*side,z:p.z-Math.sin(p.yaw)*side,yaw:p.yaw,speed:0,distance,drift:0,boost:0,place:index+1};
 }
 function start(){
- race.active=true;race.finished=false;race.elapsed=0;race.countdown=3.2;race.lastHud=0;race.placement=1;race.finishPlace=0;race.autoDrive=true;race.offTrackTime=0;race.rescueFlash=0;
+ race.active=true;race.finished=false;race.elapsed=0;race.countdown=3.2;race.lastHud=0;race.placement=1;race.finishPlace=0;race.autoDrive=true;race.offTrackTime=0;race.rescueFlash=0;race.item=null;race.pickups=0;race.lastItemBox=null;race.shield=0;race.star=0;race.itemMessage='';
  race.player=spawn(0,0);
- race.opponents=Array.from({length:AI_COUNT},(_,i)=>({...spawn(3.5*(i+1),i+1),targetSpeed:12.2+(i*13%5)*1.25,style:i}));
+ race.opponents=Array.from({length:AI_COUNT},(_,i)=>({...spawn(3.5*(i+1),i+1),targetSpeed:12.2+(i*13%5)*1.25,style:i,hitTimer:0}));
  Object.keys(controls).forEach(k=>controls[k]=false);
  const root=document.getElementById('app');root?.classList.add('kart-racing');
  const hud=document.getElementById('kartHud');if(hud)hud.hidden=false;
@@ -190,9 +190,49 @@ function stop(){
 }
 function setInput(k,on){if(Object.prototype.hasOwnProperty.call(controls,k))controls[k]=!!on;}
 function keyInput(code,on){
- const keys={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'accelerate',KeyW:'accelerate',ArrowDown:'brake',KeyS:'brake',Space:'drift',ShiftLeft:'drift',ShiftRight:'drift'};
+ if(code==='KeyE'||code==='KeyQ'){if(on)useItem();return true;}
+  const keys={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'accelerate',KeyW:'accelerate',ArrowDown:'brake',KeyS:'brake',Space:'drift',ShiftLeft:'drift',ShiftRight:'drift'};
  if(keys[code]){setInput(keys[code],on);return true}
  return false;
+}
+function useItem(){
+ if(!race.active||race.finished||race.countdown>0||!race.item)return false;
+ const kind=race.item,p=race.player;
+ race.item=null;
+ race.itemMessage=ITEM_NAMES[kind]+' を使用！';
+ if(kind==='turbo'){p.boost=Math.max(3,p.boost);p.speed=Math.max(17,p.speed);}
+ else if(kind==='bubble')race.shield=8;
+ else if(kind==='star'){race.star=5;p.boost=Math.max(p.boost,4.5);}
+ else if(kind==='gust'){
+  let hits=0;
+  for(const ai of race.opponents){
+   if(mod(ai.distance-p.distance,length)<95){ai.hitTimer=Math.max(ai.hitTimer,2.8);hits++;}
+  }
+  race.itemMessage='🍃 追い風で'+hits+'台を妨害！';
+ }else if(kind==='seed'){
+  let target=null,nearest=Infinity;
+  for(const ai of race.opponents){
+   const delta=mod(ai.distance-p.distance,length);
+   if(delta<nearest&&delta<75){nearest=delta;target=ai;}
+  }
+  if(target){target.hitTimer=Math.max(target.hitTimer,3.5);race.itemMessage='🌰 木の実が命中！';}
+  else {p.boost=Math.max(p.boost,1.3);race.itemMessage='🌰 木の実ブースト！';}
+ }
+ updateHud(true);return true;
+}
+function collectItem(p,offset){
+ if(race.item||offset>WIDTH+.65)return;
+ const lap=Math.max(0,Math.floor((p.distance-START)/length)),where=mod(p.distance,length);
+ for(let i=0;i<ITEM_DISTANCES.length;i++){
+  const d=ITEM_DISTANCES[i],gap=Math.min(Math.abs(where-d),length-Math.abs(where-d)),key=lap+'-'+i;
+  if(gap<2.35&&race.lastItemBox!==key){
+   race.lastItemBox=key;
+   race.item=ITEM_TYPES[(race.pickups*2+Math.floor(race.pickups/3))%ITEM_TYPES.length];
+   race.pickups++;
+   race.itemMessage=ITEM_ICONS[race.item]+' '+ITEM_NAMES[race.item]+' をゲット！';
+   updateHud(true);break;
+  }
+ }
 }
 function rescue(){
  if(!race.active||!race.player||race.finished)return false;
@@ -211,7 +251,7 @@ function step(dt){
  if(!race.active||race.finished)return;
  dt=clamp(dt,0,.05);
  if(race.countdown>0){race.countdown=Math.max(0,race.countdown-dt);updateHud();return;}
- race.elapsed+=dt;race.rescueFlash=Math.max(0,race.rescueFlash-dt);
+ race.elapsed+=dt;race.rescueFlash=Math.max(0,race.rescueFlash-dt);race.shield=Math.max(0,race.shield-dt);race.star=Math.max(0,race.star-dt);
  const p=race.player,acc=race.autoDrive||controls.accelerate,brake=controls.brake,steer=Number(controls.right)-Number(controls.left);
  const drifting=controls.drift&&Math.abs(steer)>.2&&p.speed>5;
  const oldDrift=p.drift;
@@ -219,7 +259,7 @@ function step(dt){
  else if(oldDrift>.65){p.boost=1.65;p.speed=Math.max(p.speed,16);p.drift=0;}
  else p.drift=0;
  if(p.boost>0)p.boost=Math.max(0,p.boost-dt);
- p.speed=clamp(p.speed+(acc?12:-6)*dt-(brake?22*dt:0),0,p.boost>0?21:13.7);
+ p.speed=clamp(p.speed+(acc?12:-6)*dt-(brake?22*dt:0),0,race.star>0?25:p.boost>0?23:15.6);
  // With our rear-follow camera, positive yaw points to screen-LEFT.
  // Thus RIGHT steering must DECREASE yaw (opposite the old version).
  p.yaw-=steer*(.95+p.speed*.093)*(drifting?1.22:1)*dt;
@@ -231,11 +271,12 @@ function step(dt){
  const desired=Math.atan2(ahead.x-p.x,ahead.z-p.z);
  const error=mod(desired-p.yaw+Math.PI,Math.PI*2)-Math.PI;
  const assist=clamp((road.offset-WIDTH*.40)/(WIDTH*.9),0,1);
- if(!drifting&&assist>0){
+ if(!steer&&race.autoDrive)p.yaw+=clamp(error,-dt*1.6,dt*1.6)*.65;
+  if(!drifting&&assist>0){
   const pull=steer?assist*.50:assist*.95;
   p.yaw+=clamp(error,-dt*2.7,dt*2.7)*pull;
  }
- if(road.offset>WIDTH-.45){
+ if(road.offset>WIDTH-.45&&race.star<=0){
   p.speed=Math.min(p.speed,road.offset>WIDTH+1.8?8.5:11.5);
  }
  // Keep the lap counter tied to real FORWARD travel near the road.
