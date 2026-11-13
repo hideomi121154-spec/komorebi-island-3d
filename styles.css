@@ -228,3 +228,18 @@
 #kartRescue{height:clamp(57px,16vw,82px)}
 @media(max-width:390px){.kart-minimap{top:calc(env(safe-area-inset-top) + 126px);width:92px;height:92px;right:8px}.kart-race-actions button{padding:4px 6px;font-size:10px}}
 @media(orientation:landscape) and (max-height:460px){.kart-minimap{top:calc(env(safe-area-inset-top) + 7px);right:12px;width:90px;height:90px}.kart-hud-panel{padding:3px 6px}.kart-race-actions button{min-height:27px;padding:3px 6px}}
+
+/* Grand Prix v37: readable interactive item action on narrow iPhone screens. */
+.kart-touch-controls{z-index:36;padding-left:6px;padding-right:6px}
+.kart-pedals{gap:5px}
+#kartItem{background:#ffde91;color:#664320;min-width:clamp(62px,17vw,88px);box-shadow:0 5px 17px #a96c3880}
+#kartItem:disabled{background:#dde8e5;color:#71838a;opacity:.75;box-shadow:0 3px 8px #142b4829}
+.kart-hud-panel strong{letter-spacing:.02em}
+@media(max-width:430px){
+ .kart-steering,.kart-pedals{gap:4px}
+ .kart-touch-controls button{min-width:45px;height:66px;font-size:12px;padding:4px}
+ .kart-pedals button{min-width:clamp(53px,14vw,61px)}
+ #kartItem{min-width:68px;font-size:11px}
+ #kartDrift{min-width:61px}
+}
+@media(max-width:360px){#kartItem{min-width:58px}.kart-touch-controls button{min-width:42px}.kart-pedals button{min-width:51px}}
