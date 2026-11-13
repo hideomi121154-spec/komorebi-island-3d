@@ -66,7 +66,7 @@ function message(text){
 }
 function startRace(){
  if(!state.ready)return;
- kart.start();state.started=true;state.finished=false;state.last=performance.now();
+ kart.start({playerAtBack:true});state.started=true;state.finished=false;state.last=performance.now();
  document.documentElement.dataset.kart3d='running';
  $('splash').hidden=true;$('finishScreen').hidden=true;$('hud').hidden=false;
  $('auto').textContent='🚗 オート加速 ON';$('raceCall').textContent='🏁 3・2・1… START!';
@@ -163,6 +163,13 @@ async function init(){
  $('startRace').addEventListener('click',()=>{if(!state.engine)state.engine=createEngineSound();});
  $('restart').addEventListener('click',()=>{if(!state.engine)state.engine=createEngineSound();});
  // Headless Chrome may start the race for visual regression screenshots.
- if(new URLSearchParams(location.search).get('preview')==='1')startRace();
+ if(new URLSearchParams(location.search).get('preview')==='1'){
+  startRace();
+  // Move a deterministic few seconds into the race for reproducible visuals.
+  for(let frame=0;frame<600;frame++)kart.step(1/60);
+  state.last=performance.now();
+  const data=kart.getState();state.scene.update(data,performance.now(),1/60);
+  state.scene.render();updateUI(data,performance.now());miniMap(data);
+ }
 }
 init().catch(error=>failure(error.message||error));
