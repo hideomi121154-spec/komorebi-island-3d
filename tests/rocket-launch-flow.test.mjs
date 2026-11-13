@@ -68,6 +68,7 @@ test('single action tap counts down and activates the rocket tracking camera',()
 test('factory launch from rocket button preserves player position and shows distant rocket',()=>{
  const {api,node,storage,time}=boot();
  api.moveTo(29.4,20.5);
+ api.saveNow(); // Persist the visitor's factory location before launching.
  const before=api.getState();
  node('spaceportBtn')._handlers.get('click')();
  const launch=node('panelContent').children.find(c=>String(c.textContent).includes('ここからロケット発射を見る'));
