@@ -147,7 +147,7 @@ test('Festival loop, phone detail scaling and reduced motion are deterministic',
  assert.match(game,/festivalShow&&!roomActive\?festivalOrigin/);
  assert.match(game,/cameraPitch=1\.23/);
  assert.match(html,/nightfestival\.js\?v=20261112-v25/);
- assert.match(html,/game\.js\?v=(?:20261112-v25|20261113-v(?:2[6789]|3[0123]))/);
+ assert.match(html,/game\.js\?v=(?:20261112-v25|20261113-v(?:2[6789]|3[01234]))/);
 });
 
 test('Spark trails form continuous luminous 3D line segments',()=>{

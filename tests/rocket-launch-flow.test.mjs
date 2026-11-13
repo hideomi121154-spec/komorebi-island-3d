@@ -125,6 +125,37 @@ test('camera reset can stop tracking without stopping the actual rocket',()=>{
  assert.equal(api.getSpaceport().camera,false);
  assert.equal(api.getSpaceport().phase.active,true);
 });
+test('launch camera is outside west-village house and shows full rocket before takeoff',()=>{
+ const {api}=boot(),pose=api.getRocketSpectatorPose(0,.5);
+ const pad=api.getSpaceport().pad,eye=pose.eye,center=pose.center;
+ // Old camera (-21.3,1.72,-4.2) was inside the western residence.
+ const buildingBoxes=[
+  {name:'west-village house',xmin:-23.54,xmax:-18.66,zmin:-7.06,zmax:-2.94},
+  {name:'control building',xmin:-32.075,xmax:-27.725,zmin:-4.45,zmax:-1.85},
+  {name:'rocket hangar',xmin:-34.83,xmax:-29.17,zmin:-9.35,zmax:-4.85},
+  {name:'launch service tower',xmin:-21.2,xmax:-19.5,zmin:-15.0,zmax:-13.3}
+ ];
+ assert.equal(eye[1],1.72,'camera stays at human eye height');
+ assert.ok(eye[2]>0,'spectator is safely behind the plaza');
+ const inside=(x,z,b)=>x>=b.xmin&&x<=b.xmax&&z>=b.zmin&&z<=b.zmax;
+ for(const rect of buildingBoxes){
+  for(let k=0;k<=40;k++){
+   const t=k/40,x=eye[0]+(pad.x-eye[0])*t,z=eye[2]+(pad.z-eye[2])*t;
+   assert.equal(inside(x,z,rect),false,'view ray intersects '+rect.name);
+  }
+ }
+ const direction=center.map((v,i)=>v-eye[i]);
+ const angle=point=>{
+  const ray=point.map((v,i)=>v-eye[i]);
+  const dot=ray.reduce((sum,v,i)=>sum+v*direction[i],0);
+  return Math.acos(Math.max(-1,Math.min(1,dot/(Math.hypot(...ray)*Math.hypot(...direction)))))*180/Math.PI;
+ };
+ assert.ok(angle([pad.x,0,pad.z])<pose.fov/2,'rocket base visible');
+ assert.ok(angle([pad.x,14.2,pad.z])<pose.fov/2,'rocket nose visible');
+ const later=api.getRocketSpectatorPose(50,.5);
+ assert.deepEqual(Array.from(later.eye),Array.from(eye),'camera remains grounded');
+ assert.ok(later.center[1]>center[1],'gaze tracks ascending rocket');
+});
 test('launch viewpoint stays at human eye height while gaze tilts toward the sky',()=>{
  const {api}=boot();
  const start=api.getRocketSpectatorPose(0);
@@ -145,6 +176,6 @@ test('camera is independent of rocket height, and game save format remains uncha
  assert.match(game,/spectator\?spectator\.center/);
  assert.match(game,/function beginRocketLaunch\(\)/);
  assert.match(game,/komorebi_island_3d_v01/);
- assert.match(html,/game\.js\?v=20261113-v3[0123]/);
- assert.match(html,/spaceport3d\.js\?v=20261113-v30/);
+ assert.match(html,/game\.js\?v=20261113-v3[01234]/);
+ assert.match(html,/spaceport3d\.js\?v=20261113-v3[04]/);
 });
