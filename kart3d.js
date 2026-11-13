@@ -280,10 +280,13 @@ function spawn(offset,index){
  const distance=START-offset,p=at(distance),side=index%2===0?-.80:.80;
  return {x:p.x+Math.cos(p.yaw)*side,z:p.z-Math.sin(p.yaw)*side,yaw:p.yaw,speed:0,distance,drift:0,boost:0,place:index+1};
 }
-function start(){
+function start(options={}){
  race.active=true;race.finished=false;race.elapsed=0;race.countdown=3.2;race.lastHud=0;race.placement=1;race.finishPlace=0;race.autoDrive=true;race.offTrackTime=0;race.rescueFlash=0;race.item=null;race.pickups=0;race.lastItemBox=null;race.shield=0;race.star=0;race.itemMessage='';race.jumpTimer=0;race.lastJump=null;race.jumps=0;
- race.player=spawn(0,0);
- race.opponents=Array.from({length:AI_COUNT},(_,i)=>({...spawn(3.5*(i+1),i+1),targetSpeed:12.2+(i*13%5)*1.25,style:i,hitTimer:0}));
+ // The new renderer uses a rear grid start to keep competing karts in view;
+ // the classic mode retains its original front grid by default.
+ const backGrid=options.playerAtBack===true;
+ race.player=spawn(backGrid?3.5*AI_COUNT:0,0);
+ race.opponents=Array.from({length:AI_COUNT},(_,i)=>({...spawn(backGrid?3.5*i:3.5*(i+1),i+1),targetSpeed:12.2+(i*13%5)*1.25,style:i,hitTimer:0}));
  Object.keys(controls).forEach(k=>controls[k]=false);
  const root=document.getElementById('app');root?.classList.add('kart-racing');
  const hud=document.getElementById('kartHud');if(hud)hud.hidden=false;
