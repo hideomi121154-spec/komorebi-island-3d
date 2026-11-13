@@ -188,3 +188,8 @@
 #industryBtn{font-size:21px;touch-action:manipulation}
 #app.indoors #industryBtn{display:none}
 @media(max-height:700px){.edge-buttons{gap:5px}.edge-buttons button{width:39px;height:39px}}
+
+/* v32 — prevent iOS Safari text-selection overlays during game gestures. */
+#app,#app .top-hud,#app .bottom-ui,#app .edge-buttons,#app .hint,#app .island-name-pill{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#gameCanvas{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
+.panel,.panel p,.room-dialogue,.room-dialogue p{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}

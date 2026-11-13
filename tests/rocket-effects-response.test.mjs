@@ -11,11 +11,11 @@ test('touch gesture immediately downscales render pixels and restores clarity at
  new Script(file('render-quality.js')).runInNewContext(context);
  const q=context.window.KomorebiRenderQuality.create({mode:'auto'});
  const high=q.ratio(390,844,3);
- assert.ok(high>1.8);
+ assert.ok(high>=1.5,'mobile-auto resolution remains readable');
  q.setInteractive(true);
  const fast=q.ratio(390,844,3);
- assert.ok(fast<=1.14);
- assert.ok(fast<high*.7,'touch render should reduce pixel work substantially');
+ assert.equal(fast,high,'buffer dimensions remain stable while touching');
+ assert.ok(high<=1.65,'auto mode uses a mobile-friendly resolution budget');
  assert.equal(q.current().interactive,true);
  q.setInteractive(false);
  assert.equal(q.ratio(390,844,3),high);
@@ -76,14 +76,14 @@ test('3D rocket breaks through a bounded cloud bank at high altitude',()=>{
 test('game wires gesture quality, sound toggle and ground rumble without changing saves',()=>{
  const src=file('game.js'),html=file('index.html');
  for(const pattern of [
-  /renderQuality\?\.setInteractive\?\.\(true\)/,
-  /renderQuality\?\.setInteractive\?\.\(false\)/,
-  /Math\.pow\(pinch\.dist\/Math\.max\(10,distance\),1\.18\)/,
+  /onGesture:active=>renderQuality\?\.setInteractive\?\.\(active\)/,
+  /\(CAMERA_GESTURES\|\|fallback\)\.create\(canvas/,
+  /cameraPan\.x=clamp\(cameraPan\.x-vec\.x\*size/,
   /LAUNCH_AUDIO\?\.play\?\.\(\)/,
   /LAUNCH_AUDIO\.setEnabled\(!LAUNCH_AUDIO\.enabled\(\)\)/,
   /spacePhase\.lift<16/,
   /komorebi_island_3d_v01/
  ])assert.match(src,pattern);
  assert.match(html,/src="launch-audio\.js\?v=20261113-v30"/);
- assert.match(html,/render-quality\.js\?v=20261113-v30/);
+ assert.match(html,/render-quality\.js\?v=20261113-v32/);
 });

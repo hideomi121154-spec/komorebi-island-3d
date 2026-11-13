@@ -29,6 +29,7 @@ jobs:
         run: |
           node --check nightfestival.js
           node --check render-quality.js
+          node --check camera-gestures.js
       - name: Validate sky gradient shader syntax
         run: node --check sky-gradient.js
       - name: Validate large-world expansion syntax

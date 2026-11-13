@@ -81,7 +81,7 @@ test('trees do not render on home, commerce or either extended island',()=>{
  assert.match(game,/drawSupplyStations\(b\)/);
  assert.match(game,/drawAvailableSupplies\(b\)/);
  assert.match(html,/果物を3個集めよう/);
- assert.match(html,/game\.js\?v=(?:20261112-v2[45]|20261113-v(?:2[6789]|3[01]))/);
+ assert.match(html,/game\.js\?v=(?:20261112-v2[45]|20261113-v(?:2[6789]|3[012]))/);
 });
 test('expanded open land, new districts and rails remain valid geometry',()=>{
  const scene=loadScene(),m=geometry();

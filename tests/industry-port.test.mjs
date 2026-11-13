@@ -78,7 +78,7 @@ test('dynamic production convoy is bounded and advances toward carrier',()=>{
 test('game and UI connect factory camera, travel buttons, map and preserve old save format',()=>{
  const game=file('game.js'),html=file('index.html'),map=file('sealine3d.js');
  assert.match(game,/INDUSTRY\.drawDynamic\(b,now\)/);
- assert.match(game,/const focusX=industrialOverview\?45/);
+ assert.match(game,/const focusX=cameraPan\.x\+\(industrialOverview\?45/);
  assert.match(game,/industrialOverview\?68/);
  assert.match(game,/type==='industry'/);
  assert.match(game,/getIndustry:/);
@@ -86,7 +86,7 @@ test('game and UI connect factory camera, travel buttons, map and preserve old s
  assert.match(html,/id="industryBtn"/);
  assert.ok(html.indexOf('src="spaceport3d.js')<html.indexOf('src="industry3d.js'));
  assert.ok(html.indexOf('src="industry3d.js')<html.indexOf('src="game.js'));
- assert.match(html,/game\.js\?v=20261113-v31/);
+ assert.match(html,/game\.js\?v=20261113-v3[12]/);
  assert.match(map,/\[21,27,'🏭'\]/);
  assert.match(map,/\[69,29\.5,'🚢'\]/);
 });

@@ -71,7 +71,7 @@ test('Fallback drawing works with screen canvas coordinates',()=>{
 test('Retina scale fits a safe pixel budget and honors low-power mode',()=>{
  const auto=quality.create();
  const retina=auto.ratio(390,844,3);
- assert.ok(retina>1.7&&retina<=2.1);
+ assert.ok(retina>=1.5&&retina<=1.65);
  assert.ok(390*844*retina**2<=2200000+1);
  assert.equal(quality.create({mode:'battery'}).ratio(390,844,3),1);
  assert.ok(quality.create({mode:'ultra'}).ratio(390,844,3)>=retina);
@@ -97,9 +97,9 @@ test('3D fireworks exist above the island and can be viewed from overhead',()=>{
  assert.equal(festival.worldParticles(1250,1,[5,-3],true).length,0);
  const game=source('game.js');
  assert.match(game,/worldFestivalRenderer\.draw\(festivalClock,fireworksIntensity/);
- assert.match(game,/canvas\.addEventListener\('wheel'/);
+ assert.match(source('camera-gestures.js'),/canvas\.addEventListener\('wheel'/);
  assert.match(game,/cameraPitch=clamp/);
- assert.match(game,/pointers\.size===2/);
+ assert.match(source('camera-gestures.js'),/pts\.length>=2/);
  assert.match(game,/festivalViewBtn/);
 });
 
@@ -147,7 +147,7 @@ test('Festival loop, phone detail scaling and reduced motion are deterministic',
  assert.match(game,/festivalShow&&!roomActive\?festivalOrigin/);
  assert.match(game,/cameraPitch=1\.23/);
  assert.match(html,/nightfestival\.js\?v=20261112-v25/);
- assert.match(html,/game\.js\?v=(?:20261112-v25|20261113-v(?:2[6789]|3[01]))/);
+ assert.match(html,/game\.js\?v=(?:20261112-v25|20261113-v(?:2[6789]|3[012]))/);
 });
 
 test('Spark trails form continuous luminous 3D line segments',()=>{
