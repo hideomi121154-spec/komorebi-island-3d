@@ -615,7 +615,7 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
  const center=kartCamera?kartCamera.center:roomActive?[0,.95,-.35]:spectator?spectator.center:[camFocus.x,clamp(-cameraPitch,0,1.25)*28,camFocus.z];
  viewFov=kartCamera?kartCamera.fov:roomActive?52:(spectator?spectator.fov:industrialOverview?68:travelPoint?56:seaLineOverview?70:overviewMode?54:48);
   updateSpeechPosition(eye,center,aspect,viewFov*Math.PI/180);
- const lighting=DAYLIGHT.paletteAt(festivalShow&&!roomActive?22*60+30:state.timeMinutes);
+ const lighting=DAYLIGHT.paletteAt(KART.active()?15*60:festivalShow&&!roomActive?22*60+30:state.timeMinutes);
   const fireworksIntensity=festivalShow?1:lighting.stars;
   const festivalClock=festivalShow?Math.max(0,now-festivalStartedAt)+1800:now;
  if($('nightSky')?.style)$('nightSky').style.opacity=roomActive?'0':String(lighting.stars);
@@ -982,8 +982,8 @@ function openPanel(type){panelType=type;paused=true;for(let dir of Object.keys(i
    title.textContent='🏎️ こもれびサーキット';
    paragraph(content,'自動車工場の南側に専用の3Dカートサーキットが完成！ 8台同時スタート・CPU7台・ドリフトターボ・3周レースを楽しもう。');
    content.appendChild(row('🏁','レース形式','8台で3周・順位とタイムを計測',null,null));
-   content.appendChild(row('💨','ドリフト','左右に曲がりながらドリフトを溜め、離すと加速！',null,null));
-   paragraph(content,'iPhoneは画面下の左右・アクセル・ブレーキ・ドリフトで操作。キーボードは矢印/WASDとスペースキー。終了すると元の島の位置に戻るよ。','tip-box');
+   content.appendChild(row('💨','ドリフト','左右に曲がりながらドリフトを溜め、離すとターボ！',null,null));
+   paragraph(content,'オート加速とコースアウト防止アシストが標準ON。左右でハンドル、ドリフトでターボ、減速でブレーキ。道を外れても自動復帰するよ。キーボードは矢印/WASDとスペースキー。レース中は見やすい昼の照明に切り替わり、終了すると島の現在時刻と元の場所に戻るよ。','tip-box');
    addButton(content,'🏎️ 8台でレースを始める',startKartRace);
    addButton(content,'島に戻る',closePanel,'secondary');
   }
