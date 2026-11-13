@@ -168,7 +168,10 @@ async function init(){
   // Move a deterministic few seconds into the race for reproducible visuals.
   for(let frame=0;frame<600;frame++)kart.step(1/60);
   state.last=performance.now();
-  const data=kart.getState();state.scene.update(data,performance.now(),1/60);
+  const data=kart.getState();
+  // Screenshot fast-forward skips real camera frames; settle chase interpolation
+  // so visual tests show the true in-race angle, not the old start position.
+  for(let n=0;n<55;n++)state.scene.update(data,performance.now()+n*16,1/60);
   state.scene.render();updateUI(data,performance.now());miniMap(data);
  }
 }
