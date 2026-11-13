@@ -99,7 +99,7 @@ test('3D fireworks exist above the island and can be viewed from overhead',()=>{
  assert.match(game,/worldFestivalRenderer\.draw\(festivalClock,fireworksIntensity/);
  assert.match(source('camera-gestures.js'),/canvas\.addEventListener\('wheel'/);
  assert.match(game,/cameraPitch=clamp/);
- assert.match(game,/pointers\.size===2/);
+ assert.match(source('camera-gestures.js'),/pts\.length>=2/);
  assert.match(game,/festivalViewBtn/);
 });
 
