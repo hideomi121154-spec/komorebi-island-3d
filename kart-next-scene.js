@@ -205,7 +205,7 @@ export async function createRaceView(kart,canvas){
  }
  // Start/finish grid and grand-prix graphic banners.
  const st=kart.at(3);
- overheadGantry(scene,kart,st,'KOMOREBI GP','#167a93','#f6dc8d',kart.WIDTH*2+2.0);
+ overheadGantry(scene,kart,kart.at(kart.length*.037),'KOMOREBI GP','#167a93','#f6dc8d',kart.WIDTH*2+2.0);
  for(let i=0;i<5;i++){
   const p=kart.at(kart.length*(.12+i*.182)),theme=kart.SPONSORS[i];
   overheadGantry(scene,kart,p,BRANDS[i],theme.color,theme.accent,kart.WIDTH*2+2.0);
