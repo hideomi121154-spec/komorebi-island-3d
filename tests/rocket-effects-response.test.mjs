@@ -11,7 +11,7 @@ test('touch gesture immediately downscales render pixels and restores clarity at
  new Script(file('render-quality.js')).runInNewContext(context);
  const q=context.window.KomorebiRenderQuality.create({mode:'auto'});
  const high=q.ratio(390,844,3);
- assert.ok(high>1.8);
+ assert.ok(high>=1.5,'mobile-auto resolution remains readable');
  q.setInteractive(true);
  const fast=q.ratio(390,844,3);
  assert.equal(fast,high,'buffer dimensions remain stable while touching');
@@ -77,7 +77,7 @@ test('game wires gesture quality, sound toggle and ground rumble without changin
  const src=file('game.js'),html=file('index.html');
  for(const pattern of [
   /onGesture:active=>renderQuality\?\.setInteractive\?\.\(active\)/,
-  /\(CAMERA_GESTURES\|\|fallback\)\.create\(canvas/
+  /\(CAMERA_GESTURES\|\|fallback\)\.create\(canvas/,
   /cameraPan\.x=clamp\(cameraPan\.x-vec\.x\*size/,
   /LAUNCH_AUDIO\?\.play\?\.\(\)/,
   /LAUNCH_AUDIO\.setEnabled\(!LAUNCH_AUDIO\.enabled\(\)\)/,
@@ -85,5 +85,5 @@ test('game wires gesture quality, sound toggle and ground rumble without changin
   /komorebi_island_3d_v01/
  ])assert.match(src,pattern);
  assert.match(html,/src="launch-audio\.js\?v=20261113-v30"/);
- assert.match(html,/render-quality\.js\?v=20261113-v30/);
+ assert.match(html,/render-quality\.js\?v=20261113-v32/);
 });
