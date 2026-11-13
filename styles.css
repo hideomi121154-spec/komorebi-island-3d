@@ -193,3 +193,26 @@
 #app,#app .top-hud,#app .bottom-ui,#app .edge-buttons,#app .hint,#app .island-name-pill{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #gameCanvas{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
 .panel,.panel p,.room-dialogue,.room-dialogue p{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+
+/* v35: Native Kart Circuit on the existing 3D island. */
+#kartBtn{font-size:21px;touch-action:manipulation}
+#app.indoors #kartBtn{display:none}
+.kart-hud[hidden],#kartRestart[hidden]{display:none!important}
+.kart-hud{position:absolute;inset:0;z-index:32;pointer-events:none;-webkit-user-select:none;user-select:none}
+.kart-hud-panel{position:absolute;top:calc(env(safe-area-inset-top) + 12px);left:50%;transform:translateX(-50%);width:min(calc(100vw - 30px),440px);display:flex;align-items:center;flex-direction:column;gap:5px;padding:10px 15px 12px;border:2px solid #ffffffec;border-radius:20px;background:#192e3fdf;color:#fffdf2;box-shadow:0 6px 24px #142f3f70;text-align:center;backdrop-filter:blur(6px)}
+.kart-hud-panel strong{font-size:clamp(15px,4vw,21px);font-weight:950}
+.kart-hud-panel>span{font-size:clamp(11px,3vw,14px);font-weight:900;font-variant-numeric:tabular-nums}
+.kart-race-actions{display:flex;gap:9px;justify-content:center;margin-top:3px}
+.kart-race-actions button{pointer-events:auto;min-height:34px;padding:6px 11px;border:1px solid #fff9;border-radius:12px;background:#ecf0dc;color:#305066;font-size:12px;font-weight:900;touch-action:manipulation}
+.kart-race-actions #kartRestart{background:#fed06b;color:#593b2d}
+.kart-touch-controls{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 14px);display:flex;justify-content:space-between;align-items:flex-end;gap:8px;padding:0 max(8px,env(safe-area-inset-left)) 0 max(8px,env(safe-area-inset-right));pointer-events:none}
+.kart-steering,.kart-pedals{display:flex;align-items:flex-end;gap:7px;pointer-events:none}
+.kart-touch-controls button{pointer-events:auto;touch-action:none;-webkit-touch-callout:none;user-select:none;display:grid;place-items:center;min-width:clamp(50px,14vw,75px);height:clamp(57px,16vw,82px);border-radius:18px;border:2px solid #ffffffcb;background:#f4eddef0;color:#324f61;font-size:clamp(14px,3.4vw,18px);font-weight:950;box-shadow:0 5px 15px #20364766}
+.kart-pedals button{min-width:clamp(58px,15vw,80px);font-size:clamp(10px,2.7vw,13px);padding:3px}
+#kartAccelerate{height:clamp(75px,22vw,102px);background:#8cd6a7;color:#124f3b}
+#kartDrift{background:#b0cbef;color:#294d82}
+#kartBrake{background:#f6b7a4;color:#8b3d32}
+.kart-touch-controls button:active,.kart-touch-controls button.pressed{transform:translateY(3px);background:#ffdf8c;box-shadow:0 2px 8px #142b4866}
+#app.kart-racing .top-hud,#app.kart-racing #statusBar,#app.kart-racing .bottom-ui,#app.kart-racing .edge-buttons,#app.kart-racing .redevelopment-status,#app.kart-racing .festival-controls,#app.kart-racing .island-name-pill,#app.kart-racing .room-hud{display:none}
+@media(max-width:390px){.kart-steering,.kart-pedals{gap:4px}.kart-touch-controls{padding-left:5px;padding-right:5px}.kart-touch-controls button{min-width:48px;border-radius:13px}.kart-pedals button{min-width:55px}}
+@media(orientation:landscape) and (max-height:460px){.kart-hud-panel{top:calc(env(safe-area-inset-top) + 4px);width:min(44vw,320px);padding:4px 9px;gap:1px}.kart-hud-panel strong{font-size:13px}.kart-touch-controls{bottom:calc(env(safe-area-inset-bottom) + 5px)}.kart-touch-controls button{height:55px;min-width:60px}#kartAccelerate{height:66px}}

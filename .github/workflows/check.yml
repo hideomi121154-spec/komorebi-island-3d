@@ -37,6 +37,7 @@ jobs:
           node --check world-expansion-v23.js
           node --check spaceport3d.js
           node --check industry3d.js
+           node --check kart3d.js
           node --check sealine3d.js
           node --check expansion3d.js
       - name: Run smoke tests
