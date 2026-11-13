@@ -8,6 +8,7 @@ const fmt=(seconds)=>{
  return String(mins).padStart(2,'0')+':'+String(secs).padStart(2,'0');
 };
 function failure(msg){
+ document.documentElement.dataset.kart3d='error';
  $('fatal').hidden=false;$('fatalText').textContent='高品質3Dモードを起動できませんでした: '+String(msg);
  $('loadMessage').textContent='新しい3Dエンジンの読み込みに失敗しました。';
  $('startRace').disabled=true;console.error('Komorebi Grand Prix:',msg);
@@ -66,6 +67,7 @@ function message(text){
 function startRace(){
  if(!state.ready)return;
  kart.start();state.started=true;state.finished=false;state.last=performance.now();
+ document.documentElement.dataset.kart3d='running';
  $('splash').hidden=true;$('finishScreen').hidden=true;$('hud').hidden=false;
  $('auto').textContent='🚗 オート加速 ON';$('raceCall').textContent='🏁 3・2・1… START!';
  message('🌊 群島グランプリへようこそ！');
@@ -153,11 +155,14 @@ async function init(){
  state.scene.camera.position.set(start.x-4,6,start.z-9);
  state.scene.camera.lookAt(start.x,0,start.z);
  state.scene.render();state.ready=true;
+ document.documentElement.dataset.kart3d='ready';
  $('startRace').disabled=false;
  $('loadMessage').textContent='準備完了！ スタートを押すと音が出ます。';
  controls();
  // Audio only begins inside a real user tap, never on page load.
  $('startRace').addEventListener('click',()=>{if(!state.engine)state.engine=createEngineSound();});
  $('restart').addEventListener('click',()=>{if(!state.engine)state.engine=createEngineSound();});
+ // Headless Chrome may start the race for visual regression screenshots.
+ if(new URLSearchParams(location.search).get('preview')==='1')startRace();
 }
 init().catch(error=>failure(error.message||error));
