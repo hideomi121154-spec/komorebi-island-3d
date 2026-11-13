@@ -553,7 +553,7 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
  if(!indoor.room)updateMoko(now);
  const spacePhase=SPACE.phase(now),spaceHud=$('spaceHud');if(rocketCameraActive&&!spacePhase.active)rocketCameraActive=false;const launchView=rocketCameraActive&&spacePhase.active&&!indoor.room;if(spaceHud){spaceHud.hidden=!!indoor.room||!spacePhase.active;if(!spaceHud.hidden&&spaceHud.textContent!=='🚀 '+spacePhase.label)spaceHud.textContent='🚀 '+spacePhase.label;}
   if(railRide.active)updateSeaRide(now);
- const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&!railRide.active&&!rocketCameraActive&&(sx||sy)){if(!indoor.room)leaveOverviewForMovement();const move=screenMoveVector(sx,sy,indoor.room?0:viewHeading());let dx=move.x*speed*dt,dz=move.z*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);if(SEA.isCommercial(x,z))return SEA.walkable(x,z);if(!EXPANSION.canWalk(x,z)||REDEVELOPMENT.within(x,z))return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
+ const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&!railRide.active&&!rocketCameraActive&&(sx||sy)){if(!indoor.room){leaveOverviewForMovement();cameraPan.x=0;cameraPan.z=0;}const move=screenMoveVector(sx,sy,indoor.room?0:viewHeading());let dx=move.x*speed*dt,dz=move.z*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);if(SEA.isCommercial(x,z))return SEA.walkable(x,z);if(!EXPANSION.canWalk(x,z)||REDEVELOPMENT.within(x,z))return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
  const fishingActive=fishing.stage!=='idle',roomActive=!!indoor.room;
   const travelPoint=railRide.active?SEA.pointAt(railRide.from==='home'?railRide.progress:1-railRide.progress):null;
   const festivalOrigin=state.currentIsland==='commerce'?[52,-4]:[11,-5];
@@ -924,6 +924,7 @@ function openPanel(type){panelType=type;paused=true;for(let dir of Object.keys(i
    paragraph(content,'工場の奥では鉄骨工事とクレーン作業が進行中。船は港に停泊し、車が順番にスロープを登る3D演出が続くよ。','tip-box');
    const visit=(x,z,panorama=false)=>{
     if(indoor.room)return;
+    cameraPan.x=0;cameraPan.z=0;
     state.x=x;state.z=z;state.currentIsland='home';state.angle=0;
     camFocus.x=x;camFocus.z=z;overviewMode=false;seaLineOverview=false;
     industrialOverview=panorama;rocketCameraActive=false;festivalShow=false;
@@ -997,8 +998,17 @@ function bindControls(){const dirs=document.querySelectorAll('[data-dir]');dirs.
  $('redevelopmentHud').addEventListener('click',()=>{if(fishing.stage==='idle'&&!indoor.room)openPanel('redevelopment')});$('redevelopmentViewBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'){overviewMode=!overviewMode;$('redevelopmentViewBtn').classList.toggle('active',overviewMode);showToast(overviewMode?(state.currentIsland==='commerce'?'🏙️ 商業島を見渡そう':'🏗️ 島の再開発を見渡そう'):'🚶 いつもの視点に戻したよ')}});$('seaLineBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'&&!railRide.active)openPanel('sealine')});$('spaceportBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'&&!railRide.active)openPanel('spaceport')});$('industryBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'&&!railRide.active)openPanel('industry')});$('islandMapBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle')openPanel('map')});$('rotateLeft').addEventListener('click',()=>{state.angle-=Math.PI/4;save()});$('rotateRight').addEventListener('click',()=>{state.angle+=Math.PI/4;save()});$('cameraReset').addEventListener('click',()=>{rocketCameraActive=false;industrialOverview=false;cameraPan.x=0;cameraPan.z=0;gestures?.reset?.();state.angle=0;cameraZoom=1;cameraPitch=0;cameraYaw=0;overviewMode=false;seaLineOverview=false;$('redevelopmentViewBtn').classList.remove('active');save();showToast('📷 カメラを戻したよ')});$('actionBtn').addEventListener('click',()=>{if(fishing.stage==='idle')interact();else fishAction()});$('bagBtn').addEventListener('click',()=>openPanel('bag'));$('questBtn').addEventListener('click',()=>openPanel('quests'));$('nextDayBtn').addEventListener('click',saveNow);$('panelClose').addEventListener('click',closePanel);$('panelOverlay').addEventListener('click',e=>{if(e.target===$('panelOverlay'))closePanel()});
  // Safari: native TouchEvents for orbit/pinch, PointerEvents for mouse/pen.
  // Avoid resizing the WebGL drawing buffer on every touchstart/touchend.
- if(!CAMERA_GESTURES)throw Error('camera-gestures.js is required');
- gestures=CAMERA_GESTURES.create(canvas,{
+ // Fallback keeps legacy embedded/offline versions and unit bootstraps working.
+ // Published Safari builds use camera-gestures.js and the native touch path.
+ const fallback={create:(element,o)=>{
+  let pointer=null;
+  const end=e=>{if(pointer&&pointer.id===e.pointerId){pointer=null;o.onGesture?.(false);}};
+  element.addEventListener('pointerdown',e=>{if(o.enabled?.()===false)return;pointer={id:e.pointerId,x:e.clientX,y:e.clientY,...o.get()};o.onGesture?.(true);});
+  element.addEventListener('pointermove',e=>{if(!pointer||pointer.id!==e.pointerId)return;o.set({yaw:pointer.yaw+(e.clientX-pointer.x)*.010,pitch:pointer.pitch+(e.clientY-pointer.y)*.0085});});
+  element.addEventListener('pointerup',end);element.addEventListener('pointercancel',end);
+  return {reset:()=>{pointer=null;o.onGesture?.(false)},isActive:()=>!!pointer};
+ }};
+ gestures=(CAMERA_GESTURES||fallback).create(canvas,{
   enabled:()=>!indoor.room,
   get:()=>({yaw:cameraYaw,pitch:cameraPitch,zoom:cameraZoom}),
   set:next=>{
@@ -1009,7 +1019,8 @@ function bindControls(){const dirs=document.querySelectorAll('[data-dir]');dirs.
   onPan:(dx,dy)=>{
    if(rocketCameraActive)return;
    const size=((overviewMode||industrialOverview||seaLineOverview)?0.16:0.06)*cameraZoom;
-   const vec=screenMoveVector(dx,dy,viewHeading());
+   const heading=viewHeading(),c=Math.cos(heading),s=Math.sin(heading);
+   const vec={x:dx*c+dy*s,z:-dx*s+dy*c};
    cameraPan.x=clamp(cameraPan.x-vec.x*size,-45,45);
    cameraPan.z=clamp(cameraPan.z-vec.z*size,-37,37);
   },
