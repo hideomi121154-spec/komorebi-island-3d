@@ -216,3 +216,15 @@
 #app.kart-racing .top-hud,#app.kart-racing #statusBar,#app.kart-racing .bottom-ui,#app.kart-racing .edge-buttons,#app.kart-racing .redevelopment-status,#app.kart-racing .festival-controls,#app.kart-racing .island-name-pill,#app.kart-racing .room-hud{display:none}
 @media(max-width:390px){.kart-steering,.kart-pedals{gap:4px}.kart-touch-controls{padding-left:5px;padding-right:5px}.kart-touch-controls button{min-width:48px;border-radius:13px}.kart-pedals button{min-width:55px}}
 @media(orientation:landscape) and (max-height:460px){.kart-hud-panel{top:calc(env(safe-area-inset-top) + 4px);width:min(44vw,320px);padding:4px 9px;gap:1px}.kart-hud-panel strong{font-size:13px}.kart-touch-controls{bottom:calc(env(safe-area-inset-bottom) + 5px)}.kart-touch-controls button{height:55px;min-width:60px}#kartAccelerate{height:66px}}
+
+/* v36: Mario-Kart-inspired simple touch controls and course awareness. */
+#kartAutoToggle{background:#d9f1df;color:#1e624b}
+#kartRescue{background:#f7e1ac;color:#6e5421}
+.kart-minimap{position:absolute;top:calc(env(safe-area-inset-top) + 132px);right:11px;z-index:33;width:clamp(92px,23vw,125px);height:clamp(92px,23vw,125px);border:2px solid #ffffffd8;border-radius:19px;box-shadow:0 4px 20px #172e4259;background:#ffffffd4;pointer-events:none}
+.kart-hud-panel{padding:7px 11px 9px;gap:3px}
+.kart-race-actions{gap:5px;margin-top:0}
+.kart-race-actions button{font-size:clamp(10px,2.8vw,12px);min-height:31px;padding:5px 8px}
+.kart-touch-controls button{font-weight:900}
+#kartRescue{height:clamp(57px,16vw,82px)}
+@media(max-width:390px){.kart-minimap{top:calc(env(safe-area-inset-top) + 126px);width:92px;height:92px;right:8px}.kart-race-actions button{padding:4px 6px;font-size:10px}}
+@media(orientation:landscape) and (max-height:460px){.kart-minimap{top:calc(env(safe-area-inset-top) + 7px);right:12px;width:90px;height:90px}.kart-hud-panel{padding:3px 6px}.kart-race-actions button{min-height:27px;padding:3px 6px}}
