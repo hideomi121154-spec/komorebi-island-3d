@@ -80,10 +80,10 @@ function drawFactory(b){
  b.box(x,4.6,z-d/2-.09,w,.35,.12,'#d6e9e9');
  windowBand(b,x,4.75,z+d/2+.08,12,1.6,7);
  // Opening facing the highway: dark bay with three glass garage doors.
- b.box(x+4.7,1.60,z+d/2+.10,4.6,3.1,.20,'#354b53');
+ b.box(x+w/2+.10,1.60,z-1.2,.20,3.1,4.6,'#354b53');
  for(let i=0;i<3;i++){
-  b.box(x+3.2+i*1.45,1.6,z+d/2+.23,1.22,2.70,.10,'#78949a');
-  b.box(x+3.2+i*1.45,2.25,z+d/2+.29,1.06,.46,.11,'#b4d6dc');
+  b.box(x+w/2+.23,1.6,z-2.65+i*1.45,.10,2.70,1.22,'#78949a');
+  b.box(x+w/2+.29,2.25,z-2.65+i*1.45,.11,.46,1.06,'#b4d6dc');
  }
  for(let i=0;i<5;i++)b.box(x-w/2+1.3+i*2.5,3.7,z+d/2+.08,1.35,1.05,.12,'#97c9d3');
  for(let i=0;i<7;i++)b.box(x-w/2+1.1+i*2.0,6.65,z-.8,.9,.33,1.7,'#aab9c0');
@@ -233,34 +233,5 @@ function drawDynamic(b,now){
  b.box(48.1,1.72,25.3,.6,.13,.55,'#f4d077');
  b.box(48.54,1.14+a,25.3,.15,.85,.16,'#ebd5b5');
 }
-const oldMap=S.paintMap;
-S.paintMap=(canvas,state)=>{
- oldMap(canvas,state);
- const ctx=canvas.getContext('2d');
- if(!ctx)return;
- const w=canvas.width,h=canvas.height,scale=Math.min((w-28)/136,(h-40)/88);
- // Old map uses slightly wider framing. Repaint map with matching new viewport.
- ctx.save();ctx.fillStyle='#98d2db';ctx.fillRect(0,0,w,h);
- ctx.translate(14,18);ctx.scale(scale,scale);ctx.translate(44,33);
- const disk=(x,z,rx,rz,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x,z,rx,rz,0,0,Math.PI*2);ctx.fill();};
- const home=window.KomorebiExpansion;
- disk(home.landCenter.x,home.landCenter.z,home.sand[0],home.sand[1],'#f5dfad');
- disk(home.landCenter.x,home.landCenter.z,home.grass[0],home.grass[1],'#a3d48e');
- disk(S.CENTER.x,S.CENTER.z,S.RADII.x+1,S.RADII.z+1,'#f5dfad');
- disk(S.CENTER.x,S.CENTER.z,S.RADII.x,S.RADII.z,'#a3d48e');
- disk(land.x,land.z,land.rx+1,land.rz+1,'#f5dfad');
- disk(land.x,land.z,land.rx,land.rz,'#a3d48e');
- ctx.fillStyle='#a3aaab';ctx.fillRect(32,23,17,15);
- ctx.fillStyle='#e7e7dd';ctx.fillRect(54,24,32,11);
- ctx.strokeStyle='#f4ebdc';ctx.lineWidth=.95;ctx.beginPath();
- ctx.moveTo(S.A.x,S.A.z);ctx.lineTo(S.B.x,S.B.z);ctx.stroke();
- const icons=[[-6,-5,'🏡'],[6,-5,'🏪'],[-24,-13,'🚀'],[17.4,2.8,'🚉'],[43.6,-2.8,'🚉'],[52,-4.7,'🛍️'],[63.6,5,'🎡'],[21,27,'🏭'],[38,30,'🚗'],[70,29.5,'🚢']];
- for(const [x,z,icon] of icons){
-  ctx.save();ctx.translate(x,z);ctx.scale(1/scale,1/scale);
-  ctx.font='18px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(icon,0,0);ctx.restore();
- }
- disk(state.x,state.z,.75,.75,'#ed755b');
- ctx.restore();
-};
 window.KomorebiIndustry={land,factory,dock,ship,places,route,drawDynamic,drawShip,interpolateRoute,metrics};
 })();
