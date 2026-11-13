@@ -274,8 +274,16 @@ function drawKart(b,x,z,yaw,color,isPlayer=false,drift=false,variation=0,effects
  if(effects?.shield>0)b.sphere(0,1.03,-.12,1.43,1.20,1.71,'#b0dfe2',5,7);
  b.clearTransform();
 }
+const PILOTS=['こもれび','ミント','そら','あかね','しおかぜ','ルナ','こはく','モモ'];
+function forecastGrid(seed=1){
+ let x=(Number(seed)>>>0)||1;const random=()=>{x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)/4294967296;};
+ return PILOTS.map((name,index)=>{
+  const speed=12.9+random()*3.55,handling=2+Math.round(random()*3),form=2+Math.round(random()*3);
+  return {number:index+1,name,speed:Number(speed.toFixed(2)),handling,form};
+ });
+}
 const controls={left:false,right:false,accelerate:false,brake:false,drift:false};
-const race={active:false,finished:false,elapsed:0,countdown:0,player:null,opponents:[],lastHud:0,placement:1,finishPlace:0,autoDrive:true,offTrackTime:0,rescueFlash:0,item:null,pickups:0,lastItemBox:null,shield:0,star:0,itemMessage:'',jumpTimer:0,lastJump:null,jumps:0};
+const race={active:false,finished:false,elapsed:0,countdown:0,player:null,opponents:[],lastHud:0,placement:1,finishPlace:0,autoDrive:true,offTrackTime:0,rescueFlash:0,item:null,pickups:0,lastItemBox:null,shield:0,star:0,itemMessage:'',jumpTimer:0,lastJump:null,jumps:0,spectator:false,grid:[],finishTimes:[],finishOrder:[],seed:1};
 function spawn(offset,index){
  const distance=START-offset,p=at(distance),side=index%2===0?-.80:.80;
  return {x:p.x+Math.cos(p.yaw)*side,z:p.z-Math.sin(p.yaw)*side,yaw:p.yaw,speed:0,distance,drift:0,boost:0,place:index+1};
@@ -285,8 +293,15 @@ function start(options={}){
  // The new renderer uses a rear grid start to keep competing karts in view;
  // the classic mode retains its original front grid by default.
  const backGrid=options.playerAtBack===true;
+ race.spectator=options.spectator===true;
+ race.seed=(Number(options.seed)>>>0)||1;race.grid=race.spectator?forecastGrid(race.seed):[];
+ race.finishTimes=Array(8).fill(null);race.finishOrder=[];
  race.player=spawn(backGrid?3.5*AI_COUNT:0,0);
  race.opponents=Array.from({length:AI_COUNT},(_,i)=>({...spawn(backGrid?3.5*i:3.5*(i+1),i+1),targetSpeed:12.2+(i*13%5)*1.25,style:i,hitTimer:0}));
+ if(race.spectator){
+  race.player.targetSpeed=race.grid[0].speed;
+  for(let i=0;i<AI_COUNT;i++)race.opponents[i].targetSpeed=race.grid[i+1].speed;
+ }
  Object.keys(controls).forEach(k=>controls[k]=false);
  const root=document.getElementById('app');root?.classList.add('kart-racing');
  const hud=document.getElementById('kartHud');if(hud)hud.hidden=false;
@@ -365,6 +380,27 @@ function step(dt){
  dt=clamp(dt,0,.05);
  if(race.countdown>0){race.countdown=Math.max(0,race.countdown-dt);updateHud();return;}
  race.elapsed+=dt;race.rescueFlash=Math.max(0,race.rescueFlash-dt);race.shield=Math.max(0,race.shield-dt);race.star=Math.max(0,race.star-dt);race.jumpTimer=Math.max(0,race.jumpTimer-dt);
+ if(race.spectator){
+  const actors=[race.player,...race.opponents],limit=START+length*LAPS;
+  for(let i=0;i<actors.length;i++){
+   const actor=actors[i],entry=race.grid[i],k=actor.distance;
+   const swing=1+.048*Math.sin(race.elapsed*(.65+i*.11)+i*1.17+race.seed%13);
+   const bend=Math.cos(k*.045+i*.73)*.025*(6-entry.handling);
+   actor.speed=entry.speed*(swing-bend);
+   actor.distance+=Math.max(5,actor.speed)*dt;
+   const pos=at(actor.distance),lane=(i%3-1)*.83;
+   actor.x=pos.x+Math.cos(pos.yaw)*lane;
+   actor.z=pos.z-Math.sin(pos.yaw)*lane;
+   actor.yaw=pos.yaw;
+   if(actor.distance>=limit&&race.finishTimes[i]===null)race.finishTimes[i]=race.elapsed;
+  }
+  race.placement=1+race.opponents.filter(a=>a.distance>race.player.distance).length;
+  if(race.finishTimes.every(t=>t!==null)){
+   race.finishOrder=Array.from({length:8},(_,i)=>i+1).sort((a,b)=>race.finishTimes[a-1]-race.finishTimes[b-1]||a-b);
+   race.finished=true;race.finishPlace=race.finishOrder.indexOf(1)+1;
+  }
+  updateHud();return;
+ }
  const p=race.player,acc=race.autoDrive||controls.accelerate,brake=controls.brake,steer=Number(controls.right)-Number(controls.left);
  const drifting=controls.drift&&Math.abs(steer)>.2&&p.speed>5;
  const oldDrift=p.drift;
@@ -495,5 +531,5 @@ function bindControls(onQuit){
  if(typeof window!=='undefined')window.addEventListener('blur',()=>Object.keys(controls).forEach(k=>controls[k]=false));
 }
 const places=[{id:'kartTrack',x:34,z:60,r:3.0,icon:'🏎️',name:'こもれび群島グランプリ'}];
-window.KomorebiKart={CENTER,LAND,WIDTH,LAPS,length,COURSE_BOUNDS,ITEM_DISTANCES,JUMP_DISTANCES,ITEM_TYPES,SPONSORS,VENUES,venuePosition,places,at,roadNearest,useItem,drawTerrain,drawStatic,drawDynamic,start,stop,rescue,toggleAuto,setInput,active:()=>race.active,finished:()=>race.finished,camera,step,bindControls,keyInput,getState:()=>({active:race.active,finished:race.finished,item:race.item,pickups:race.pickups,shield:race.shield,star:race.star,jumpTimer:race.jumpTimer,jumps:race.jumps,lap:race.player?Math.min(LAPS,1+Math.floor((race.player.distance-START)/length)):0,autoDrive:race.autoDrive,offTrackTime:race.offTrackTime,place:race.placement,elapsed:race.elapsed,player:race.player&&{...race.player},opponents:race.opponents.map(a=>({...a}))})};
+window.KomorebiKart={CENTER,LAND,WIDTH,LAPS,length,COURSE_BOUNDS,ITEM_DISTANCES,JUMP_DISTANCES,ITEM_TYPES,SPONSORS,VENUES,venuePosition,forecastGrid,places,at,roadNearest,useItem,drawTerrain,drawStatic,drawDynamic,start,stop,rescue,toggleAuto,setInput,active:()=>race.active,finished:()=>race.finished,camera,step,bindControls,keyInput,getState:()=>({active:race.active,finished:race.finished,spectator:race.spectator,grid:race.grid.map(x=>({...x})),finishOrder:[...race.finishOrder],item:race.item,pickups:race.pickups,shield:race.shield,star:race.star,jumpTimer:race.jumpTimer,jumps:race.jumps,lap:race.player?Math.min(LAPS,1+Math.floor((race.player.distance-START)/length)):0,autoDrive:race.autoDrive,offTrackTime:race.offTrackTime,place:race.placement,elapsed:race.elapsed,player:race.player&&{...race.player},opponents:race.opponents.map(a=>({...a}))})};
 })();
