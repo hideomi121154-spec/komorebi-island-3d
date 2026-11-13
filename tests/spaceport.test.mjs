@@ -13,10 +13,11 @@ function setup(){
  return ctx.window;
 }
 function mesh(){
- const b={calls:0,invalid:0,high:0};
+ const b={calls:0,invalid:0,high:0,spheres:0,cloudCenters:[]};
  for(const kind of ['box','roof','tri','quad','cylinder','sphere','ellipseDisc']){
   b[kind]=(...args)=>{
    b.calls++;
+   if(kind==='sphere'){b.spheres++;b.cloudCenters.push({x:args[0],y:args[1],z:args[2]});}
    for(const v of args)for(const n of Array.isArray(v)?v:[v]){
     if(typeof n==='number'&&!Number.isFinite(n))b.invalid++;
     if(typeof n==='number'&&kind==='box'&&n>25)b.high=Math.max(b.high,n);
@@ -70,4 +71,21 @@ test('launch controls, map marker and module load order are wired into the 3D ga
  assert.match(game,/SPACE\.startLaunch\(performance\.now\(\)\)/);
  assert.match(map,/\[-24,-13,'🚀'\]/);
  assert.match(game,/komorebi_island_3d_v01/,'save key is stable');
+});
+
+test('liftoff produces dense clouds, ground smoke persists as rocket ascends',()=>{
+ const {KomorebiSpaceport:P}=setup();
+ const idle=mesh();P.drawDynamic(idle,0);
+ assert.equal(idle.invalid,0);
+ P.startLaunch(1000);
+ const vent=mesh();P.drawDynamic(vent,4700);
+ assert.ok(vent.spheres>=idle.spheres+14,'countdown should release steam');
+ const blast=mesh();P.drawDynamic(blast,8400);
+ assert.ok(blast.spheres>=idle.spheres+45,'liftoff should have many more smoke puffs');
+ assert.ok(blast.spheres<70,'mobile device should not render unbounded clouds');
+ assert.equal(blast.invalid,0);
+ const later=mesh();P.drawDynamic(later,20000);
+ const ground=later.cloudCenters.filter(p=>p.y<1.5&&Math.hypot(p.x-P.pad.x,p.z-P.pad.z)<12);
+ assert.ok(ground.length>=26,'smoke must remain around the ground launchpad, not follow the rocket');
+ assert.equal(later.invalid,0);
 });

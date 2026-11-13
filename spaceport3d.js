@@ -108,10 +108,51 @@ function startLaunch(now){
  startedAt=now;
  return true;
 }
+// Dense, deterministic low-poly clouds, compatible with both 3D renderers.
+function smokeCloud(b,x,y,z,r,col){
+ b.sphere(x,Math.max(.21,y),z,r,r*.70,r,col,4,6);
+}
+function drawLaunchSmoke(b,now,elapsed,lift){
+ if(elapsed<COUNTDOWN-3200)return;
+ const time=Math.max(0,(elapsed-COUNTDOWN)/1000);
+ const x=pad.x,z=pad.z;
+ const palette=['#e6e1d9','#d4d1ca','#f0e9df','#c2c5c3'];
+ if(elapsed<COUNTDOWN){
+  const strength=Math.min(1,(elapsed-COUNTDOWN+3200)/1800);
+  for(let i=0;i<14;i++){
+   const a=i*2.399+now*.0001,d=.55+strength*(1+(i%5)*.40);
+   const r=(.18+.07*(i%4))*(.55+strength);
+   smokeCloud(b,x+Math.cos(a)*d,.47+(i%4)*.32,z+Math.sin(a)*d,r,'#f0ece6');
+  }
+  return;
+ }
+ // Thick blast smoke stays at ground level, even while the rocket ascends.
+ const strength=Math.min(1,time/2.7),drift=Math.min(1,time/11);
+ for(let i=0;i<30;i++){
+  const a=i*2.399+Math.sin(i*1.1)*.08;
+  const d=1.45+(i%5)*.56+(3.8+2.2*(i%3)/2)*drift;
+  const r=(.34+(i%6)*.17)*(.25+.75*strength);
+  smokeCloud(b,x+Math.cos(a)*d,.42+(i%4)*.20,z+Math.sin(a)*d,r,palette[i%4]);
+ }
+ // Billowing central plume and smaller coils in the exhaust trail.
+ for(let i=0;i<14;i++){
+  const age=(time*.45+i*.183)%1,a=i*2.399+now*.00012;
+  const d=.35+age*2.8;
+  const y=Math.max(.42,Math.min(7,lift*.30)+1.5-age*3.7);
+  smokeCloud(b,x+Math.cos(a)*d,y,z+Math.sin(a)*d,.35+age*.70,palette[(i+1)%4]);
+ }
+ if(time<11){
+  for(let i=0;i<9;i++){
+   const a=i*2.399+now*.00025,d=.3+(i%4)*.30;
+   const y=Math.max(.35,lift-.8-(i%5)*1.2);
+   smokeCloud(b,x+Math.cos(a)*d,y,z+Math.sin(a)*d,.35+(i%4)*.12,palette[(i+2)%4]);
+  }
+ }
+}
 function rocket(b,now){
  const p=phase(now),elapsed=startedAt<0?0:now-startedAt;
  const hidden=p.active&&elapsed>COUNTDOWN+FLIGHT;
- if(hidden)return;
+ if(hidden){drawLaunchSmoke(b,now,elapsed,p.lift);return;}
  const x=pad.x,y=p.lift,z=pad.z;
  // Single central fuselage, two side boosters, nosecone and four fins.
  b.cylinder(x,6.35+y,z,.92,10.65,14,'#faf8ed');
@@ -135,14 +176,12 @@ function rocket(b,now){
  }
  b.box(x,5.8+y,z+.94,.45,.36,.05,'#749fb5');
  if(p.active&&elapsed>=COUNTDOWN){
-  const flame=2.5+1.1*Math.sin(now*.018);
-  b.cylinder(x,1.1+y-flame*.50,z,.40,flame*1.7,10,'#ffba50',.06);
-  b.cylinder(x,.65+y-flame*.80,z,.20,flame*1.25,10,'#fff2a0',.015);
-  for(let i=0;i<5;i++){
-   const a=i*6.28/5+now*.0008,rad=.4+((now*.001+i*.37)%1)*1.3;
-   b.sphere(x+Math.cos(a)*rad,.25+((now*.001+i*.2)%1)*1.3,z+Math.sin(a)*rad,.27,.27,.27,'#e1d6ca',4,6);
-  }
+  // Brighter, wider exhaust flame that is visible from ground level.
+  const flame=3.15+.70*Math.sin(now*.020);
+  b.cylinder(x,1.25+y-flame*.60,z,.58,flame*1.95,12,'#f39c45',.08);
+  b.cylinder(x,1.0+y-flame*.70,z,.32,flame*1.55,12,'#ffe39a',.025);
  }
+ if(p.active)drawLaunchSmoke(b,now,elapsed,p.lift);
 }
 function drawDynamic(b,now){rocket(b,now);}
 window.KomorebiSpaceport={bounds,pad,marker,hangar,phase,startLaunch,drawDynamic,isActive:now=>phase(now).active,reset:()=>{startedAt=-1;}};
