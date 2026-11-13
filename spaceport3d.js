@@ -183,6 +183,30 @@ function rocket(b,now){
  }
  if(p.active)drawLaunchSmoke(b,now,elapsed,p.lift);
 }
-function drawDynamic(b,now){rocket(b,now);}
+// A high cloud bank parts as the rocket reaches the sky.
+// Keep the count bounded: low-poly billows instead of expensive particles.
+function drawCloudBreak(b,now){
+ const p=phase(now),height=p.lift;
+ if(!p.active||height<22||height>96)return;
+ const progress=Math.min(1,Math.max(0,(height-35)/23));
+ const drift=Math.min(4.5,progress*4.5);
+ const x=pad.x,z=pad.z;
+ // Main white cloud layer: a visible opening grows during the pass-through.
+ for(let i=0;i<16;i++){
+  const a=i*Math.PI/8,radius=2.4+drift+(i%3)*.56;
+  const wobble=Math.sin(now*.00034+i*1.7)*.34;
+  const py=45+Math.cos(i*2.1)*2.1;
+  b.sphere(x+Math.cos(a)*(radius+wobble),py,z+Math.sin(a)*(radius+wobble),
+   2.3+(i%4)*.33,.85+(i%3)*.24,1.8+(i%5)*.23,
+   i%3?'#f1f0e9':'#deeaf0',4,6);
+ }
+ // Wisps pushed away from the rocket at the cloud breakthrough.
+ if(height>=35&&height<78)for(let i=0;i<7;i++){
+  const a=i*2.399+now*.00014,rad=1.2+progress*5.5;
+  b.sphere(x+Math.cos(a)*rad,45+(i%3)*1.3,z+Math.sin(a)*rad,
+   .6+progress*.7,.55,.85,'#f9f7ef',4,5);
+ }
+}
+function drawDynamic(b,now){rocket(b,now);drawCloudBreak(b,now);}
 window.KomorebiSpaceport={bounds,pad,marker,hangar,phase,startLaunch,drawDynamic,isActive:now=>phase(now).active,reset:()=>{startedAt=-1;}};
 })();
