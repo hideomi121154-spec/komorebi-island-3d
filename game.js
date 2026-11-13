@@ -465,7 +465,7 @@ function buildDynamic(now){const b=new MeshBuilder();if(indoor.room){drawRoomAct
   INDUSTRY.drawDynamic(b,now);
  return b.toFloat()}
 let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0,viewFov=48;
-let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,festivalRenderer=null,worldFestivalRenderer=null,skyRenderer=null,worldBuffer=null,dynamicBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine'),cameraZoom=1,cameraPitch=0,cameraYaw=0,festivalShow=false,festivalStartedAt=0,rocketCameraActive=false,industrialOverview=false;
+let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,festivalRenderer=null,worldFestivalRenderer=null,skyRenderer=null,worldBuffer=null,dynamicBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine'),cameraZoom=1,cameraPitch=0,cameraYaw=0,festivalShow=false,festivalStartedAt=0,rocketCameraActive=false,rocketCameraMode='pad',rocketViewOrigin=null,rocketPriorView=null,industrialOverview=false;
 const vShader=`attribute vec3 aPos;attribute vec3 aNormal;attribute vec3 aColor;uniform mat4 uProjection;uniform mat4 uView;varying vec3 vColor;varying float vDepth;void main(){vec4 p=uView*vec4(aPos,1.0);gl_Position=uProjection*p;float sun=max(0.0,dot(normalize(aNormal),normalize(vec3(0.5,0.92,0.45))));float light=0.76+sun*0.25;vColor=aColor*light;vDepth=length(p.xyz);}`;
 const fShader=`precision mediump float;varying vec3 vColor;varying float vDepth;uniform vec3 uFog;uniform float uBrightness;uniform vec3 uFestivalTint;uniform float uFestivalGlow;void main(){vec3 c=mix(vColor,uFog,smoothstep(62.0,130.0,vDepth)*0.12);vec3 night=mix(c,c*vec3(0.22,0.34,0.58),clamp(uBrightness,0.0,1.0));gl_FragColor=vec4(clamp(night+uFestivalTint*uFestivalGlow,0.0,1.0),1.0);}`;
 function makeShader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error('Shader error: '+gl.getShaderInfoLog(s));return s}
@@ -548,10 +548,38 @@ function rocketSpectatorPose(lift,aspect){
   fov:aspect<.70?56:52
  };
 }
+// A visitor can also remain at the factory or harbor and watch the launch
+// across the island. Never move the saved avatar to the spaceport.
+function distantRocketSpectatorPose(lift,aspect,origin=rocketViewOrigin){
+ const ox=origin?.x??state.x,oz=origin?.z??state.z;
+ const vx=ox-SPACE.pad.x,vz=oz-SPACE.pad.z,span=Math.max(1,Math.hypot(vx,vz));
+ const back=Math.min(7,Math.max(4.5,span*.09));
+ return {
+  eye:[ox+vx/span*back,5.1,oz+vz/span*back],
+  center:[SPACE.pad.x,8+Math.min(67,Math.max(0,lift)*.76),SPACE.pad.z],
+  fov:aspect<.70?43:40
+ };
+}
+function restoreRocketCamera(){
+ rocketCameraActive=false;
+ if(rocketPriorView){
+  overviewMode=rocketPriorView.overviewMode;
+  industrialOverview=rocketPriorView.industrialOverview;
+  seaLineOverview=rocketPriorView.seaLineOverview;
+  festivalShow=rocketPriorView.festivalShow;
+  cameraYaw=rocketPriorView.yaw;
+  cameraPitch=rocketPriorView.pitch;
+  cameraZoom=rocketPriorView.zoom;
+  cameraPan.x=rocketPriorView.panX;cameraPan.z=rocketPriorView.panZ;
+  camFocus.x=rocketPriorView.focusX;camFocus.z=rocketPriorView.focusZ;
+  $('redevelopmentViewBtn').classList.toggle('active',overviewMode);
+ }
+ rocketPriorView=null;rocketViewOrigin=null;rocketCameraMode='pad';
+}
 function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.walkIn&&!indoor.room){const w=indoor.walkIn,k=clamp((now-w.start)/390,0,1);state.x=w.x+(w.toX-w.x)*k;state.z=w.z+(w.toZ-w.z)*k;playerFacing=Math.atan2(w.toX-w.x,w.toZ-w.z)}const dt=Math.min(.07,(now-previous)/1000||0);previous=now;tick+=dt;
  if(!document.hidden&&(lastClockSampleRaf<0||now-lastClockSampleRaf>=900)){lastClockSampleRaf=now;syncRealClock();}
  if(!indoor.room)updateMoko(now);
- const spacePhase=SPACE.phase(now),spaceHud=$('spaceHud');if(rocketCameraActive&&!spacePhase.active)rocketCameraActive=false;const launchView=rocketCameraActive&&spacePhase.active&&!indoor.room;if(spaceHud){spaceHud.hidden=!!indoor.room||!spacePhase.active;if(!spaceHud.hidden&&spaceHud.textContent!=='🚀 '+spacePhase.label)spaceHud.textContent='🚀 '+spacePhase.label;}
+ const spacePhase=SPACE.phase(now),spaceHud=$('spaceHud');if(rocketCameraActive&&!spacePhase.active)restoreRocketCamera();const launchView=rocketCameraActive&&spacePhase.active&&!indoor.room;if(spaceHud){spaceHud.hidden=!!indoor.room||!spacePhase.active;if(!spaceHud.hidden&&spaceHud.textContent!=='🚀 '+spacePhase.label)spaceHud.textContent='🚀 '+spacePhase.label;}
   if(railRide.active)updateSeaRide(now);
  const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&!railRide.active&&!rocketCameraActive&&(sx||sy)){if(!indoor.room){leaveOverviewForMovement();cameraPan.x=0;cameraPan.z=0;}const move=screenMoveVector(sx,sy,indoor.room?0:viewHeading());let dx=move.x*speed*dt,dz=move.z*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);if(SEA.isCommercial(x,z))return SEA.walkable(x,z);if(!EXPANSION.canWalk(x,z)||REDEVELOPMENT.within(x,z))return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
  const fishingActive=fishing.stage!=='idle',roomActive=!!indoor.room;
@@ -567,7 +595,7 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
  const scenicAngle=viewHeading();
   const baseHeight=industrialOverview?(aspect<.70?84:62):fishingActive?9.2:(seaLineOverview?66:overviewMode?(state.currentIsland==='commerce'?36:32):14.6);
   const pitch=clamp(cameraPitch,-1.25,1.40);
-  const spectator=launchView?rocketSpectatorPose(spacePhase.lift,aspect):null;
+  const spectator=launchView?(rocketCameraMode==='remote'?distantRocketSpectatorPose(spacePhase.lift,aspect):rocketSpectatorPose(spacePhase.lift,aspect)):null;
   // The low-frequency engine rumble gives a subtle ground camera jolt;
   // reduced-motion users keep a perfectly stable horizon.
   if(spectator&&!reducedMotion&&spacePhase.lift>0&&spacePhase.lift<16){
@@ -688,17 +716,28 @@ function setContext(){if(fishing.stage!=='idle'||indoor.transition||watering.act
 function give(id,amount){state.inventory[id]=(state.inventory[id]||0)+amount}
 function price(id){return Math.max(1,Math.round(basePrice[id]*(.86+(state.day*37+id.length*13)%29/100)))}
 function maybeQuest(){if(!state.claimed[0]&&state.questBerries>=3){state.claimed[0]=true;state.coins+=70;showToast('🎉 おねがい達成！ 70コインをゲット');return}if(state.claimed[0]&&!state.claimed[1]&&state.questSold){state.claimed[1]=true;state.coins+=80;showToast('🎉 商売の達人！ 80コインをゲット');return}if(state.claimed[1]&&!state.claimed[2]&&state.questGrown){state.claimed[2]=true;state.coins+=100;showToast('🎉 初めての収穫！ 100コインをゲット')}}
-function beginRocketLaunch(){
+function beginRocketLaunch(){return launchRocketWithView('pad')}
+function launchRocketWithView(requestedView='pad'){
  if(!window.KomorebiSpaceport||indoor.room||railRide.active)return false;
  if(!SPACE.startLaunch(performance.now())){showToast('🚀 打ち上げ進行中！');return false;}
-  LAUNCH_AUDIO?.play?.();
+ const fromHere=requestedView==='here'&&dist(state.x,state.z,SPACE.pad.x,SPACE.pad.z)>15;
+ rocketCameraMode=fromHere?'remote':'pad';
+ rocketViewOrigin=fromHere?{x:state.x,z:state.z}:null;
+ rocketPriorView=fromHere?{
+  overviewMode,industrialOverview,seaLineOverview,festivalShow,
+  yaw:cameraYaw,pitch:cameraPitch,zoom:cameraZoom,
+  panX:cameraPan.x,panZ:cameraPan.z,focusX:camFocus.x,focusZ:camFocus.z
+ }:null;
+ LAUNCH_AUDIO?.play?.();
  rocketCameraActive=true;
- festivalShow=false;overviewMode=false;seaLineOverview=false;
+ festivalShow=false;overviewMode=false;seaLineOverview=false;industrialOverview=false;
  cameraYaw=0;cameraPitch=0;cameraZoom=1;
- camFocus.x=SPACE.pad.x;camFocus.z=SPACE.pad.z;
+ cameraPan.x=0;cameraPan.z=0;
+ camFocus.x=fromHere?state.x:SPACE.pad.x;
+ camFocus.z=fromHere?state.z:SPACE.pad.z;
  $('redevelopmentViewBtn').classList.remove('active');
  for(const dir of Object.keys(input))input[dir]=false;
- showToast('🚀 発射まで6秒！ 空を見上げよう！');
+ showToast(fromHere?'🚀 この場所から発射を見よう！ 6秒後に離陸':'🚀 発射まで6秒！ 空を見上げよう！');
  setContext();return true;
 }
 function interact(){if(paused)return;if(indoor.room){interactInside();return}const t=findNearby();if(!t){showToast('🌿 気になる場所に近づいて「調べる」を押そう');return}const id=t.id;
@@ -936,7 +975,12 @@ function openPanel(type){panelType=type;paused=true;for(let dir of Object.keys(i
    addButton(content,'🚢 港で積み込みを見学する',()=>{visit(45.4,23.2);cameraYaw=.35;cameraZoom=.76;showToast('🚢 船のスロープに車が入っていくよ！')},'secondary');
    addButton(content,'島へ戻る',closePanel,'secondary');
   }
-  else if(type==='spaceport'){title.textContent='🚀 こもれび宇宙港';paragraph(content,'新しく埋め立てた西南地区にロケット発射台・整備格納庫・発射管制棟が完成！ 本島の住宅街から離れた場所にあるよ。');const status=SPACE.phase(performance.now());content.appendChild(row('🚀','発射台',status.label,null,null));paragraph(content,'発射ボタンを押すと約6秒のカウントダウン後、3Dロケットが炎と煙を出しながら上昇するよ。打ち上げ後は自動的に再準備されるよ。','tip-box');const travel=()=>{if(indoor.room)return;state.x=SPACE.marker.x;state.z=SPACE.marker.z;state.currentIsland='home';state.angle=0;camFocus.x=state.x;camFocus.z=state.z;overviewMode=false;seaLineOverview=false;festivalShow=false;cameraZoom=.77;cameraPitch=-.20;cameraYaw=0;nearest=findNearby();closePanel();save()};addButton(content,'🚶 発射台の展望広場へ行く',()=>{travel();showToast('🚀 発射台に到着！ ロケットを見上げてね')},'secondary');addButton(content,status.active?'🚀 打ち上げ進行中':'🚀 カウントダウン・発射',()=>{if(status.active)return;travel();beginRocketLaunch()},status.active?'secondary':'primary');if(LAUNCH_AUDIO){addButton(content,LAUNCH_AUDIO.enabled()?'🔊 発射音 ON（押すとOFF）':'🔇 発射音 OFF（押すとON）',()=>{
+  else if(type==='spaceport'){title.textContent='🚀 こもれび宇宙港';paragraph(content,'新しく埋め立てた西南地区にロケット発射台・整備格納庫・発射管制棟が完成！ 本島の住宅街から離れた場所にあるよ。');const status=SPACE.phase(performance.now());content.appendChild(row('🚀','発射台',status.label,null,null));paragraph(content,'発射ボタンを押すと約6秒のカウントダウン後、3Dロケットが炎と煙を出しながら上昇するよ。打ち上げ後は自動的に再準備されるよ。','tip-box');const travel=()=>{if(indoor.room)return;state.x=SPACE.marker.x;state.z=SPACE.marker.z;state.currentIsland='home';state.angle=0;camFocus.x=state.x;camFocus.z=state.z;overviewMode=false;seaLineOverview=false;festivalShow=false;cameraZoom=.77;cameraPitch=-.20;cameraYaw=0;nearest=findNearby();closePanel();save()};addButton(content,status.active?'🚀 打ち上げ進行中':'🚀 ここからロケット発射を見る',()=>{
+  if(status.active)return;
+  closePanel();launchRocketWithView('here');
+ },status.active?'secondary':'primary');
+ addButton(content,'🚶 発射台の展望広場へ行く',()=>{travel();showToast('🚀 発射台に到着！ ロケットを見上げてね')},'secondary');
+ addButton(content,status.active?'🚀 打ち上げ進行中':'🚀 発射台の近くで打ち上げを見る',()=>{if(status.active)return;travel();beginRocketLaunch()},'secondary');if(LAUNCH_AUDIO){addButton(content,LAUNCH_AUDIO.enabled()?'🔊 発射音 ON（押すとOFF）':'🔇 発射音 OFF（押すとON）',()=>{
  LAUNCH_AUDIO.setEnabled(!LAUNCH_AUDIO.enabled());
  openPanel('spaceport');
 },'secondary');}
@@ -995,7 +1039,7 @@ function exportSave(){const data=new Blob([JSON.stringify(state,null,2)],{type:'
 function bindControls(){const dirs=document.querySelectorAll('[data-dir]');dirs.forEach(btn=>{const dir=btn.dataset.dir;btn.addEventListener('pointerdown',e=>{e.preventDefault();input[dir]=true;btn.classList.add('pressed');try{btn.setPointerCapture(e.pointerId)}catch{}});const release=e=>{input[dir]=false;btn.classList.remove('pressed')};btn.addEventListener('pointerup',release);btn.addEventListener('pointercancel',release);btn.addEventListener('lostpointercapture',release)});
  const codes={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};
  document.addEventListener('keydown',e=>{if(fishing.stage!=='idle'){if(e.code==='Escape'){e.preventDefault();stopFishing()}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)fishAction()}else if(codes[e.code])e.preventDefault();return}if(codes[e.code]){e.preventDefault();input[codes[e.code]]=true}else if(e.code==='Space'||e.code==='KeyE'){e.preventDefault();if(!e.repeat)interact()}else if(e.code==='Escape'){if(!$('roomDialogue').hidden)closeRoomDialogue();else if(!$('panelOverlay').hidden)closePanel();else if(indoor.room)leaveRoom()}});document.addEventListener('keyup',e=>{if(codes[e.code]){e.preventDefault();input[codes[e.code]]=false}});window.addEventListener('blur',()=>Object.keys(input).forEach(d=>input[d]=false));
- $('redevelopmentHud').addEventListener('click',()=>{if(fishing.stage==='idle'&&!indoor.room)openPanel('redevelopment')});$('redevelopmentViewBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'){overviewMode=!overviewMode;$('redevelopmentViewBtn').classList.toggle('active',overviewMode);showToast(overviewMode?(state.currentIsland==='commerce'?'🏙️ 商業島を見渡そう':'🏗️ 島の再開発を見渡そう'):'🚶 いつもの視点に戻したよ')}});$('seaLineBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'&&!railRide.active)openPanel('sealine')});$('spaceportBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'&&!railRide.active)openPanel('spaceport')});$('industryBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'&&!railRide.active)openPanel('industry')});$('islandMapBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle')openPanel('map')});$('rotateLeft').addEventListener('click',()=>{state.angle-=Math.PI/4;save()});$('rotateRight').addEventListener('click',()=>{state.angle+=Math.PI/4;save()});$('cameraReset').addEventListener('click',()=>{rocketCameraActive=false;industrialOverview=false;cameraPan.x=0;cameraPan.z=0;gestures?.reset?.();state.angle=0;cameraZoom=1;cameraPitch=0;cameraYaw=0;overviewMode=false;seaLineOverview=false;$('redevelopmentViewBtn').classList.remove('active');save();showToast('📷 カメラを戻したよ')});$('actionBtn').addEventListener('click',()=>{if(fishing.stage==='idle')interact();else fishAction()});$('bagBtn').addEventListener('click',()=>openPanel('bag'));$('questBtn').addEventListener('click',()=>openPanel('quests'));$('nextDayBtn').addEventListener('click',saveNow);$('panelClose').addEventListener('click',closePanel);$('panelOverlay').addEventListener('click',e=>{if(e.target===$('panelOverlay'))closePanel()});
+ $('redevelopmentHud').addEventListener('click',()=>{if(fishing.stage==='idle'&&!indoor.room)openPanel('redevelopment')});$('redevelopmentViewBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'){overviewMode=!overviewMode;$('redevelopmentViewBtn').classList.toggle('active',overviewMode);showToast(overviewMode?(state.currentIsland==='commerce'?'🏙️ 商業島を見渡そう':'🏗️ 島の再開発を見渡そう'):'🚶 いつもの視点に戻したよ')}});$('seaLineBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'&&!railRide.active)openPanel('sealine')});$('spaceportBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'&&!railRide.active)openPanel('spaceport')});$('industryBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle'&&!railRide.active)openPanel('industry')});$('islandMapBtn').addEventListener('click',()=>{if(!indoor.room&&fishing.stage==='idle')openPanel('map')});$('rotateLeft').addEventListener('click',()=>{state.angle-=Math.PI/4;save()});$('rotateRight').addEventListener('click',()=>{state.angle+=Math.PI/4;save()});$('cameraReset').addEventListener('click',()=>{rocketCameraActive=false;rocketCameraMode='pad';rocketViewOrigin=null;rocketPriorView=null;industrialOverview=false;cameraPan.x=0;cameraPan.z=0;gestures?.reset?.();state.angle=0;cameraZoom=1;cameraPitch=0;cameraYaw=0;overviewMode=false;seaLineOverview=false;$('redevelopmentViewBtn').classList.remove('active');save();showToast('📷 カメラを戻したよ')});$('actionBtn').addEventListener('click',()=>{if(fishing.stage==='idle')interact();else fishAction()});$('bagBtn').addEventListener('click',()=>openPanel('bag'));$('questBtn').addEventListener('click',()=>openPanel('quests'));$('nextDayBtn').addEventListener('click',saveNow);$('panelClose').addEventListener('click',closePanel);$('panelOverlay').addEventListener('click',e=>{if(e.target===$('panelOverlay'))closePanel()});
  // Safari: native TouchEvents for orbit/pinch, PointerEvents for mouse/pen.
  // Avoid resizing the WebGL drawing buffer on every touchstart/touchend.
  // Fallback keeps legacy embedded/offline versions and unit bootstraps working.
@@ -1033,7 +1077,7 @@ function bindControls(){const dirs=document.querySelectorAll('[data-dir]');dirs.
  $('fishBack').addEventListener('click',stopFishing);$('roomDialogClose').addEventListener('click',closeRoomDialogue);
  $('startBtn').addEventListener('click',()=>{$('welcomeOverlay').hidden=true;paused=false;state.welcomeSeen=true;save();showToast('🌿 島を探検しよう！')});document.addEventListener('visibilitychange',()=>{if(document.hidden){if(fishing.stage!=='idle')stopFishing();if(watering.active)finishWatering();save()}else{syncRealClock();save()}});window.addEventListener('pageshow',()=>syncRealClock());window.addEventListener('pagehide',save);
 }
-function start(){try{initializeGL();bindControls();syncRealClock();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='train')beginSeaJourney();if(typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='fireworks'){festivalShow=true;festivalStartedAt=0;cameraPitch=-.60;cameraZoom=.78;overviewMode=false;seaLineOverview=false;$('festivalViewBtn').textContent='🎆 花火を終了'}requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),getIslandBounds:()=>({grass:EXPANSION.grass,sand:EXPANSION.sand}),getRedevelopment:()=>({progress:state.redevelopmentProgress,stage:REDEVELOPMENT.stage(state.redevelopmentProgress),overview:overviewMode}),getSeaLine:()=>({island:state.currentIsland,rides:state.seaLineRides,riding:railRide.active,progress:railRide.progress,from:railRide.from,to:railRide.to,panorama:seaLineOverview}),boardTrain:beginSeaJourney,updateTrain:updateSeaRide,moveTo:(x,z)=>{state.x=x;state.z=z;nearest=findNearby();setContext()},interact,saveNow,openPanel,price,vertices:worldVerts,getFestival:()=>({active:festivalShow,pitch:cameraPitch,zoom:cameraZoom}),getCameraMovement:(x,y)=>screenMoveVector(x,y,indoor.room?0:viewHeading()),getCameraHeading:()=>viewHeading(),exitOverviewForMovement:leaveOverviewForMovement,getSpaceport:()=>({bounds:SPACE.bounds,pad:SPACE.pad,phase:SPACE.phase(performance.now()),camera:rocketCameraActive}),getLaunchAudio:()=>({available:!!LAUNCH_AUDIO,enabled:LAUNCH_AUDIO?.enabled?.()??false}),getIndustry:()=>({factory:INDUSTRY.factory,ship:INDUSTRY.ship,overview:industrialOverview,metrics:INDUSTRY.metrics(performance.now())}),getRenderQuality:()=>renderQuality?.current?.(),getTouchCamera:()=>({yaw:cameraYaw,pitch:cameraPitch,zoom:cameraZoom,pan:{...cameraPan},active:gestures?.isActive?.()||false}),getRocketSpectatorPose:(lift,aspect=.5)=>rocketSpectatorPose(lift,aspect),launchRocket:beginRocketLaunch,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getMokoPose:()=>({...mokoPose}),updateMoko,getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,dateKey:state.realDateKey,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),syncClock:syncRealClock,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
+function start(){try{initializeGL();bindControls();syncRealClock();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='train')beginSeaJourney();if(typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='fireworks'){festivalShow=true;festivalStartedAt=0;cameraPitch=-.60;cameraZoom=.78;overviewMode=false;seaLineOverview=false;$('festivalViewBtn').textContent='🎆 花火を終了'}requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),getIslandBounds:()=>({grass:EXPANSION.grass,sand:EXPANSION.sand}),getRedevelopment:()=>({progress:state.redevelopmentProgress,stage:REDEVELOPMENT.stage(state.redevelopmentProgress),overview:overviewMode}),getSeaLine:()=>({island:state.currentIsland,rides:state.seaLineRides,riding:railRide.active,progress:railRide.progress,from:railRide.from,to:railRide.to,panorama:seaLineOverview}),boardTrain:beginSeaJourney,updateTrain:updateSeaRide,moveTo:(x,z)=>{state.x=x;state.z=z;nearest=findNearby();setContext()},interact,saveNow,openPanel,price,vertices:worldVerts,getFestival:()=>({active:festivalShow,pitch:cameraPitch,zoom:cameraZoom}),getCameraMovement:(x,y)=>screenMoveVector(x,y,indoor.room?0:viewHeading()),getCameraHeading:()=>viewHeading(),exitOverviewForMovement:leaveOverviewForMovement,getSpaceport:()=>({bounds:SPACE.bounds,pad:SPACE.pad,phase:SPACE.phase(performance.now()),camera:rocketCameraActive,view:rocketCameraMode,origin:rocketViewOrigin&&{...rocketViewOrigin}}),getDistantRocketPose:(lift,aspect=.5,origin)=>distantRocketSpectatorPose(lift,aspect,origin),getLaunchAudio:()=>({available:!!LAUNCH_AUDIO,enabled:LAUNCH_AUDIO?.enabled?.()??false}),getIndustry:()=>({factory:INDUSTRY.factory,ship:INDUSTRY.ship,overview:industrialOverview,metrics:INDUSTRY.metrics(performance.now())}),getRenderQuality:()=>renderQuality?.current?.(),getTouchCamera:()=>({yaw:cameraYaw,pitch:cameraPitch,zoom:cameraZoom,pan:{...cameraPan},active:gestures?.isActive?.()||false}),getRocketSpectatorPose:(lift,aspect=.5)=>rocketSpectatorPose(lift,aspect),launchRocket:beginRocketLaunch,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getMokoPose:()=>({...mokoPose}),updateMoko,getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,dateKey:state.realDateKey,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),syncClock:syncRealClock,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 
