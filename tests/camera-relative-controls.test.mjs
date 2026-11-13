@@ -43,7 +43,7 @@ test('D-pad direction follows camera on-screen after a one-finger orbit gesture'
  near(p.x,0);near(p.z,-1);
  const canvas=node('gameCanvas');
  canvas._handlers.get('pointerdown')({pointerId:1,clientX:100,clientY:200});
- canvas._handlers.get('pointermove')({pointerId:1,clientX:100+Math.PI/2/.007,clientY:200});
+ canvas._handlers.get('pointermove')({pointerId:1,clientX:100+Math.PI/2/.010,clientY:200});
  canvas._handlers.get('pointerup')({pointerId:1});
  near(api.getCameraHeading(),Math.PI/2);
  p=api.getCameraMovement(0,-1);near(p.x,-1);near(p.z,0); // up moves away on screen
@@ -59,7 +59,7 @@ test('camera rotation buttons and drag both contribute to movement angle',()=>{
  let p=api.getCameraMovement(0,-1);near(p.x,-1);near(p.z,0);
  const canvas=node('gameCanvas');
  canvas._handlers.get('pointerdown')({pointerId:7,clientX:100,clientY:100});
- canvas._handlers.get('pointermove')({pointerId:7,clientX:100-Math.PI/2/.007,clientY:100});
+ canvas._handlers.get('pointermove')({pointerId:7,clientX:100-Math.PI/2/.010,clientY:100});
  canvas._handlers.get('pointerup')({pointerId:7});
  near(api.getCameraHeading(),0);
  p=api.getCameraMovement(0,-1);near(p.x,0);near(p.z,-1);
