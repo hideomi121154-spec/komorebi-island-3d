@@ -3,8 +3,13 @@
 'use strict';
 const E=window.KomorebiExpansion;
 if(!E) throw Error('kart3d.js requires expansion3d.js');
-const CENTER={x:44,z:58},LAND={x:44,z:58,rx:25,rz:21},WIDTH=3.35,AI_COUNT=7,LAPS=3;
-const WAYPOINTS=[[30,58],[30,52],[37,47],[49,47],[57,52],[59,58],[55,65],[47,70],[37,69],[30,64]];
+const CENTER={x:24,z:12},LAND={x:44,z:58,rx:25,rz:21},WIDTH=4.55,AI_COUNT=7,LAPS=3;
+// 島全体の海岸線を走る壮大な外周ルート。海上は橋で横断する。
+const WAYPOINTS=[[30,57],[17,43],[-5,38],[-27,35],[-40,19],[-41,-5],[-31,-28],[-7,-34],[24,-28],[53,-25],[83,-14],[94,10],[89,32],[74,52],[55,65],[38,68]];
+const COURSE_BOUNDS={minX:-48,maxX:101,minZ:-41,maxZ:76};
+const ITEM_TYPES=['turbo','bubble','seed','gust','star'];
+const ITEM_ICONS={turbo:'⚡',bubble:'🫧',seed:'🌰',gust:'🍃',star:'🌟'};
+const ITEM_NAMES={turbo:'ターボ',bubble:'バリア',seed:'木の実ショット',gust:'追い風',star:'スター'};
 const COLORS=['#f8c65a','#ec7185','#70b8dc','#9f9ad9','#84c49a','#f3a76c','#69bec3','#d6bb77'];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mod=(x,n)=>((x%n)+n)%n;
@@ -13,10 +18,11 @@ function spline(i,t) {
  return {x:.5*((2*b[0])+(-a[0]+c[0])*t+(2*a[0]-5*b[0]+4*c[0]-d[0])*t*t+(-a[0]+3*b[0]-3*c[0]+d[0])*t*t*t),
          z:.5*((2*b[1])+(-a[1]+c[1])*t+(2*a[1]-5*b[1]+4*c[1]-d[1])*t*t+(-a[1]+3*b[1]-3*c[1]+d[1])*t*t*t)};
 }
-const STEPS=240,points=[];
+const STEPS=320,points=[];
 for(let i=0;i<STEPS;i++)points.push(spline(Math.floor(i/STEPS*WAYPOINTS.length),(i/STEPS*WAYPOINTS.length)%1));
 const cumulative=[0];for(let i=0;i<STEPS;i++){const a=points[i],b=points[(i+1)%STEPS];cumulative.push(cumulative[i]+Math.hypot(b.x-a.x,b.z-a.z));}
 const length=cumulative[STEPS],START=3;
+const ITEM_DISTANCES=[.085,.19,.31,.43,.56,.69,.81,.92].map(t=>t*length);
 function at(distance){
  const d=mod(distance,length);let lo=0,hi=STEPS-1;
  while(lo<hi){const m=(lo+hi+1)>>1;if(cumulative[m]<=d)lo=m;else hi=m-1;}
@@ -44,11 +50,16 @@ function drawTerrain(b){
  b.ellipseDisc(LAND.x,-.17,LAND.z,LAND.rx+1.2,LAND.rz+1.2,'#efdab2',48);
  b.ellipseDisc(LAND.x,-.041,LAND.z,LAND.rx,LAND.rz,'#9ccc91',48);
  // Ground route toward the industrial area, with an obvious visual link to the island.
- roadQuad(b,{x:36,z:43},{x:36,z:48},2.5,.045,'#c9bea4');
+ roadQuad(b,{x:36,z:43},{x:36,z:56},2.8,.045,'#d8c4a8');
+  // Reinforced seawall bridge supports beneath the outer circuit.
+  for(let i=0;i<STEPS;i+=12){
+   const p=points[i];b.cylinder(p.x,-.19,p.z,.32,.74,6,'#a6c6c9');
+   b.box(p.x,.02,p.z,1.5,.12,1.4,'#c2c8ba');
+  }
  for(let i=0;i<STEPS;i++){
   const a=points[i],c=points[(i+1)%STEPS];
-  roadQuad(b,a,c,WIDTH+.38,.09,i%8<4?'#e7e3d0':'#e6d5ba');
-  roadQuad(b,a,c,WIDTH,.105,'#59636c');
+  roadQuad(b,a,c,WIDTH+.44,.09,i%8<4?'#f5e6be':'#e4d4ba');
+  roadQuad(b,a,c,WIDTH,.105,i%28<14?'#596c78':'#536774');
  }
  // Alternating kerbs are readable on iPhone, but use the existing lightweight mesh builder.
  for(let i=0;i<STEPS;i+=4){
@@ -58,7 +69,19 @@ function drawTerrain(b){
    roadQuad(b,{x:a.x+nx,z:a.z+nz},{x:c.x+nx,z:c.z+nz},.24,.121,(i/4)%2?'#f9f8ef':'#e46e62');
   }
  }
- // Starting grid crosses the tangent, not the world's X axis.
+ // Low-poly reflective guardrails along the archipelago bridges.
+  for(let i=0;i<STEPS;i+=10){
+   const a=points[i],c=points[(i+7)%STEPS],dx=c.x-a.x,dz=c.z-a.z,d=Math.hypot(dx,dz)||1;
+   for(const side of[-1,1]){
+    const nx=-dz/d*side*(WIDTH+.77),nz=dx/d*side*(WIDTH+.77);
+    roadQuad(b,{x:a.x+nx,z:a.z+nz},{x:c.x+nx,z:c.z+nz},.14,.38,'#d8f4ec');
+   }
+  }
+  for(const frac of[.16,.39,.63,.87]){
+   const p=at(frac*length);
+   b.box(p.x,.145,p.z,3.5,.04,1.1,'#f7d271');
+  }
+  // Starting grid crosses the tangent, not the world's X axis.
  const st=at(START),nx=Math.cos(st.yaw),nz=-Math.sin(st.yaw);
  for(let j=0;j<8;j++){
   const side=j-3.5,c=side*.72;
@@ -82,7 +105,27 @@ function drawStatic(b){
  for(const side of[-1,1])b.box(gate.x+gx*side*(WIDTH+1.0),2.1,gate.z+gz*side*(WIDTH+1.0),.25,4.2,.25,'#f2d990');
  b.box(gate.x,4.30,gate.z,8.9,.58,.38,'#f3ca76');
  // Grandstand figures; fixed low-poly objects only.
- for(let i=0;i<12;i++)b.sphere(35+i*1.43,1.85,76.7,.20,.28,.19,i%3===0?'#ef9b7c':'#a2b6d4',4,5);
+ for(let i=0;i<24;i++){
+   const x=32.5+(i%12)*1.12,z=76.4+Math.floor(i/12)*.75;
+   b.sphere(x,1.85,z,.23,.32,.23,['#ef9b7c','#f6df8e','#9fcbd1','#b2a5da'][i%4],4,6);
+  }
+  // Finish arches and festival balloons give this track an original personality.
+  for(const t of[.04,.28,.54,.78]){
+   const p=at(length*t),nx=Math.cos(p.yaw),nz=-Math.sin(p.yaw);
+   for(const sign of[-1,1]){
+    const x=p.x+nx*(WIDTH+1)*sign,z=p.z+nz*(WIDTH+1)*sign;
+    b.box(x,3.1,z,.30,6.1,.30,'#87c9cb');
+    b.sphere(x,6.3,z,.65,.60,.65,t<.5?'#ffe095':'#ec9cb4',5,7);
+   }
+   b.box(p.x,6.20,p.z,WIDTH*2+2.3,.48,.41,'#ffe5aa');
+  }
+  for(let i=0;i<18;i++){
+   const p=at(length*(i+.3)/18),nx=Math.cos(p.yaw),nz=-Math.sin(p.yaw);
+   const x=p.x+nx*(WIDTH+7.5),z=p.z+nz*(WIDTH+7.5);
+   const col=['#92c5bd','#f2b4ae','#cab6df','#f9d582'][i%4];
+   b.cylinder(x,1.15,z,.17,2.2,5,'#bba992');
+   b.sphere(x,2.55,z,1.38,.95,1.39,col,5,7);
+  }
 }
 function drawKart(b,x,z,yaw,color,isPlayer=false,drift=false){
  b.setTransform(x,.11,z,yaw);
