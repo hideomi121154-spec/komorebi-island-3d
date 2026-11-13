@@ -441,7 +441,7 @@ function updateHud(force=false){
   const itemBtn=document.getElementById('kartItem');
   if(itemBtn){itemBtn.textContent=race.item?ITEM_ICONS[race.item]+' '+ITEM_NAMES[race.item]:'🎁 アイテム';itemBtn.disabled=!race.item||race.countdown>0||race.finished;}
  const lap=Math.min(LAPS,Math.max(1,1+Math.floor((p.distance-START)/length)));
- if(label)label.textContent=race.finished?'🏁 GOAL！ '+race.finishPlace+'位 / 8台':race.countdown>0?'🏎️ '+Math.ceil(race.countdown)+'…':race.rescueFlash>0?'🔄 コースに復帰！':race.jumpTimer>0?'🪽 海風ジャンプ！':race.star>0?'🌟 スター無敵！':race.shield>0?'🫧 バリア展開中！':race.item?'🎁 '+ITEM_NAMES[race.item]+'を使おう':p.boost>0?'⚡ ターボ加速！':p.drift>.7?'💨 ドリフトチャージ！':'🏎️ こもれびカート';
+ if(label)label.textContent=race.finished?'🏁 GOAL！ '+race.finishPlace+'位 / 8台':race.countdown>0?'🏎️ '+Math.ceil(race.countdown)+'…':race.rescueFlash>0?'🔄 コースに復帰！':race.jumpTimer>0?'🪽 海風ジャンプ！':race.star>0?'🌟 スター無敵！':race.shield>0?'🫧 バリア展開中！':race.item?'🎁 '+ITEM_NAMES[race.item]+'を使おう':VENUES.some(v=>{const spot=venuePosition(v);return Math.hypot(p.x-spot.x,p.z-spot.z)<23})?'📣 観客席から大歓声！':p.boost>0?'⚡ ターボ加速！':p.drift>.7?'💨 ドリフトチャージ！':'🏎️ こもれびカート';
  if(meta)meta.textContent='順位 '+race.placement+'/8 · '+lap+'/'+LAPS+'周 · '+Math.round(p.speed*9)+' km/h · '+timeString(race.elapsed);
  drawMiniMap();
 }
