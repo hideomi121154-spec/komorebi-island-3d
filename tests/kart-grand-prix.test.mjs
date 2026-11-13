@@ -22,6 +22,7 @@ test('grand loop spans the island coast and bridges across the archipelago',()=>
  assert.equal(kart.LAPS,3);
  assert.equal(kart.places[0].id,'kartTrack');
  assert.equal(kart.ITEM_DISTANCES.length,8);
+ assert.equal(kart.JUMP_DISTANCES.length,3);
  assert.equal(kart.ITEM_TYPES.length,5);
  for(const d of kart.ITEM_DISTANCES){
   const p=kart.at(d);
@@ -64,6 +65,18 @@ test('road pickups provide usable powerups that affect speed rather than only lo
  assert.equal(after.item,null);
  assert.ok(after.player.boost>0,'item changes player speed');
  assert.equal(kart.useItem(),false,'cannot reuse a consumed item');
+ kart.stop();
+});
+test('coastal jump pads lift the player and reward with a speed boost',()=>{
+ const {kart}=boot();kart.start();
+ let jumped=false,boosted=false;
+ for(let i=0;i<2800;i++){
+  kart.step(1/60);
+  const state=kart.getState();
+  if(state.jumps>0){jumped=true;boosted=state.player.boost>0||state.jumpTimer>0;break;}
+ }
+ assert.equal(jumped,true,'player must reach a jump ramp on the outer course');
+ assert.equal(boosted,true,'ramp should visibly lift kart or boost it');
  kart.stop();
 });
 test('restart clears item effects and race state without corrupting island game',()=>{
