@@ -120,8 +120,25 @@ function makeDriverKart(color,index){
 function billboard(scene,x,z,yaw,text,bg,accent,w=6.8,h=2.25){
  const holder=new THREE.Group();holder.position.set(x,0,z);holder.rotation.y=yaw;scene.add(holder);
  for(const sx of[-w*.43,w*.43])rect(holder,.24,3.0,.25,'#c0d1cb',sx,1.55,0);
- const board=mesh(holder,new THREE.PlaneGeometry(w,h),colorBillboard(text,bg,accent),0,3.2,.12,false);board.castShadow=false;
+ const signMaterial=colorBillboard(text,bg,accent);
+ const front=mesh(holder,new THREE.PlaneGeometry(w,h),signMaterial,0,3.2,.14,false);
+ const back=mesh(holder,new THREE.PlaneGeometry(w,h),signMaterial,0,3.2,-.14,false);
+ back.rotation.y=Math.PI;front.castShadow=false;back.castShadow=false;
  return holder;
+}
+function overheadGantry(scene,kart,p,text,bg,accent,w=11.5){
+ const root=new THREE.Group();root.position.set(p.x,0,p.z);root.rotation.y=p.yaw;scene.add(root);
+ const h=2.0,center=6.4,span=kart.WIDTH+1.4;
+ for(const side of[-1,1]){
+  rect(root,.24,6.0,.28,'#c1d5d3',side*span,3.0,0);
+  rect(root,.70,.34,.82,accent,side*span,.20,0);
+ }
+ const m=colorBillboard(text,bg,accent);
+ const front=mesh(root,new THREE.PlaneGeometry(w,h),m,0,center,.18,false);
+ const back=mesh(root,new THREE.PlaneGeometry(w,h),m,0,center,-.18,false);
+ back.rotation.y=Math.PI;
+ rect(root,w+.1,.22,.32,accent,0,center+h/2+.11,0);
+ return root;
 }
 function createStand(scene,kart,venue,index,cheers){
  const p=kart.venuePosition(venue);
@@ -188,10 +205,10 @@ export async function createRaceView(kart,canvas){
  }
  // Start/finish grid and grand-prix graphic banners.
  const st=kart.at(3);
- billboard(scene,st.x,st.z,st.yaw,'KOMOREBI GRAND PRIX','#167a93','#f6dc8d',12.4,2.2);
+ overheadGantry(scene,kart,st,'KOMOREBI GP','#167a93','#f6dc8d',kart.WIDTH*2+2.0);
  for(let i=0;i<5;i++){
   const p=kart.at(kart.length*(.12+i*.182)),theme=kart.SPONSORS[i];
-  billboard(scene,p.x,p.z,p.yaw,BRANDS[i],theme.color,theme.accent,10.0,1.75);
+  overheadGantry(scene,kart,p,BRANDS[i],theme.color,theme.accent,kart.WIDTH*2+2.0);
  }
  const cheers=[];
  for(let i=0;i<kart.VENUES.length;i++)createStand(scene,kart,kart.VENUES[i],i,cheers);
@@ -271,12 +288,12 @@ export async function createRaceView(kart,canvas){
   });
   clouds.forEach(c=>{c.group.position.x+=dt*(.15+(c.index%5)*.06);if(c.group.position.x>170)c.group.position.x=-123;});
   const p=state.player,sin=Math.sin(p.yaw),cos=Math.cos(p.yaw),speed=Math.max(0,p.speed||0);
-  target.set(p.x-sin*(5.2+speed*.04),3.4+speed*.023,p.z-cos*(5.2+speed*.04));
-  look.set(p.x+sin*(10+speed*.16),1.60+speed*.008,p.z+cos*(10+speed*.16));
+  target.set(p.x-sin*(8.6+speed*.035),4.9+speed*.018,p.z-cos*(8.6+speed*.035));
+  look.set(p.x+sin*(14+speed*.12),1.65+speed*.006,p.z+cos*(14+speed*.12));
   const alpha=1-Math.exp(-Math.max(dt,.0001)*6.6);
   camera.position.lerp(target,alpha);
   camera.lookAt(look);
-  camera.fov=63+Math.min(10,speed*.36);camera.updateProjectionMatrix();
+  camera.fov=66+Math.min(8,speed*.30);camera.updateProjectionMatrix();
   sun.position.set(p.x-35,66,p.z+35);sun.target.position.set(p.x,0,p.z);sun.target.updateMatrixWorld();
  }
  function render(){if(active)renderer.render(scene,camera);}
