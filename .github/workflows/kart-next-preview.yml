@@ -1,0 +1,63 @@
+name: Grand Prix 3D mobile preview
+on:
+  pull_request:
+    paths:
+      - 'kart-next.html'
+      - 'kart-next.js'
+      - 'kart-next-scene.js'
+      - 'kart-next.css'
+      - '.github/workflows/kart-next-preview.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'kart-next.html'
+      - 'kart-next.js'
+      - 'kart-next-scene.js'
+      - 'kart-next.css'
+      - '.github/workflows/kart-next-preview.yml'
+permissions:
+  contents: read
+jobs:
+  chrome-portrait:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Launch static site
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/kart-server.log 2>&1 &
+          sleep 2
+      - name: Install Japanese UI fonts for faithful portrait screenshots
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk
+          fc-cache -f
+      - name: Confirm the browser creates a live WebGL race
+        shell: bash
+        run: |
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME" ]; then echo 'Chrome is missing'; exit 1; fi
+          "$CHROME" --headless --no-sandbox --disable-dev-shm-usage --enable-webgl --enable-unsafe-swiftshader --use-angle=swiftshader \
+            --window-size=390,844 --virtual-time-budget=11000 --dump-dom \
+            'http://127.0.0.1:8765/kart-next.html?preview=1' > "$RUNNER_TEMP/kart-dom.html" 2>/tmp/kart-chrome.log
+          grep -q 'data-kart3d="running"' "$RUNNER_TEMP/kart-dom.html" || {
+            echo 'New Grand Prix did not start. Browser logs follow:'
+            tail -90 /tmp/kart-chrome.log
+            grep -E 'id="fatal"|id="loadMessage"|data-kart3d=' "$RUNNER_TEMP/kart-dom.html" | head -10
+            exit 1
+          }
+          "$CHROME" --headless --no-sandbox --disable-dev-shm-usage --enable-webgl --enable-unsafe-swiftshader --use-angle=swiftshader \
+            --hide-scrollbars --window-size=390,844 --virtual-time-budget=7000 \
+            "--screenshot=$RUNNER_TEMP/grand-prix-mobile.png" \
+            'http://127.0.0.1:8765/kart-next.html?preview=1'
+          test -s "$RUNNER_TEMP/grand-prix-mobile.png"
+          file "$RUNNER_TEMP/grand-prix-mobile.png"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: grand-prix-mobile-preview
+          path: |
+            ${{ runner.temp }}/grand-prix-mobile.png
+            ${{ runner.temp }}/kart-dom.html
+          if-no-files-found: ignore
+          retention-days: 5

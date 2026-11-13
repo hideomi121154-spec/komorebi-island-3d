@@ -979,15 +979,16 @@ function openPanel(type){panelType=type;paused=true;for(let dir of Object.keys(i
   else if(type.startsWith('city')){title.textContent=({cityMall:'🛍️ ショッピングモール',cityCafe:'☕ 海辺のカフェ',cityMarket:'🧺 駅前マルシェ',cityHotel:'🏨 みなとホテル',cityOffice:'🏢 商業島オフィス',cityWheel:'🎡 海の観覧車',cityPromenade:'🌊 海辺の遊歩道',cityTower:'🏙️ みなと高層街区',cityHomes:'🏘️ 新しい住宅街',cityLibrary:'📚 みなと市民センター',cityPark:'🌳 海風公園',cityMarina:'⛵ マリーナ広場'})[type]||'🛍️ 商業島';const descriptions={cityMall:'商業島で一番大きなショッピング施設。雑貨やお土産が並んでいるよ。',cityCafe:'海の見えるカフェ。コーヒーでひと休みしよう。',cityMarket:'小さなお店が集まるマルシェ。おやつの屋台もあるよ。',cityHotel:'海を見下ろすホテル。ロビーには観光案内もあるよ。',cityOffice:'商業島の再開発を支えるオフィス。ここから街が発展しているよ。',cityWheel:'海を見渡すカラフルな観覧車。',cityPromenade:'木のデッキを歩きながら海の風を感じよう。',cityTower:'高層街区に新しいランドマークが完成。上に伸びる街並みを見上げてみよう。',cityHomes:'駅から歩ける新しい住宅街。バルコニーや植栽のある建物が並ぶよ。',cityLibrary:'本を読んだり勉強したりできる公共施設。新しい広場もあるよ。',cityPark:'池や遊歩道のある大きな公園。広がった商業島でゆっくり散策しよう。',cityMarina:'海風を感じる海辺の広場。海上列車と港を眺めよう。'};paragraph(content,descriptions[type]||'商業島を探検しよう。');const buy=(item,price,label)=>content.appendChild(row(itemIcons[item],label,price+'コイン','買う',()=>{if(state.coins<price)return;state.coins-=price;give(item,1);save();updateHud();openPanel(type);showToast(itemIcons[item]+' '+label+'を買ったよ！')},state.coins<price));if(type==='cityMall')buy('souvenir',90,'商業島のおみやげ');else if(type==='cityCafe')buy('coffee',45,'島のコーヒー');else if(type==='cityMarket'){buy('snack',35,'焼きたてのおやつ');content.appendChild(row('🐟','新鮮なお魚を売る','魚1匹・110コイン','売る',()=>{if(state.inventory.fish<=0)return;state.inventory.fish--;state.coins+=110;save();updateHud();openPanel(type);showToast('🐟 110コインで売れた！')},state.inventory.fish<=0));}else if(type==='cityWheel')paragraph(content,'🎡 海上列車とこもれび島を眺められるよ。','tip-box');else if(type==='cityHotel')paragraph(content,'🚉 みなと駅から海上列車に乗って、いつでもこもれび島に帰れるよ。','tip-box');addButton(content,'散策に戻る',closePanel,'secondary')}
   else if(type==='redevelopment'){const p=REDEVELOPMENT.clamp(state.redevelopmentProgress);title.textContent='🏗️ 島の再開発計画';paragraph(content,'高層マンションを島の右奥で建設中！ くらしの広場や自然はそのまま残す計画です。');content.appendChild(row('🏢','マンション工事 '+p+'%',REDEVELOPMENT.stage(p),null,null));const track=document.createElement('div');track.style.cssText='height:12px;background:#e8e5d7;border-radius:9px;overflow:hidden;margin:12px 0';const fill=document.createElement('div');fill.style.cssText='height:100%;background:#82b991;width:'+p+'%';track.append(fill);content.append(track);if(p<100){paragraph(content,'木材2個を現場へ届けると建設が8%進むよ。工事は日本の日付が変わると少しずつ進むよ。','tip-box');content.appendChild(row('🪵','建設資材を納品する','木材 2個・所持 '+state.inventory.wood+'個','納品',()=>{if(state.inventory.wood<2)return;state.inventory.wood-=2;state.redevelopmentProgress=REDEVELOPMENT.clamp(state.redevelopmentProgress+8);rebuildWorld();updateHud();save();openPanel('redevelopment');showToast('🏗️ 資材を届けたよ！ 工事が8%進んだ！')},state.inventory.wood<2));}else paragraph(content,'🎉 完成おめでとう！ 建設用の足場と作業員がなくなり、新しいマンションが島の風景に加わったよ。','tip-box');addButton(content,'島の景色に戻る',closePanel,'secondary')}
   else if(type==='kart'){
-   title.textContent='🏎️ こもれびサーキット';
-   paragraph(content,'自動車工場の南側に専用の3Dカートサーキットが完成！ 8台同時スタート・CPU7台・ドリフトターボ・3周レースを楽しもう。');
-   content.appendChild(row('🏁','レース形式','8台で3周・順位とタイムを計測',null,null));
-   content.appendChild(row('💨','ドリフト','左右に曲がりながらドリフトを溜め、離すとターボ！',null,null));
-   paragraph(content,'オート加速とコースアウト防止アシストが標準ON。左右でハンドル、ドリフトでターボ、減速でブレーキ。道を外れても自動復帰するよ。キーボードは矢印/WASDとスペースキー。レース中は見やすい昼の照明に切り替わり、終了すると島の現在時刻と元の場所に戻るよ。','tip-box');
-   addButton(content,'🏎️ 8台でレースを始める',startKartRace);
-   addButton(content,'島に戻る',closePanel,'secondary');
-  }
-  else if(type==='industry'){
+    title.textContent='🏁 こもれび GRAND PRIX';
+    paragraph(content,'カートレースの映像を専用3Dエンジンで作り直しています。曲線の路面、光と影、丸みのある車体、ヘルメット姿のドライバーを新しいレース画面で体験しよう！');
+    content.appendChild(row('✨','NEW 高品質3Dプレビュー','Three.js専用レース画面（試作版）',null,null));
+    content.appendChild(row('🏆','グランプリ','CPU7台・3周・アイテム・ジャンプ',null,null));
+    paragraph(content,'新モードは最初に3Dライブラリを読み込むため通信が必要です。読み込みに失敗した場合は従来の軽量版でも遊べます。島のセーブデータは引き継がれます。','tip-box');
+    addButton(content,'✨ 新しい高品質3Dレースをプレイ',()=>{save();window.location.href='./kart-next.html';});
+    addButton(content,'🏎️ 旧・軽量版で遊ぶ',startKartRace,'secondary');
+    addButton(content,'島に戻る',closePanel,'secondary');
+   }
+   else if(type==='industry'){
    title.textContent='🏭 こもれび自動車工場と輸出港';
    paragraph(content,'島の南東に新しい自動車産業地区ができたよ！ 工場から完成車が続々出発し、積み込みヤードを抜けて大型の自動車運搬船に乗り込むよ。');
    content.appendChild(row('🏭','自動車工場','完成車の製造・搬出',null,null));

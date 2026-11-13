@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ja">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+ <meta name="theme-color" content="#0f5268">
+ <meta name="description" content="こもれび群島グランプリ — 専用3Dエンジンで遊ぶオリジナルのカートレース。">
+ <title>こもれび GRAND PRIX | 新3Dレース</title>
+ <link rel="stylesheet" href="kart-next.css?v=20261113-a1">
+ <script type="importmap">
+ {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"}}
+ </script>
+</head>
+<body>
+ <main id="raceApp">
+  <canvas id="raceCanvas" aria-label="専用エンジンによる3Dレースの映像"></canvas>
+  <div id="splash" class="splash">
+    <div class="splash-card">
+     <span class="super">KOMOREBI RACING SERIES</span>
+     <h1>こもれび <em>GRAND PRIX</em></h1>
+     <p>新しい3Dエンジン、光と影、海上サーキット。オリジナルのカートで走ろう！</p>
+     <div id="loadMessage" role="status">レース会場を準備しています…</div>
+     <button id="startRace" disabled>🏁 レースを始める</button>
+     <a href="./index.html" class="sub-link">島に戻る</a>
+    </div>
+  </div>
+  <div id="hud" hidden>
+   <header class="race-hud">
+    <div class="title-group"><span class="eyebrow">KOMOREBI GRAND PRIX / PREVIEW 01</span><strong id="raceCall">🏁 READY?</strong></div>
+    <div class="status-group"><span id="position">8位 / 8台</span><span id="lap">1 / 3 LAP</span><span id="speed">0 km/h</span><span id="time">00:00</span></div>
+   </header>
+   <aside class="race-actions"><button id="auto" type="button">🚗 オート加速 ON</button><button id="quality" type="button">画質：自動</button><a href="./index.html" aria-label="こもれび島へ戻る">🏝️ 島に戻る</a></aside>
+   <canvas id="trackMap" width="176" height="154" aria-label="レースコースのミニマップ"></canvas>
+   <div class="toast" id="message" role="status"></div>
+   <section class="pad" aria-label="操作ボタン">
+    <div class="steer">
+     <button id="left" type="button" aria-label="左へ曲がる">◀</button>
+     <button id="right" type="button" aria-label="右へ曲がる">▶</button>
+    </div>
+    <div class="action">
+     <button id="brake" type="button">減速</button>
+     <button id="drift" type="button">💨 ドリフト</button>
+     <button id="item" type="button" disabled>🎁 アイテム</button>
+     <button id="rescue" type="button">↩ 復帰</button>
+    </div>
+   </section>
+   <div id="finishScreen" class="finish-screen" hidden><div class="finish-card"><h2>🏆 FINISH!</h2><p id="finishResult"></p><button id="restart">もう一度走る</button><a href="./index.html">島へ戻る</a></div></div>
+  </div>
+  <div class="errors" id="fatal" hidden role="alert"><p id="fatalText">3Dを起動できませんでした。</p><a href="./index.html?demo=kart">以前の軽量版レースを開く</a></div>
+ </main>
+ <script src="expansion3d.js?v=20261112-v23" defer></script>
+ <script src="kart3d.js?v=20261113-v39" defer></script>
+ <script type="module" src="kart-next.js?v=20261113-a1"></script>
+</body>
+</html>

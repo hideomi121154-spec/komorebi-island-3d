@@ -92,6 +92,17 @@ test('restart clears item effects and race state without corrupting island game'
  kart.stop();
  assert.equal(kart.active(),false);
 });
+test('new 3D engine can start at the back of the grid without changing classic starts',()=>{
+ const {kart}=boot();
+ kart.start();
+ let first=kart.getState();
+ assert.ok(first.opponents.every(ai=>ai.distance<first.player.distance),'classic keeps player in front');
+ kart.stop();
+ kart.start({playerAtBack:true});
+ const next=kart.getState();
+ assert.ok(next.opponents.every(ai=>ai.distance>next.player.distance),'new version shows 7 rivals ahead');
+ kart.stop();
+});
 test('HTML touch interface provides item button and item world animation',()=>{
  const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const game=fs.readFileSync(new URL('../game.js',import.meta.url),'utf8');

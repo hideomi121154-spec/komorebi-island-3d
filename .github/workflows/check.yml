@@ -38,6 +38,8 @@ jobs:
           node --check spaceport3d.js
           node --check industry3d.js
            node --check kart3d.js
+          node --check kart-next.js
+          node --check kart-next-scene.js
           node --check sealine3d.js
           node --check expansion3d.js
       - name: Run smoke tests

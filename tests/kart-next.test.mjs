@@ -1,0 +1,61 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {resolve,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
+const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const file=name=>readFileSync(resolve(root,name),'utf8');
+const html=file('kart-next.html'),scene=file('kart-next-scene.js'),controller=file('kart-next.js'),home=file('game.js'),css=file('kart-next.css');
+test('dedicated 3D engine is separate from legacy island graphics and retains saved island',()=>{
+ assert.match(html,/src="kart3d\.js\?v=20261113-v39"/);
+ assert.match(html,/src="expansion3d\.js/);
+ assert.match(home,/window\.location\.href='\.\/kart-next\.html'/);
+ assert.match(home,/旧・軽量版で遊ぶ/);
+ assert.match(home,/komorebi_island_3d_v01/);
+ assert.match(html,/href="\.\/index\.html\?demo=kart"/);
+ assert.doesNotMatch(controller,/localStorage\.clear|removeItem\(/);
+});
+test('version pinned Three.js with physically based materials and real 3D camera',()=>{
+ assert.match(html,/three@0\.187\.0\/build\/three\.module\.js/);
+ assert.match(scene,/import \* as THREE from 'three'/);
+ assert.match(scene,/new THREE\.WebGLRenderer\(/);
+ assert.match(scene,/renderer\.toneMapping=THREE\.ACESFilmicToneMapping/);
+ assert.match(scene,/new THREE\.MeshStandardMaterial\(/);
+ assert.match(scene,/new THREE\.Fog\(/);
+ assert.match(scene,/new THREE\.DirectionalLight\(/);
+ assert.match(scene,/camera\.position\.lerp\(/);
+ assert.match(scene,/new THREE\.ExtrudeGeometry\(/);
+});
+test('island map and race physics still drive 7 CPUs, items, drift and laps',()=>{
+ assert.match(controller,/kart\.step\(dt\)/);
+ assert.match(controller,/kart\.start\(\{playerAtBack:true\}\)/);
+ assert.match(controller,/kart\.getState\(\)/);
+ assert.match(controller,/kart\.useItem\(\)/);
+ assert.match(controller,/kart\.setInput/);
+ assert.match(controller,/kart\.toggleAuto\(\)/);
+ assert.match(controller,/kart\.rescue\(\)/);
+ assert.match(scene,/kart\.ITEM_DISTANCES/);
+ assert.match(scene,/kart\.JUMP_DISTANCES/);
+ assert.match(scene,/kart\.VENUES/);
+ assert.match(controller,/data\.finished/);
+});
+test('iPhone dynamic pixel-ratio cap and touch controls are implemented',()=>{
+ assert.match(scene,/quality==='performance'\?1:quality==='quality'\?1\.7:1\.35/);
+ assert.match(scene,/renderer\.setPixelRatio\(/);
+ assert.match(controller,/pointerdown/);
+ assert.match(controller,/pointercancel/);
+ assert.match(controller,/setPointerCapture/);
+ assert.match(css,/touch-action:none/);
+ assert.match(html,/id="left"/);
+ assert.match(html,/id="item"/);
+ assert.match(html,/id="quality"/);
+ assert.match(html,/id="trackMap"/);
+});
+test('fallback is obvious if the new renderer cannot initialize',()=>{
+ assert.match(controller,/init\(\)\.catch\(error=>failure/);
+ assert.match(html,/id="fatal"/);
+ assert.match(controller,/loadMessage/);
+ assert.match(html,/以前の軽量版レースを開く/);
+ assert.match(scene,/window\.addEventListener\('resize'/);
+ assert.match(scene,/function dispose\(/);
+});
