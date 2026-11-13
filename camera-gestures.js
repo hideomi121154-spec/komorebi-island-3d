@@ -48,7 +48,7 @@ function create(canvas,options={}){
  // On iOS, prefer native touch events and ignore parallel touch PointerEvents,
  // which Safari can cancel when a second finger comes down.
  canvas.addEventListener('touchstart',e=>{
-  if(!nativeTouch)return;
+  if(!nativeTouch||options.enabled?.()===false)return;
   noPageScroll(e);
   points.clear();
   for(const t of Array.from(e.touches).slice(0,2))points.set(t.identifier,point(t));
@@ -73,7 +73,7 @@ function create(canvas,options={}){
  canvas.addEventListener('touchend',touchFinish,{passive:false});
  canvas.addEventListener('touchcancel',touchFinish,{passive:false});
  canvas.addEventListener('pointerdown',e=>{
-  if(nativeTouch&&e.pointerType==='touch')return;
+  if((nativeTouch&&e.pointerType==='touch')||options.enabled?.()===false)return;
   noPageScroll(e);
   points.set(e.pointerId,point(e));
   try{canvas.setPointerCapture(e.pointerId)}catch{}
@@ -94,6 +94,7 @@ function create(canvas,options={}){
  };
  for(const type of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(type,release);
  canvas.addEventListener('wheel',e=>{
+  if(options.enabled?.()===false)return;
   noPageScroll(e);
   const delta=Number(e.deltaY)||0;
   options.set({zoom:clamp(options.get().zoom*Math.exp(delta*.0018),.34,3.1)});
