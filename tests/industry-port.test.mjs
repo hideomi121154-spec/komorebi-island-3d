@@ -86,7 +86,7 @@ test('game and UI connect factory camera, travel buttons, map and preserve old s
  assert.match(html,/id="industryBtn"/);
  assert.ok(html.indexOf('src="spaceport3d.js')<html.indexOf('src="industry3d.js'));
  assert.ok(html.indexOf('src="industry3d.js')<html.indexOf('src="game.js'));
- assert.match(html,/game\.js\?v=20261113-v3[12345679]/);
+ assert.match(html,/game\.js\?v=(?:20261113-v3[12345679]|20261114-v40)/);
  assert.match(map,/\[21,27,'🏭'\]/);
  assert.match(map,/\[69,29\.5,'🚢'\]/);
 });

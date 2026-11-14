@@ -250,7 +250,7 @@ export async function createRaceView(kart,canvas){
  const kartModels=PALETTE.map((color,i)=>makeDriverKart(color,i));
  for(const k of kartModels)scene.add(k.root);
  const target=new THREE.Vector3(),look=new THREE.Vector3();
- let quality='auto',active=true,prev=0;
+ let quality='auto',active=true,prev=0,spectatorCamera='drive';
  function resize(){
   const w=canvas.clientWidth||window.innerWidth,h=canvas.clientHeight||window.innerHeight;
   const cap=quality==='performance'?1:quality==='quality'?1.7:1.35;
@@ -287,19 +287,26 @@ export async function createRaceView(kart,canvas){
    flag.rotation.z=Math.sin(now*.004+index)*.13;
   });
   clouds.forEach(c=>{c.group.position.x+=dt*(.15+(c.index%5)*.06);if(c.group.position.x>170)c.group.position.x=-123;});
-  const p=state.player,speed=Math.max(0,p.speed||0);
-  // Anchor the chase camera above the actual road behind the player instead
-  // of pushing it off-track into trees/billboards in sharp hairpin turns.
-  const behind=kart.at(p.distance-9.5),ahead=kart.at(p.distance+17);
-  target.set(behind.x,4.7+speed*.015,behind.z);
-  look.set(ahead.x,1.58+speed*.006,ahead.z);
+  const contenders=[state.player,...state.opponents];
+  const focus=spectatorCamera==='drive'?state.player:contenders.reduce((a,b)=>a.distance>b.distance?a:b);
+  const speed=Math.max(0,focus.speed||0);
+  // Broadcast camera tracks the actual leading racer rather than the viewer.
+  const behind=kart.at(focus.distance-(spectatorCamera==='drive'?9.5:16));
+  const ahead=kart.at(focus.distance+(spectatorCamera==='drive'?17:27));
+  if(spectatorCamera==='overhead'){
+   target.set(focus.x,29,focus.z+12);
+   look.set(focus.x,0,focus.z);
+  }else{
+   target.set(behind.x,spectatorCamera==='drive'?4.7+speed*.015:8.3,behind.z);
+   look.set(ahead.x,spectatorCamera==='drive'?1.58+speed*.006:1.8,ahead.z);
+  }
   const alpha=1-Math.exp(-Math.max(dt,.0001)*6.6);
   camera.position.lerp(target,alpha);
   camera.lookAt(look);
-  camera.fov=66+Math.min(8,speed*.30);camera.updateProjectionMatrix();
-  sun.position.set(p.x-35,66,p.z+35);sun.target.position.set(p.x,0,p.z);sun.target.updateMatrixWorld();
+  camera.fov=spectatorCamera==='overhead'?65:spectatorCamera==='leader'?72:66+Math.min(8,speed*.30);camera.updateProjectionMatrix();
+  sun.position.set(focus.x-35,66,focus.z+35);sun.target.position.set(focus.x,0,focus.z);sun.target.updateMatrixWorld();
  }
  function render(){if(active)renderer.render(scene,camera);}
  function dispose(){active=false;renderer.dispose();window.removeEventListener('resize',resize);}
- return {update,render,resize,setQuality,dispose,camera,scene,renderer,getQuality:()=>quality};
+ return {update,render,resize,setQuality,dispose,camera,scene,renderer,setSpectatorCamera:mode=>{spectatorCamera=['drive','leader','overhead'].includes(mode)?mode:'drive';},getQuality:()=>quality};
 }

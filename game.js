@@ -983,8 +983,10 @@ function openPanel(type){panelType=type;paused=true;for(let dir of Object.keys(i
     paragraph(content,'カートレースの映像を専用3Dエンジンで作り直しています。曲線の路面、光と影、丸みのある車体、ヘルメット姿のドライバーを新しいレース画面で体験しよう！');
     content.appendChild(row('✨','NEW 高品質3Dプレビュー','Three.js専用レース画面（試作版）',null,null));
     content.appendChild(row('🏆','グランプリ','CPU7台・3周・アイテム・ジャンプ',null,null));
+    content.appendChild(row('🎟️','観戦・予想','8台AI競走・仮想メダル・着順予想・払戻',null,null));
     paragraph(content,'新モードは最初に3Dライブラリを読み込むため通信が必要です。読み込みに失敗した場合は従来の軽量版でも遊べます。島のセーブデータは引き継がれます。','tip-box');
     addButton(content,'✨ 新しい高品質3Dレースをプレイ',()=>{save();window.location.href='./kart-next.html';});
+    addButton(content,'🎟️ 観客として着順を予想する',()=>{save();window.location.href='./kart-next.html?mode=watch';});
     addButton(content,'🏎️ 旧・軽量版で遊ぶ',startKartRace,'secondary');
     addButton(content,'島に戻る',closePanel,'secondary');
    }

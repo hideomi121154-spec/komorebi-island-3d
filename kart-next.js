@@ -1,8 +1,10 @@
 /* Komorebi Grand Prix Preview 01 — standalone race controller.
    Imported engine failure never affects the legacy island or existing save data. */
+import {TYPES,readWallet,selectValid,estimateOdds,makeTicket,placeTicket,settleTicket,recoverInterrupted,ticketLabel} from './kart-forecast.mjs';
 const $=id=>document.getElementById(id);
+const DRIVER_COLORS=['#ffc45a','#ef6d82','#70c3d4','#b3a0ef','#7dcc9a','#f0a66c','#72c1c1','#d5b674'];
 const kart=window.KomorebiKart;
-const state={ready:false,started:false,finished:false,last:0,frames:0,quality:'auto',displayMessage:'',messageUntil:0,engine:null,scene:null,frameHandle:0};
+const state={ready:false,started:false,finished:false,last:0,frames:0,quality:'auto',displayMessage:'',messageUntil:0,engine:null,scene:null,frameHandle:0,mode:'drive',spectatorSeed:0,spectatorGrid:null,activeTicketId:null,watchCamera:'leader'};
 const fmt=(seconds)=>{
  const whole=Math.max(0,Math.floor(seconds)),mins=Math.floor(whole/60),secs=whole%60;
  return String(mins).padStart(2,'0')+':'+String(secs).padStart(2,'0');
@@ -41,7 +43,8 @@ function controls(){
   state.quality=values[(values.indexOf(state.quality)+1)%values.length];
   state.scene?.setQuality(state.quality);$('quality').textContent=labels[state.quality];
  });
- $('restart').addEventListener('click',()=>startRace());
+ $('restart').addEventListener('click',()=>state.mode==='spectate'?openForecast():startRace());
+ bindForecastControls();
  $('startRace').addEventListener('click',()=>startRace());
  window.addEventListener('keydown',e=>{
   if(e.code==='Escape'){window.location.href='./index.html';return;}
@@ -64,13 +67,20 @@ function message(text){
  element.textContent=text;element.classList.add('visible');
  state.messageUntil=performance.now()+2300;
 }
-function startRace(){
+function startRace(options={}){
  if(!state.ready)return;
- kart.start({playerAtBack:true});state.started=true;state.finished=false;state.last=performance.now();
+ const watching=options.mode==='spectate';
+ kart.start(watching?{playerAtBack:true,spectator:true,seed:state.spectatorSeed}:{playerAtBack:true});
+ state.mode=watching?'spectate':'drive';
+ state.scene.setSpectatorCamera?.(watching?'leader':'drive');
+ state.started=true;state.finished=false;state.last=performance.now();
  document.documentElement.dataset.kart3d='running';
- $('splash').hidden=true;$('finishScreen').hidden=true;$('hud').hidden=false;
+ $('splash').hidden=true;$('forecastOverlay').hidden=true;$('finishScreen').hidden=true;$('hud').hidden=false;
+ $('hud').classList.toggle('spectating',watching);$('spectatorBoard').hidden=!watching;
+ $('resultPayout').hidden=true;
+ $('restart').textContent=watching?'🎟️ 次の予想レース':'もう一度走る';
  $('auto').textContent='🚗 オート加速 ON';$('raceCall').textContent='🏁 3・2・1… START!';
- message('🌊 群島グランプリへようこそ！');
+ message(watching?'📺 AI8台のレースが始まります！':'🌊 群島グランプリへようこそ！');
  if(!state.frameHandle)state.frameHandle=requestAnimationFrame(tick);
 }
 function updateUI(info,now){
@@ -81,7 +91,8 @@ function updateUI(info,now){
  $('time').textContent=fmt(info.elapsed);
  $('item').textContent=info.item?({turbo:'⚡ ターボ',bubble:'🫧 バリア',seed:'🌰 木の実',gust:'🍃 追い風',star:'🌟 スター'}[info.item]||'🎁 アイテム'):'🎁 アイテム';
  $('item').disabled=!info.item;
- if(info.star>0)$('raceCall').textContent='🌟 スター無敵！';
+ if(state.mode==='spectate')$('raceCall').textContent='📺 AI GRAND PRIX 中継';
+ else if(info.star>0)$('raceCall').textContent='🌟 スター無敵！';
  else if(info.shield>0)$('raceCall').textContent='🫧 バリア展開中';
  else if(info.jumpTimer>0)$('raceCall').textContent='🪽 ジャンプ！';
  else if(info.player.boost>0)$('raceCall').textContent='⚡ ターボ加速！';
@@ -115,10 +126,12 @@ function tick(now){
   state.scene.render();
   state.frames++;
   if(state.frames%3===0)miniMap(data);
+  if(state.mode==='spectate'&&state.frames%10===0)showLivePositions(data);
   if(state.frames%4===0)updateUI(data,now);
   if(data.finished&&!state.finished){
    state.finished=true;
-   $('finishResult').textContent=data.place+'位でゴール！ 走行タイム '+fmt(data.elapsed);
+   if(state.mode==='spectate')finishSpectator(data);
+   else $('finishResult').textContent=data.place+'位でゴール！ 走行タイム '+fmt(data.elapsed);
    $('finishScreen').hidden=false;
    state.engine?.setLevel(0);
   }
@@ -126,6 +139,107 @@ function tick(now){
  }catch(error){
   state.started=false;cancelAnimationFrame(state.frameHandle);state.frameHandle=0;failure(error.message||String(error));
  }
+}
+function fillSelect(select,entries,selected){
+ select.replaceChildren();
+ for(const entry of entries){
+  const option=document.createElement('option');option.value=String(entry.number);
+  option.textContent=entry.number+'号 '+entry.name;select.appendChild(option);
+ }
+ select.value=String(selected);
+}
+function showHistory(){
+ const w=readWallet(localStorage);
+ $('medalBalance').textContent=w.balance.toLocaleString('ja-JP');
+ const container=$('betHistory');container.replaceChildren();
+ const rows=w.history.slice(-8).reverse();
+ if(!rows.length){container.textContent='まだ予想はありません';return;}
+ for(const t of rows){
+  const row=document.createElement('p');
+  const label=ticketLabel(t);
+  row.textContent=label+' / '+(t.status==='settled'?(t.hit?'的中 ＋'+t.payout+' B':'不的中 0 B'):t.status==='cancelled'?'途中終了・返還済み':'結果待ち');
+  container.appendChild(row);
+ }
+}
+function updateOdds(){
+ const type=$('betType').value,stake=Number($('stake').value);
+ $('pick2Label').hidden=TYPES[type].count<2;
+ $('pick3Label').hidden=TYPES[type].count<3;
+ const picks=[$('pick1'),$('pick2'),$('pick3')].slice(0,TYPES[type].count).map(x=>Number(x.value));
+ const valid=selectValid(type,picks);
+ const odds=valid?estimateOdds(state.spectatorGrid,type,picks):null;
+ $('watchBegin').disabled=!!stake&&(!valid||readWallet(localStorage).balance<stake);
+ $('oddsPreview').textContent=stake===0?'🎫 無料観戦です。メダルを使わず全8台のレースを見られます。':!valid?'番号が重複しています。別の番号を選んでください':stake>readWallet(localStorage).balance?'メダルが足りません。無料観戦も可能です':'予想倍率 ×'+odds.toFixed(1)+' ｜ 的中時の払戻 '+Math.floor(stake*odds)+' B（元金込み）';
+}
+function openForecast(){
+ state.started=false;state.finished=false;
+ state.spectatorSeed=(Date.now()^Math.floor(Math.random()*0xffffffff))>>>0;
+ state.spectatorGrid=kart.forecastGrid(state.spectatorSeed);
+ $('finishScreen').hidden=true;$('hud').hidden=true;$('splash').hidden=true;
+ const box=$('raceLineup');box.replaceChildren();
+ for(const entry of state.spectatorGrid){
+  const el=document.createElement('div');el.className='racer-row';
+  const num=document.createElement('span');num.className='racer-number';num.style.setProperty('--driver-color',DRIVER_COLORS[entry.number-1]);num.textContent=entry.number;
+  const desc=document.createElement('div');const name=document.createElement('strong');name.textContent=entry.name;
+  const meta=document.createElement('small');meta.className='racer-meta';meta.textContent='速度指数 '+entry.speed.toFixed(1)+' / 操作性 '+('★'.repeat(entry.handling))+' / 調子 '+('★'.repeat(entry.form));
+  desc.append(name,meta);el.append(num,desc);box.appendChild(el);
+ }
+ for(const [i,id] of ['pick1','pick2','pick3'].entries())fillSelect($(id),state.spectatorGrid,i+1);
+ $('betType').value='win';$('stake').value='0';
+ $('forecastError').textContent='';
+ showHistory();updateOdds();
+ $('forecastOverlay').hidden=false;
+}
+function beginSpectating(){
+ const type=$('betType').value,picks=[$('pick1'),$('pick2'),$('pick3')].slice(0,TYPES[type].count).map(el=>Number(el.value));
+ const stake=Number($('stake').value);
+ $('forecastError').textContent='';
+ try{
+  state.activeTicketId=null;
+  if(stake>0){
+   const id='gp-'+Date.now()+'-'+Math.floor(Math.random()*1000000);
+   const ticket=makeTicket({id,grid:state.spectatorGrid,type,picks,stake,seed:state.spectatorSeed});
+   placeTicket(localStorage,ticket);
+   state.activeTicketId=id;
+  }
+  startRace({mode:'spectate'});
+  message(stake>0?'🎟️ 予想確定！ 発走後は変更できません':'📺 無料で観戦中');
+ }catch(e){$('forecastError').textContent=e.message||String(e);updateOdds();}
+}
+function showLivePositions(data){
+ const all=[data.player,...data.opponents].map((p,i)=>({number:i+1,distance:p.distance}));
+ all.sort((a,b)=>b.distance-a.distance);
+ const box=$('livePositions');box.replaceChildren();
+ for(let i=0;i<all.length;i++){
+  const row=document.createElement('div');
+  const name=state.spectatorGrid?.[all[i].number-1]?.name||'CPU';
+  const left=document.createElement('span'),right=document.createElement('span');
+  left.textContent=(i+1)+'位 '+all[i].number+'号 '+name;
+  right.textContent=Math.max(0,Math.min(100,Math.floor(all[i].distance/(kart.length*3)*100)))+'%';
+  row.append(left,right);box.appendChild(row);
+ }
+}
+function finishSpectator(data){
+ const order=data.finishOrder;
+ $('finishResult').textContent='🏆 確定着順 '+order.slice(0,3).map((n,i)=>(i+1)+'着 '+n+'号 '+state.spectatorGrid[n-1].name).join(' / ')+'　全8台完走 '+fmt(data.elapsed);
+ const p=$('resultPayout');p.hidden=false;
+ if(state.activeTicketId){
+  try{
+   const result=settleTicket(localStorage,state.activeTicketId,order);
+   p.textContent=(result.ticket.hit?'🎉 予想的中！':'今回は不的中')+'　払戻 '+result.ticket.payout+' B / 残高 '+result.wallet.balance+' B';
+  }catch(e){p.textContent='精算エラー：'+(e.message||e);}
+ }else p.textContent='🎫 無料観戦のため、メダルの増減はありません。';
+}
+function bindForecastControls(){
+ $('watchRace').addEventListener('click',openForecast);
+ $('forecastClose').addEventListener('click',()=>{$('forecastOverlay').hidden=true;$('splash').hidden=false;});
+ for(const id of ['betType','pick1','pick2','pick3','stake'])$(id).addEventListener('change',updateOdds);
+ $('watchBegin').addEventListener('click',beginSpectating);
+ $('spectatorCamera').addEventListener('click',()=>{
+  state.watchCamera=state.watchCamera==='leader'?'overhead':'leader';
+  state.scene?.setSpectatorCamera?.(state.watchCamera);
+  $('spectatorCamera').textContent=state.watchCamera==='leader'?'📷 全体俯瞰に切替':'📷 先頭追走に切替';
+ });
 }
 function createEngineSound(){
  const Audio=window.AudioContext||window.webkitAudioContext;
@@ -146,9 +260,10 @@ function createEngineSound(){
  }catch{return null;}
 }
 async function init(){
+ recoverInterrupted(localStorage);
  if(!kart)throw Error('従来レースのシミュレーションを読み込めません');
  $('loadMessage').textContent='専用3Dエンジンとコースを読み込み中…';
- const {createRaceView}=await import('./kart-next-scene.js?v=20261113-a1');
+ const {createRaceView}=await import('./kart-next-scene.js?v=20261114-b1');
  state.scene=await createRaceView(kart,$('raceCanvas'));
  // Pre-render the new world before the player presses start.
  const start=kart.at(3);
@@ -156,13 +271,23 @@ async function init(){
  state.scene.camera.lookAt(start.x,0,start.z);
  state.scene.render();state.ready=true;
  document.documentElement.dataset.kart3d='ready';
- $('startRace').disabled=false;
+ $('startRace').disabled=false;$('watchRace').disabled=false;
  $('loadMessage').textContent='準備完了！ スタートを押すと音が出ます。';
  controls();
  // Audio only begins inside a real user tap, never on page load.
  $('startRace').addEventListener('click',()=>{if(!state.engine)state.engine=createEngineSound();});
  $('restart').addEventListener('click',()=>{if(!state.engine)state.engine=createEngineSound();});
  // Headless Chrome may start the race for visual regression screenshots.
+ if(new URLSearchParams(location.search).get('mode')==='watch')openForecast();
+ if(new URLSearchParams(location.search).get('preview')==='watch'){
+  openForecast();$('stake').value='0';$('watchBegin').click();
+  // Advance deterministic preview beyond the countdown to verify real AI driving.
+  for(let frame=0;frame<440;frame++)kart.step(.05);
+  const data=kart.getState();
+  for(let frame=0;frame<55;frame++)state.scene.update(data,performance.now()+frame*16,1/60);
+  state.scene.render();miniMap(data);showLivePositions(data);updateUI(data,performance.now());
+  state.last=performance.now();
+ }
  if(new URLSearchParams(location.search).get('preview')==='1'){
   startRace();
   // Move a deterministic few seconds into the race for reproducible visuals.

@@ -7,7 +7,7 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const file=name=>readFileSync(resolve(root,name),'utf8');
 const html=file('kart-next.html'),scene=file('kart-next-scene.js'),controller=file('kart-next.js'),home=file('game.js'),css=file('kart-next.css');
 test('dedicated 3D engine is separate from legacy island graphics and retains saved island',()=>{
- assert.match(html,/src="kart3d\.js\?v=20261113-v39"/);
+ assert.match(html,/src="kart3d\.js\?v=20261114-b1"/);
  assert.match(html,/src="expansion3d\.js/);
  assert.match(home,/window\.location\.href='\.\/kart-next\.html'/);
  assert.match(home,/旧・軽量版で遊ぶ/);
@@ -28,7 +28,8 @@ test('version pinned Three.js with physically based materials and real 3D camera
 });
 test('island map and race physics still drive 7 CPUs, items, drift and laps',()=>{
  assert.match(controller,/kart\.step\(dt\)/);
- assert.match(controller,/kart\.start\(\{playerAtBack:true\}\)/);
+ assert.match(controller,/playerAtBack:true,spectator:true/);
+ assert.match(controller,/\{playerAtBack:true\}/);
  assert.match(controller,/kart\.getState\(\)/);
  assert.match(controller,/kart\.useItem\(\)/);
  assert.match(controller,/kart\.setInput/);
