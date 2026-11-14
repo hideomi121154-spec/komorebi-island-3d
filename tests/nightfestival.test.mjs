@@ -149,7 +149,7 @@ test('Festival loop, phone detail scaling and reduced motion are deterministic',
  assert.match(game,/get\('demo'\)==='fireworks'/);
  assert.match(game,/festivalShow&&!roomActive\?festivalOrigin/);
  assert.match(game,/cameraPitch=1\.23/);
- assert.match(html,/nightfestival\.js\?v=20261114-v42/);
+ assert.match(html,/nightfestival\.js\?v=20261114-v43/);
  assert.match(html,/game\.js\?v=(?:20261112-v25|(?:20261113-v(?:2[6789]|3[012345679])|20261114-v4[012]))/);
 });
 
@@ -175,8 +175,10 @@ test('One in every ten 3D launches is a rare mascot firework, without unlucky st
  const types=new Set();
  const rareSlots=new Set();
  for(let cycle=0;cycle<90;cycle++){
+  const selection=festival.rareAtCycle(cycle);
   const choices=festival.showPattern.map((spec,index)=>{
-   const active=festival.spectacleEventsAt(cycle*festival.SHOW_CYCLE+spec.at+20);
+   const at=index===selection.slot?festival.RARE_AT:spec.at;
+   const active=festival.spectacleEventsAt(cycle*festival.SHOW_CYCLE+at+20);
    return active.find(e=>e.index===index&&e.age===20);
   });
   assert.equal(choices.length,10);
@@ -186,12 +188,36 @@ test('One in every ten 3D launches is a rare mascot firework, without unlucky st
   rareSlots.add(rare.index);
   types.add(rare.spec.faceType);
   assert.ok(rare.spec.r>=3.5);
-  const a=festival.worldParticles(cycle*festival.SHOW_CYCLE+festival.showPattern[rare.index].at+680,1,[11,-5]);
+  const a=festival.worldParticles(cycle*festival.SHOW_CYCLE+festival.RARE_AT+680,1,[11,-5]);
   assert.ok(a.length>0&&a.every(Number.isFinite),'rare firework particles must have valid geometry');
   assert.ok(a.length/8<11000,'phone draw budget remains capped');
  }
  assert.ok(rareSlots.size>=5,'rare location varies between shows');
  assert.deepEqual([...types].sort(),[...festival.FACE_KINDS].sort());
+});
+test('Rare face receives a solo finale; gold and red bursts cannot overlap its silhouette',()=>{
+ const cycle=2;
+ const events=festival.spectacleEventsAt(cycle*festival.SHOW_CYCLE+festival.RARE_AT+700);
+ const active=events.filter(e=>e.age>=0);
+ assert.equal(active.length,1,'no simultaneous ordinary explosion during the face');
+ assert.equal(active[0].spec.kind,'face');
+ assert.equal(active[0].spec.faceType,'face-cat');
+ const justBefore=festival.spectacleEventsAt(cycle*festival.SHOW_CYCLE+festival.RARE_AT-200);
+ assert.ok(justBefore.every(e=>e.age<0||e.spec.kind!=='face'));
+ assert.ok(justBefore.every(e=>e.age<0),'all previous regular bursts have faded');
+ const after=festival.spectacleEventsAt(cycle*festival.SHOW_CYCLE+festival.RARE_AT+festival.RARE_LIFE+10);
+ assert.ok(after.every(e=>e.spec.kind!=='face'),'the shape clears before the next cycle');
+});
+test('WebGL displays only one face outline while Canvas2D fallback retains its own',()=>{
+ const cycle=4;
+ const ms=cycle*festival.SHOW_CYCLE+festival.RARE_AT+800;
+ const fallback=festival.worldParticles(ms,1,[11,-5],false,1,null,true);
+ const webgl=festival.worldParticles(ms,1,[11,-5],false,1,null,false);
+ assert.ok(fallback.length>webgl.length+150*8,'single WebGL billboard removes repeated eyes, ears and face lines');
+ assert.ok(webgl.length>0,'the halo still sparkles in WebGL mode');
+ const src=source('nightfestival.js');
+ assert.match(src,/worldParticles\(ms,intensity,origin,reducedMotion,detail,lineSegments,false\)/);
+ assert.match(src,/if\(includeFaceOutline\)for\(const p of FACE_SHAPES/);
 });
 test('Original round, bunny and cat fireworks have recognizable facial features',()=>{
  for(const kind of festival.FACE_KINDS){

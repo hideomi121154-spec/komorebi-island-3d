@@ -134,7 +134,9 @@ function createRenderer(gl){
  * from the shore, by looking up, or from the overhead camera. Deterministic
  * seeded explosions avoid network textures and heavy audio/video downloads.
  */
-const SHOW_CYCLE=6800;
+// Let the nine ordinary bursts finish before the featured rare face appears.
+const SHOW_CYCLE=10200;
+const RARE_AT=6950,RARE_LIFE=2550;
 const showPattern=[
  {at:140,x:0,y:26,z:-3,r:5.7,color:[1,.72,.31],rays:248,life:5450,kind:'gold'},
  {at:500,x:1,y:17,z:2,r:4.1,color:[1,.23,.32],rays:185,life:4520,kind:'red'},
@@ -196,10 +198,15 @@ function spectacleEventsAt(ms){
  const t=Math.max(0,ms),cycle=Math.floor(t/SHOW_CYCLE),phase=t%SHOW_CYCLE;
  const rare=rareAtCycle(cycle);
  return showPattern.flatMap((base,index)=>{
-  if(phase<base.at-580||phase>=base.at+base.life)return [];
-  const spec=index===rare.slot?
-   {...base,r:Math.max(3.5,base.r*1.55),y:Math.max(21,base.y+3.5),color:[1,.91,.78],kind:'face',faceType:rare.kind}:base;
-  return [{spec,age:phase-base.at,index,cycle}];
+  const isRare=index===rare.slot;
+  const start=isRare?RARE_AT:base.at;
+  const life=isRare?RARE_LIFE:base.life;
+  if(phase<start-580||phase>=start+life)return [];
+  // The rare face is a dedicated final firework, never behind the giant
+  // gold chrysanthemum. Keep nine normal launches in their original slots.
+  const spec=isRare?
+   {...base,at:start,life,r:3.7,y:28,color:[1,.91,.78],kind:'face',faceType:rare.kind}:base;
+  return [{spec,age:phase-start,index,cycle}];
  });
 }
 function burstLighting(ms,intensity){
@@ -213,7 +220,7 @@ function burstLighting(ms,intensity){
  }
  return {strength:Math.min(.20,brightness*.18*intensity),color:tint};
 }
-function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,lineSegments=null){
+function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,lineSegments=null,includeFaceOutline=true){
  if(intensity<=.005||reducedMotion)return new Float32Array(0);
  const output=[],active=spectacleEventsAt(ms);
  const density=clamp(detail,.45,1);
@@ -237,9 +244,9 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,
      j%5===0?[1,1,.96]:[1,.83,.48],alpha);
   }
  }
- for(const {spec,age} of active){
+ for(const {spec,age,index} of active){
   const centerX=origin[0]+spec.x,centerZ=origin[1]+spec.z;
-  const seed=showPattern.indexOf(spec)+12;
+  const seed=index+12;
   // White-hot launch rocket rises before the opening. Its glitter trail curls.
   if(age<0){
    const t=clamp(1+age/580),head=1+(spec.y-1)*t*t*(3-2*t);
@@ -255,8 +262,9 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,
   if(spec.kind==='face'){
    const t=clamp(age/spec.life),grow=.32+.68*Math.pow(Math.min(1,t*2.3),.63);
    const fade=Math.pow(1-t,.65)*intensity;
-   for(const p of FACE_SHAPES[spec.faceType]){
-    // Spark-particle companion to the camera-facing glow texture.
+   if(includeFaceOutline)for(const p of FACE_SHAPES[spec.faceType]){
+    // Canvas2D fallback draws these points. WebGL shows the face on a single
+    // camera-facing billboard instead to prevent duplicated/misaligned lines.
     add(centerX+p.x*spec.r*grow,spec.y-p.y*spec.r*grow-.8*t*t,centerZ,
      5.8*p.size,p.color,fade*(.85+.15*Math.sin(age*.008+p.x*31)));
    }
@@ -475,7 +483,7 @@ function createWorldRenderer(gl){
   draw(ms,intensity,origin,view,proj,pixelRatio,reducedMotion=false){
    const detail=(pixelRatio||1)<1.35?.66:1;
    const lineSegments=[];
-   const points=worldParticles(ms,intensity,origin,reducedMotion,detail,lineSegments);
+   const points=worldParticles(ms,intensity,origin,reducedMotion,detail,lineSegments,false);
    if(!points.length)return;
    billboards?.draw(ms,intensity,origin,view,proj);
    gl.useProgram(program);
@@ -525,5 +533,5 @@ function drawCanvas(ctx,width,height,ms,intensity,reducedMotion=false){
    fireworks[i+3]*.44,[fireworks[i+4],fireworks[i+5],fireworks[i+6]],fireworks[i+7]);
  ctx.restore();
 }
-window.KomorebiNightFestival={CYCLE,ROCKET_MS,BURST_MS,stars,eventsAt,fireworkAt,makeParticles,burstLighting,createRenderer,drawCanvas,worldParticles,createWorldRenderer,SHOW_CYCLE,showPattern,spectacleEventsAt,FACE_KINDS,FACE_SHAPES,rareAtCycle};
+window.KomorebiNightFestival={CYCLE,ROCKET_MS,BURST_MS,stars,eventsAt,fireworkAt,makeParticles,burstLighting,createRenderer,drawCanvas,worldParticles,createWorldRenderer,SHOW_CYCLE,RARE_AT,RARE_LIFE,showPattern,spectacleEventsAt,FACE_KINDS,FACE_SHAPES,rareAtCycle};
 })();
