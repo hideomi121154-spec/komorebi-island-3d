@@ -471,7 +471,7 @@ function buildDynamic(now,includeRocket=true){const b=new MeshBuilder();if(indoo
  return b.toFloat()}
 function buildRocketDynamic(now){const b=new MeshBuilder();SPACE.drawRocket(b,now);return b.toFloat()}
 let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0,viewFov=48;
-let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,uOpacity=null,festivalRenderer=null,worldFestivalRenderer=null,skyRenderer=null,worldBuffer=null,dynamicBuffer=null,rocketBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine'),cameraZoom=1,cameraPitch=0,cameraYaw=0,festivalShow=false,festivalStartedAt=0,rocketCameraActive=false,rocketCameraMode='pad',rocketViewOrigin=null,rocketPriorView=null,industrialOverview=false;
+let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,uOpacity=null,festivalRenderer=null,worldFestivalRenderer=null,skyRenderer=null,worldBuffer=null,dynamicBuffer=null,rocketBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine'),cameraZoom=1,cameraPitch=0,cameraYaw=0,festivalShow=false,festivalStartedAt=0,lastRareBurstKey=null,fireworksAudio=null,rocketCameraActive=false,rocketCameraMode='pad',rocketViewOrigin=null,rocketPriorView=null,industrialOverview=false;
 const vShader=`attribute vec3 aPos;attribute vec3 aNormal;attribute vec3 aColor;uniform mat4 uProjection;uniform mat4 uView;varying vec3 vColor;varying float vDepth;void main(){vec4 p=uView*vec4(aPos,1.0);gl_Position=uProjection*p;float sun=max(0.0,dot(normalize(aNormal),normalize(vec3(0.5,0.92,0.45))));float light=0.76+sun*0.25;vColor=aColor*light;vDepth=length(p.xyz);}`;
 const fShader=`precision mediump float;varying vec3 vColor;varying float vDepth;uniform vec3 uFog;uniform float uBrightness;uniform vec3 uFestivalTint;uniform float uFestivalGlow;uniform float uOpacity;void main(){vec3 c=mix(vColor,uFog,smoothstep(62.0,130.0,vDepth)*0.12);vec3 night=mix(c,c*vec3(0.22,0.34,0.58),clamp(uBrightness,0.0,1.0));gl_FragColor=vec4(clamp(night+uFestivalTint*uFestivalGlow,0.0,1.0),uOpacity);}`;
 function makeShader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error('Shader error: '+gl.getShaderInfoLog(s));return s}
@@ -623,6 +623,18 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
  const lighting=DAYLIGHT.paletteAt(KART.active()?15*60:festivalShow&&!roomActive?22*60+30:state.timeMinutes);
   const fireworksIntensity=festivalShow?1:lighting.stars;
   const festivalClock=festivalShow?Math.max(0,now-festivalStartedAt)+1800:now;
+  if(festivalShow&&!roomActive&&!reducedMotion&&FESTIVAL?.spectacleEventsAt){
+   const special=FESTIVAL.spectacleEventsAt(festivalClock).find(e=>
+    e.spec.kind==='face'&&e.age>=0&&e.age<900);
+   if(special){
+    const key=special.cycle+':'+special.index;
+    if(key!==lastRareBurstKey){
+     lastRareBurstKey=key;
+     showToast('✨ レア花火！ かわいい顔が夜空に咲いた！');
+     playRareChime();
+    }
+   }
+  }
  if($('nightSky')?.style)$('nightSky').style.opacity=roomActive?'0':String(lighting.stars);
  if(ctx2d){drawSoftware(festivalClock,eye,aspect,lighting,center);requestAnimationFrame(render);return;}
  const indoorShade=roomActive?.06:lighting.darkness;
@@ -736,6 +748,29 @@ function saveNow(){
 
 let lastAutoSave=0;
 function showToast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toaster);toaster=setTimeout(()=>el.classList.remove('show'),2900)}
+// Original three-note chime; sound is initialized only after a festival tap.
+function enableRareAudio(){
+ const Audio=window.AudioContext||window.webkitAudioContext;
+ if(!Audio)return;
+ try{
+  if(!fireworksAudio)fireworksAudio=new Audio();
+  if(fireworksAudio.state==='suspended')fireworksAudio.resume().catch(()=>{});
+ }catch(error){console.warn('Firework chime unavailable',error)}
+}
+function playRareChime(){
+ if(!fireworksAudio||fireworksAudio.state!=='running')return;
+ const now=fireworksAudio.currentTime;
+ for(const [i,hz] of [659.25,783.99,1046.5].entries()){
+  const osc=fireworksAudio.createOscillator(),gain=fireworksAudio.createGain();
+  osc.type='sine';osc.frequency.value=hz;
+  osc.connect(gain);gain.connect(fireworksAudio.destination);
+  const start=now+i*.11;
+  gain.gain.setValueAtTime(.0001,start);
+  gain.gain.exponentialRampToValueAtTime(.055,start+.035);
+  gain.gain.exponentialRampToValueAtTime(.0001,start+.38);
+  osc.start(start);osc.stop(start+.40);
+ }
+}
 function save(){try{const snapshot=(indoor.room||indoor.transition)&&indoor.original?{...state,x:indoor.original.x,z:indoor.original.z,angle:indoor.original.angle}:state;localStorage.setItem(KEY,JSON.stringify(snapshot));$('saveStatus').textContent='● セーブ済'}catch{$('saveStatus').textContent='⚠ 保存できません'}}
 function updateRedevelopmentHud(){const p=REDEVELOPMENT.clamp(state.redevelopmentProgress);$('redevelopmentPercent').textContent=p+'%';$('redevelopmentLabel').textContent=p>=100?'🏙️ 新しいマンションが完成！':'🏗️ 島の再開発中 · '+REDEVELOPMENT.stage(p);if($('redevelopmentFill').style)$('redevelopmentFill').style.width=p+'%';$('redevelopmentHud').setAttribute?.('aria-label','島の再開発 '+p+'%・詳細を開く')}
 function updateHud(){ updateClockHud();updateRedevelopmentHud();$('coinPill').textContent='🪙 '+state.coins;if($('islandNamePill'))$('islandNamePill').textContent=state.currentIsland==='commerce'?'🛍️ 商業島・みなと島':'🌿 こもれび島';$('redevelopmentViewBtn').textContent=state.currentIsland==='commerce'?'🏙️':'🏗️';
@@ -1127,9 +1162,9 @@ function bindControls(){KART.bindControls(stopKartRace);const dirs=document.quer
   onGesture:active=>renderQuality?.setInteractive?.(active)
  });
  const festivalButton=$('festivalViewBtn');
- festivalButton.addEventListener('click',()=>{if(indoor.room){showToast('外に出ると花火を見られるよ');return}festivalShow=!festivalShow;if(festivalShow){cameraPitch=-.60;cameraZoom=.78;overviewMode=false;seaLineOverview=false;festivalStartedAt=performance.now();festivalButton.textContent='🎆 花火を終了';showToast('🎆 画面を上下にドラッグで見上げよう！')}else{cameraPitch=0;cameraZoom=1;festivalButton.textContent='🎆 花火を見る'}});
+ festivalButton.addEventListener('click',()=>{if(indoor.room){showToast('外に出ると花火を見られるよ');return}enableRareAudio();lastRareBurstKey=null;festivalShow=!festivalShow;if(festivalShow){cameraPitch=-.60;cameraZoom=.78;overviewMode=false;seaLineOverview=false;festivalStartedAt=performance.now();festivalButton.textContent='🎆 花火を終了';showToast('🎆 画面を上下にドラッグで見上げよう！')}else{cameraPitch=0;cameraZoom=1;festivalButton.textContent='🎆 花火を見る'}});
  const overheadButton=$('fireworksOverheadBtn');
- overheadButton.addEventListener('click',()=>{if(indoor.room){showToast('外に出ると見られるよ');return}festivalShow=true;festivalStartedAt=performance.now();cameraPitch=1.23;cameraZoom=.93;overviewMode=true;seaLineOverview=false;festivalButton.textContent='🎆 花火を終了';showToast('🛰️ 花火を上空から見下ろそう！')});
+ overheadButton.addEventListener('click',()=>{if(indoor.room){showToast('外に出ると見られるよ');return}enableRareAudio();lastRareBurstKey=null;festivalShow=true;festivalStartedAt=performance.now();cameraPitch=1.23;cameraZoom=.93;overviewMode=true;seaLineOverview=false;festivalButton.textContent='🎆 花火を終了';showToast('🛰️ 花火を上空から見下ろそう！')});
  $('fishBack').addEventListener('click',stopFishing);$('roomDialogClose').addEventListener('click',closeRoomDialogue);
  $('startBtn').addEventListener('click',()=>{$('welcomeOverlay').hidden=true;paused=false;state.welcomeSeen=true;save();showToast('🌿 島を探検しよう！')});document.addEventListener('visibilitychange',()=>{if(document.hidden){if(fishing.stage!=='idle')stopFishing();if(watering.active)finishWatering();save()}else{syncRealClock();save()}});window.addEventListener('pageshow',()=>syncRealClock());window.addEventListener('pagehide',save);
 }
