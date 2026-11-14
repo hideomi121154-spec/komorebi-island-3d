@@ -26,6 +26,8 @@ test('HD night effects are injected before the island engine',()=>{
  assert.match(game,/festivalRenderer\.draw\(festivalClock,fireworksIntensity/);
  assert.match(game,/gl\.useProgram\(prog\)/);
  assert.match(game,/FESTIVAL\.burstLighting\(festivalClock,fireworksIntensity\)/);
+ assert.match(game,/showToast\('✨ レア花火！/);
+ assert.match(game,/playRareChime\(\)/);
  assert.match(game,/renderQuality\.ratio\(cssW,cssH/);
  assert.match(game,/FESTIVAL\?\.drawCanvas/);
 });
@@ -134,7 +136,8 @@ test('Festival loop, phone detail scaling and reduced motion are deterministic',
  const ms=1800;
  const first=festival.worldParticles(ms,1,[5,-3]);
  assert.deepEqual(Array.from(first),Array.from(festival.worldParticles(ms,1,[5,-3])));
- assert.deepEqual(Array.from(first),Array.from(festival.worldParticles(ms+festival.SHOW_CYCLE,1,[5,-3])));
+ // Each show has a new rare slot and face; the output remains stable at the same timestamp.
+ assert.deepEqual(Array.from(first),Array.from(festival.worldParticles(ms,1,[5,-3])));
  const low=festival.worldParticles(ms,1,[5,-3],false,.6);
  assert.ok(low.length<first.length&&low.length>0,'lower-end phones render fewer sparks');
  assert.equal(festival.worldParticles(ms,0,[5,-3]).length,0);
@@ -146,8 +149,8 @@ test('Festival loop, phone detail scaling and reduced motion are deterministic',
  assert.match(game,/get\('demo'\)==='fireworks'/);
  assert.match(game,/festivalShow&&!roomActive\?festivalOrigin/);
  assert.match(game,/cameraPitch=1\.23/);
- assert.match(html,/nightfestival\.js\?v=20261112-v25/);
- assert.match(html,/game\.js\?v=(?:20261112-v25|(?:20261113-v(?:2[6789]|3[012345679])|20261114-v4[01]))/);
+ assert.match(html,/nightfestival\.js\?v=20261114-v42/);
+ assert.match(html,/game\.js\?v=(?:20261112-v25|(?:20261113-v(?:2[6789]|3[012345679])|20261114-v4[012]))/);
 });
 
 test('Spark trails form continuous luminous 3D line segments',()=>{
@@ -166,4 +169,42 @@ test('Spark trails form continuous luminous 3D line segments',()=>{
  assert.match(fireworksModule,/gl\.drawArrays\(gl\.LINES/);
  assert.match(fireworksModule,/gl\.drawArrays\(gl\.POINTS/);
  assert.match(fireworksModule,/uniform float uLine/);
+});
+
+test('One in every ten 3D launches is a rare mascot firework, without unlucky streaks',()=>{
+ const types=new Set();
+ const rareSlots=new Set();
+ for(let cycle=0;cycle<90;cycle++){
+  const choices=festival.showPattern.map((spec,index)=>{
+   const active=festival.spectacleEventsAt(cycle*festival.SHOW_CYCLE+spec.at+20);
+   return active.find(e=>e.index===index&&e.age===20);
+  });
+  assert.equal(choices.length,10);
+  assert.equal(choices.filter(e=>e?.spec?.kind==='face').length,1,'one rare in each block of ten');
+  const rare=choices.find(e=>e?.spec?.kind==='face');
+  assert.ok(rare.index>=2&&rare.index<10,'main gold and red spectacles remain');
+  rareSlots.add(rare.index);
+  types.add(rare.spec.faceType);
+  assert.ok(rare.spec.r>=3.5);
+  const a=festival.worldParticles(cycle*festival.SHOW_CYCLE+festival.showPattern[rare.index].at+680,1,[11,-5]);
+  assert.ok(a.length>0&&a.every(Number.isFinite),'rare firework particles must have valid geometry');
+  assert.ok(a.length/8<11000,'phone draw budget remains capped');
+ }
+ assert.ok(rareSlots.size>=5,'rare location varies between shows');
+ assert.deepEqual([...types].sort(),[...festival.FACE_KINDS].sort());
+});
+test('Original round, bunny and cat fireworks have recognizable facial features',()=>{
+ for(const kind of festival.FACE_KINDS){
+  const points=festival.FACE_SHAPES[kind];
+  assert.ok(points.length>170&&points.length<340);
+  assert.ok(points.filter(p=>p.color[1]>.80&&p.color[2]>.9).length>=20,'glowing eyes');
+  assert.ok(points.filter(p=>p.color[0]===1&&p.color[1]<.6).length>=24,'pink cheeks');
+  if(kind==='face-bunny')assert.ok(points.some(p=>p.y< -1.1),'long bunny ears');
+  if(kind==='face-cat')assert.ok(points.some(p=>p.y<-.95),'pointed cat ears');
+  assert.ok(points.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.size>0));
+ }
+ const s=source('nightfestival.js');
+ assert.match(s,/renderFaceTexture\(c,kind\)/);
+ assert.match(s,/spec\.kind==='face'\?spec\.faceType:spec\.kind/);
+ assert.match(s,/gl\.drawArrays\(gl\.TRIANGLE_STRIP,0,4\)/);
 });

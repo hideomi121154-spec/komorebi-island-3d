@@ -148,10 +148,59 @@ const showPattern=[
  {at:3030,x:-4.5,y:23,z:-4,r:2.1,color:[1,.75,.38],rays:82,life:3630,kind:'gold'}
 ];
 const showPalette={gold:[1,.72,.31],red:[1,.23,.32],pink:[1,.30,.72],green:[.38,1,.63]};
+// Exactly one surprise in each group of ten launches, at a seeded random
+// position. This avoids dry spells without inflating the stated 10% frequency.
+const FACE_KINDS=['face-round','face-bunny','face-cat'];
+const faceColors={outline:[1,.93,.72],eye:[.57,.91,1],blush:[1,.46,.65],mouth:[1,.76,.85],spark:[.87,1,.9]};
+function rareAtCycle(cycle){return {slot:2+Math.floor(random(cycle*14033+791)*8),kind:FACE_KINDS[cycle%3]};}
+function faceShape(kind){
+ const pts=[],put=(x,y,c='outline',size=1)=>pts.push({x,y,color:faceColors[c],size});
+ const oval=(x,y,rx,ry,n,c='outline')=>{for(let i=0;i<n;i++){let a=TWO_PI*i/n;put(x+rx*Math.cos(a),y+ry*Math.sin(a),c);}};
+ const line=(ax,ay,bx,by,n,c='outline')=>{for(let i=0;i<=n;i++){let t=i/n;put(ax+(bx-ax)*t,ay+(by-ay)*t,c);}};
+ const bend=(a,b,c,n,color='outline')=>{for(let i=0;i<=n;i++){let t=i/n,u=1-t;put(u*u*a[0]+2*u*t*b[0]+t*t*c[0],u*u*a[1]+2*u*t*b[1]+t*t*c[1],color);}};
+ oval(0,0,.68,.64,94);
+ for(const x of[-.23,.23]){oval(x,-.10,.073,.095,13,'eye');put(x-.02,-.13,'spark',1.7);}
+ for(const x of[-.40,.40])oval(x,.21,.10,.05,13,'blush');
+ bend([-.10,.26],[0,.40],[.10,.26],16,'mouth');
+ if(kind==='face-bunny'){
+  for(const side of[-1,1]){
+   bend([side*.30,-.54],[side*.62,-1.43],[side*.26,-1.31],31);
+   bend([side*.26,-1.31],[side*.09,-1.30],[side*.08,-.60],25);
+   bend([side*.25,-.67],[side*.30,-1.07],[side*.24,-1.17],15,'blush');
+  }
+ }else if(kind==='face-cat'){
+  for(const side of[-1,1]){
+   line(side*.38,-.51,side*.68,-1.00,17);
+   line(side*.68,-1.00,side*.12,-.62,18);
+   line(side*.39,-.67,side*.53,-.84,10,'blush');
+   for(let i=-1;i<=1;i++)line(side*.44,.25+i*.04,side*.80,.23+i*.09,7,'mouth');
+  }
+ }else{for(const side of[-1,1])oval(side*.61,-.46,.11,.11,16,'spark');}
+ for(let i=0;i<20;i++){let a=TWO_PI*i/20,r=1.02+(i%3)*.055;put(Math.cos(a)*r,Math.sin(a)*r*.8,'spark',i%5===0?1.3:.70);}
+ return pts;
+}
+const FACE_SHAPES=Object.fromEntries(FACE_KINDS.map(k=>[k,faceShape(k)]));
+function renderFaceTexture(ctx,kind){
+ ctx.clearRect(0,0,512,512);ctx.save();ctx.translate(256,282);
+ for(const p of FACE_SHAPES[kind]){
+  const rgb=p.color.map(n=>Math.round(n*255)).join(','),x=p.x*178,y=p.y*178;
+  ctx.shadowBlur=11;ctx.shadowColor='rgba('+rgb+',.98)';
+  ctx.fillStyle='rgba('+rgb+',.48)';ctx.beginPath();ctx.arc(x,y,3.0*p.size,0,TWO_PI);ctx.fill();
+  ctx.shadowBlur=3;ctx.fillStyle='rgba(255,255,240,.95)';
+  ctx.beginPath();ctx.arc(x,y,Math.max(.9,1.35*p.size),0,TWO_PI);ctx.fill();
+ }
+ ctx.restore();
+}
+
 function spectacleEventsAt(ms){
- const t=Math.max(0,ms),phase=t%SHOW_CYCLE;
- return showPattern.filter(s=>phase>=s.at-580&&phase<s.at+s.life)
-   .map(s=>({spec:s,age:phase-s.at}));
+ const t=Math.max(0,ms),cycle=Math.floor(t/SHOW_CYCLE),phase=t%SHOW_CYCLE;
+ const rare=rareAtCycle(cycle);
+ return showPattern.flatMap((base,index)=>{
+  if(phase<base.at-580||phase>=base.at+base.life)return [];
+  const spec=index===rare.slot?
+   {...base,r:Math.max(3.5,base.r*1.55),y:Math.max(21,base.y+3.5),color:[1,.91,.78],kind:'face',faceType:rare.kind}:base;
+  return [{spec,age:phase-base.at,index,cycle}];
+ });
 }
 function burstLighting(ms,intensity){
  if(intensity<=.02)return {strength:0,color:[1,.8,.5]};
@@ -200,6 +249,21 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,
     const a=.95*(1-u)*intensity;
     add(centerX+.19*Math.sin(seed+i*1.5+t*3),Math.max(.07,head-dy),centerZ,
       i===0?13:4.0,i%4===0?[1,1,.96]:[1,.72,.35],a);
+   }
+   continue;
+  }
+  if(spec.kind==='face'){
+   const t=clamp(age/spec.life),grow=.32+.68*Math.pow(Math.min(1,t*2.3),.63);
+   const fade=Math.pow(1-t,.65)*intensity;
+   for(const p of FACE_SHAPES[spec.faceType]){
+    // Spark-particle companion to the camera-facing glow texture.
+    add(centerX+p.x*spec.r*grow,spec.y-p.y*spec.r*grow-.8*t*t,centerZ,
+     5.8*p.size,p.color,fade*(.85+.15*Math.sin(age*.008+p.x*31)));
+   }
+   for(let j=0;j<35;j++){
+    const a=TWO_PI*j/35,r=spec.r*(.80+.25*random(seed+j*47))*grow;
+    add(centerX+Math.cos(a)*r,spec.y+Math.sin(a)*r-.8*t*t,
+      centerZ+.35*Math.sin(a*3),3.5,faceColors.spark,fade*.62);
    }
    continue;
   }
@@ -338,6 +402,19 @@ function createBurstBillboards(gl){
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   textures[kind]=texture;
  }
+ // Three small procedural face sprites. No files downloaded, no licensed art.
+ for(const kind of FACE_KINDS){
+  renderFaceTexture(c,kind);
+  const texture=gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D,texture);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,canvas);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  textures[kind]=texture;
+ }
  gl.bindTexture(gl.TEXTURE_2D,null);
  return {
   draw(ms,intensity,origin,view,proj){
@@ -353,10 +430,10 @@ function createBurstBillboards(gl){
    for(const {spec,age} of spectacleEventsAt(ms)){
     if(age<0||age>spec.life)continue;
     const t=clamp(age/spec.life);
-    const grow=.22+.83*Math.pow(Math.min(1,t*1.8),.60);
-    const opacity=intensity*Math.pow(1-t,spec.kind==='gold'?.60:.80)*.86;
+    const grow=spec.kind==='face'?.32+.86*Math.pow(Math.min(1,t*2.1),.60):.22+.83*Math.pow(Math.min(1,t*1.8),.60);
+    const opacity=intensity*Math.pow(1-t,spec.kind==='face'?.58:spec.kind==='gold'?.60:.80)*(spec.kind==='face'?1:.86);
     if(opacity<.025)continue;
-    const radius=spec.r*1.10*grow;
+    const radius=spec.r*(spec.kind==='face'?1.48:1.10)*grow;
     const center=[origin[0]+spec.x,spec.y-(spec.kind==='gold'?3.0:1.6)*t*t,origin[1]+spec.z];
     const vertices=[];
     for(const [ix,iy,u,v] of [[-1,-1,0,0],[1,-1,1,0],[-1,1,0,1],[1,1,1,1]]){
@@ -368,7 +445,7 @@ function createBurstBillboards(gl){
     gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.DYNAMIC_DRAW);
     gl.vertexAttribPointer(pos,3,gl.FLOAT,false,20,0);
     gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);
-    gl.bindTexture(gl.TEXTURE_2D,textures[spec.kind]);
+    gl.bindTexture(gl.TEXTURE_2D,textures[spec.kind==='face'?spec.faceType:spec.kind]);
     gl.uniform1f(opacityLoc,opacity);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
    }
@@ -448,5 +525,5 @@ function drawCanvas(ctx,width,height,ms,intensity,reducedMotion=false){
    fireworks[i+3]*.44,[fireworks[i+4],fireworks[i+5],fireworks[i+6]],fireworks[i+7]);
  ctx.restore();
 }
-window.KomorebiNightFestival={CYCLE,ROCKET_MS,BURST_MS,stars,eventsAt,fireworkAt,makeParticles,burstLighting,createRenderer,drawCanvas,worldParticles,createWorldRenderer,SHOW_CYCLE,showPattern,spectacleEventsAt};
+window.KomorebiNightFestival={CYCLE,ROCKET_MS,BURST_MS,stars,eventsAt,fireworkAt,makeParticles,burstLighting,createRenderer,drawCanvas,worldParticles,createWorldRenderer,SHOW_CYCLE,showPattern,spectacleEventsAt,FACE_KINDS,FACE_SHAPES,rareAtCycle};
 })();
