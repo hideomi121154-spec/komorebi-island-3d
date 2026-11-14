@@ -281,6 +281,12 @@ async function init(){
  if(new URLSearchParams(location.search).get('mode')==='watch')openForecast();
  if(new URLSearchParams(location.search).get('preview')==='watch'){
   openForecast();$('stake').value='0';$('watchBegin').click();
+  // Advance deterministic preview beyond the countdown to verify real AI driving.
+  for(let frame=0;frame<440;frame++)kart.step(.05);
+  const data=kart.getState();
+  for(let frame=0;frame<55;frame++)state.scene.update(data,performance.now()+frame*16,1/60);
+  state.scene.render();miniMap(data);showLivePositions(data);updateUI(data,performance.now());
+  state.last=performance.now();
  }
  if(new URLSearchParams(location.search).get('preview')==='1'){
   startRace();
