@@ -14,8 +14,8 @@ test('invite room codes use cryptographic randomness and exclude confusing lette
  assert.equal(MAX_PLAYERS,8);
 });
 test('chat, nicknames, worlds and player positions reject invalid data',()=>{
- assert.equal(cleanName('<script>guest</script>'),'scriptguest/script');
- assert.equal(cleanChat(' hello  <b>world</b> '),'hello bworld/b');
+ assert.equal(cleanName('<script>guest</script>'),'guest');
+ assert.equal(cleanChat(' hello  <b>world</b> '),'hello world');
  assert.ok(cleanChat('a'.repeat(200)).length<=56);
  assert.deepEqual(limitPosition(WORLDS.THREE_D,1100,-900),{x:28,z:-21});
  assert.equal(limitPosition('unknown',1,2),null);
@@ -57,7 +57,7 @@ test('server follows players across 3D/2D while rejecting arbitrary worlds and c
  room.webSocketMessage(a,JSON.stringify({type:'world',world:'admin'}));
  assert.equal(a.attachment.world,'garden2d');
  room.webSocketMessage(a,JSON.stringify({type:'chat',text:'<b>Hi</b>'}));
- assert.equal(b.messages.at(-1).text,'bHi/b');
+ assert.equal(b.messages.at(-1).text,'Hi');
  const count=b.messages.length;
  room.webSocketMessage(a,JSON.stringify({type:'chat',text:'spam'}));
  assert.equal(b.messages.length,count);
