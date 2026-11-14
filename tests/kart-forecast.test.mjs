@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {initialWallet,readWallet,estimateOdds,makeTicket,placeTicket,settleTicket,selectValid} from '../kart-forecast.mjs';
+import {initialWallet,readWallet,estimateOdds,makeTicket,placeTicket,settleTicket,recoverInterrupted,selectValid} from '../kart-forecast.mjs';
 function storage(){
  const mem=new Map();
  return {getItem:k=>mem.get(k)||null,setItem:(k,v)=>mem.set(k,String(v)),getMem:()=>mem};
@@ -58,4 +58,16 @@ test('invalid finishing order cannot settle a pending entry',()=>{
  assert.throws(()=>settleTicket(st,'pending',[1,1,2,3,4,5,6,7]),/正式な着順/);
  assert.equal(readWallet(st).balance,990);
  assert.equal(readWallet(st).history[0].status,'pending');
+});
+
+test('interrupted prediction refunds once and cannot be settled afterward',()=>{
+ const st=storage(),t=makeTicket({id:'interrupted',grid,type:'win',picks:[4],stake:200,seed:555});
+ placeTicket(st,t);
+ assert.equal(readWallet(st).balance,800);
+ const r=recoverInterrupted(st);
+ assert.equal(r.cancelled,1);
+ assert.equal(r.wallet.balance,1000);
+ assert.equal(recoverInterrupted(st).cancelled,0);
+ assert.equal(settleTicket(st,t.id,[4,1,2,3,5,6,7,8]).ticket.payout,0);
+ assert.equal(readWallet(st).balance,1000);
 });
