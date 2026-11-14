@@ -28,7 +28,8 @@ test('version pinned Three.js with physically based materials and real 3D camera
 });
 test('island map and race physics still drive 7 CPUs, items, drift and laps',()=>{
  assert.match(controller,/kart\.step\(dt\)/);
- assert.match(controller,/kart\.start\(\{playerAtBack:true\}\)/);
+ assert.match(controller,/playerAtBack:true,spectator:true/);
+ assert.match(controller,/\{playerAtBack:true\}/);
  assert.match(controller,/kart\.getState\(\)/);
  assert.match(controller,/kart\.useItem\(\)/);
  assert.match(controller,/kart\.setInput/);
