@@ -6,7 +6,7 @@
  <meta name="theme-color" content="#0f5268">
  <meta name="description" content="こもれび群島グランプリ — 専用3Dエンジンで遊ぶオリジナルのカートレース。">
  <title>こもれび GRAND PRIX | 新3Dレース</title>
- <link rel="stylesheet" href="kart-next.css?v=20261113-a1">
+ <link rel="stylesheet" href="kart-next.css?v=20261114-b1">
  <script type="importmap">
  {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"}}
  </script>
@@ -20,10 +20,32 @@
      <h1>こもれび <em>GRAND PRIX</em></h1>
      <p>新しい3Dエンジン、光と影、海上サーキット。オリジナルのカートで走ろう！</p>
      <div id="loadMessage" role="status">レース会場を準備しています…</div>
-     <button id="startRace" disabled>🏁 レースを始める</button>
+     <button id="startRace" disabled>🏎️ 自分でレースに参加</button>
+     <button id="watchRace" class="watch-entry" disabled>🎟️ 観戦して着順を予想</button>
+     <small class="medal-note">予想メダルはゲーム専用。現金・購入・換金・譲渡なし。</small>
      <a href="./index.html" class="sub-link">島に戻る</a>
     </div>
   </div>
+  <section id="forecastOverlay" class="forecast-overlay" hidden aria-label="観戦と予想を選ぶ">
+   <div class="forecast-card">
+    <div class="forecast-title"><span>🎟️ GRAND PRIX FORECAST</span><button id="forecastClose" type="button">✕ 閉じる</button></div>
+    <h2>出走表・レース予想</h2>
+    <p class="preview-disclaimer">8台のCPUが走ります。現金の賭けではなく、ゲーム内メダルだけの予想です。予想せず観戦もできます。</p>
+    <div class="forecast-wallet">所持メダル <strong id="medalBalance">1,000</strong> B <span>無料・換金不可</span></div>
+    <div id="raceLineup" class="race-lineup" aria-label="8台の出走表"></div>
+    <div class="forecast-bet-controls">
+     <label>券種<select id="betType"><option value="win">単勝（1着を当てる）</option><option value="place">複勝（3着以内）</option><option value="exacta">2連単（1着→2着）</option><option value="trifecta">3連単（1着→2着→3着）</option></select></label>
+     <label>1着／選択<select id="pick1"></select></label>
+     <label id="pick2Label" hidden>2着<select id="pick2"></select></label>
+     <label id="pick3Label" hidden>3着<select id="pick3"></select></label>
+     <label>使用メダル<select id="stake"><option value="0">0枚（無料観戦）</option><option value="10">10枚</option><option value="50">50枚</option><option value="100">100枚</option><option value="200">200枚</option></select></label>
+    </div>
+    <p id="oddsPreview" class="odds-preview">予想倍率を計算中…</p>
+    <p id="forecastError" role="alert"></p>
+    <button id="watchBegin" class="watch-primary">🏁 予想を確定して観戦開始</button>
+    <div class="history"><h3>📰 最近の予想・払戻</h3><div id="betHistory">まだ予想はありません</div></div>
+   </div>
+  </section>
   <div id="hud" hidden>
    <header class="race-hud">
     <div class="title-group"><span class="eyebrow">KOMOREBI GRAND PRIX / PREVIEW 01</span><strong id="raceCall">🏁 READY?</strong></div>
@@ -31,6 +53,7 @@
    </header>
    <aside class="race-actions"><button id="auto" type="button">🚗 オート加速 ON</button><button id="quality" type="button">画質：自動</button><a href="./index.html" aria-label="こもれび島へ戻る">🏝️ 島に戻る</a></aside>
    <canvas id="trackMap" width="176" height="154" aria-label="レースコースのミニマップ"></canvas>
+   <div id="spectatorBoard" class="spectator-board" hidden><strong>📺 AIレース中継</strong><div id="livePositions"></div><button id="spectatorCamera" type="button">📷 全体俯瞰に切替</button><p>レース中に予想券は変更できません</p></div>
    <div class="toast" id="message" role="status"></div>
    <section class="pad" aria-label="操作ボタン">
     <div class="steer">
@@ -44,12 +67,12 @@
      <button id="rescue" type="button">↩ 復帰</button>
     </div>
    </section>
-   <div id="finishScreen" class="finish-screen" hidden><div class="finish-card"><h2>🏆 FINISH!</h2><p id="finishResult"></p><button id="restart">もう一度走る</button><a href="./index.html">島へ戻る</a></div></div>
+   <div id="finishScreen" class="finish-screen" hidden><div class="finish-card"><h2>🏆 FINISH!</h2><p id="finishResult"></p><p id="resultPayout" class="result-payout" hidden></p><button id="restart">もう一度走る</button><a href="./index.html">島へ戻る</a></div></div>
   </div>
   <div class="errors" id="fatal" hidden role="alert"><p id="fatalText">3Dを起動できませんでした。</p><a href="./index.html?demo=kart">以前の軽量版レースを開く</a></div>
  </main>
  <script src="expansion3d.js?v=20261112-v23" defer></script>
  <script src="kart3d.js?v=20261113-v39" defer></script>
- <script type="module" src="kart-next.js?v=20261113-a1"></script>
+ <script type="module" src="kart-next.js?v=20261114-b1"></script>
 </body>
 </html>
