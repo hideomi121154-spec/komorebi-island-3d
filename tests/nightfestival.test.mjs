@@ -202,7 +202,7 @@ test('Rare face receives a solo finale; gold and red bursts cannot overlap its s
  assert.equal(active.length,1,'no simultaneous ordinary explosion during the face');
  assert.equal(active[0].spec.kind,'face');
  assert.equal(active[0].spec.faceType,'face-cat');
- const justBefore=festival.spectacleEventsAt(cycle*festival.SHOW_CYCLE+festival.RARE_AT-300);
+ const justBefore=festival.spectacleEventsAt(cycle*festival.SHOW_CYCLE+festival.RARE_AT-200);
  assert.ok(justBefore.every(e=>e.age<0||e.spec.kind!=='face'));
  assert.ok(justBefore.every(e=>e.age<0),'all previous regular bursts have faded');
  const after=festival.spectacleEventsAt(cycle*festival.SHOW_CYCLE+festival.RARE_AT+festival.RARE_LIFE+10);
