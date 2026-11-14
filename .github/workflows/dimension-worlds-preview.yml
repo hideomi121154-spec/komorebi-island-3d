@@ -1,0 +1,62 @@
+name: 2D x 3D dimension mobile preview
+on:
+  pull_request:
+    paths:
+      - 'dimension-*'
+      - 'multiplayer/**'
+      - 'tests/dimension-*'
+      - '.github/workflows/dimension-worlds-preview.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'dimension-*'
+      - 'multiplayer/**'
+      - '.github/workflows/dimension-worlds-preview.yml'
+permissions:
+  contents: read
+jobs:
+  portrait:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Provide Japanese UI fonts and local static hosting
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk
+          python3 -m http.server 8766 --bind 127.0.0.1 >/tmp/dim-http.log 2>&1 &
+          sleep 2
+      - name: Open 3D square and 2D pixel garden on mobile Chrome
+        shell: bash
+        run: |
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME" ]; then echo 'Chrome unavailable'; exit 1; fi
+          BASE='http://127.0.0.1:8766/dimension-hub.html'
+          for mode in dimensions3d dimensions2d; do
+            "$CHROME" --headless --no-sandbox --disable-dev-shm-usage --enable-webgl --enable-unsafe-swiftshader --use-angle=swiftshader \
+              --window-size=390,844 --virtual-time-budget=10000 --dump-dom \
+              "$BASE?demo=$mode" > "$RUNNER_TEMP/$mode.html" 2>"/tmp/$mode.log"
+            expected=plaza3d
+            if [ "$mode" = 'dimensions2d' ]; then expected=garden2d; fi
+            if ! grep -q "data-dimension=\"$expected\"" "$RUNNER_TEMP/$mode.html"; then
+              echo "$mode did not initialize as $expected"
+              grep -E 'data-dimension|worldName|dimension3d' "$RUNNER_TEMP/$mode.html" | head -8
+              tail -45 "/tmp/$mode.log"
+              exit 1
+            fi
+            "$CHROME" --headless --no-sandbox --disable-dev-shm-usage --enable-webgl --enable-unsafe-swiftshader --use-angle=swiftshader \
+              --hide-scrollbars --window-size=390,844 --virtual-time-budget=8000 \
+              "--screenshot=$RUNNER_TEMP/$mode.png" "$BASE?demo=$mode"
+            test -s "$RUNNER_TEMP/$mode.png"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: komorebi-dimension-3d-2d-iphone-preview
+          path: |
+            ${{ runner.temp }}/dimensions3d.png
+            ${{ runner.temp }}/dimensions2d.png
+            ${{ runner.temp }}/dimensions3d.html
+            ${{ runner.temp }}/dimensions2d.html
+          retention-days: 5
+          if-no-files-found: ignore
