@@ -491,7 +491,7 @@ function drawSoftware(now,eye,aspect,lighting,centerOverride){
  const perspectiveX=1/Math.tan(viewFov*.5*Math.PI/180)/aspect;
  const perspectiveY=1/Math.tan(viewFov*.5*Math.PI/180);
  const triangles=[];
- function process(data,start=0,end=data.length){for(let i=start;i<end;i+=27){
+ function process(data,start=0,end=data.length,opacity=1){for(let i=start;i<end;i+=27){
   let tri=[],depth=0,skip=false;
   for(let j=0;j<3;j++){
    let k=i+j*9,x=data[k],y=data[k+1],z=data[k+2];
@@ -506,9 +506,9 @@ function drawSoftware(now,eye,aspect,lighting,centerOverride){
   const nx=data[i+3],ny=data[i+4],nz=data[i+5],lit=.76+.25*Math.max(0,(nx*.5+ny*.92+nz*.45)/1.145);
   const dark=indoor.room?.07:lighting.darkness;
    let rgb=[Math.round(clamp(data[i+6]*lit*255*(1-.78*dark),0,255)),Math.round(clamp(data[i+7]*lit*255*(1-.64*dark),0,255)),Math.round(clamp(data[i+8]*lit*255*(1-.43*dark),0,255))];
-  triangles.push({depth:depth/3,tri,c:'rgb('+rgb.join(',')+')'});
+  triangles.push({depth:depth/3,tri,c:'rgb('+rgb.join(',')+')',opacity});
  }}
- const paint=()=>{triangles.sort((a,b)=>b.depth-a.depth);for(let v of triangles){const t=v.tri;ctx.beginPath();ctx.moveTo(t[0],t[1]);ctx.lineTo(t[2],t[3]);ctx.lineTo(t[4],t[5]);ctx.closePath();ctx.fillStyle=v.c;ctx.fill();}triangles.length=0};
+ const paint=()=>{triangles.sort((a,b)=>b.depth-a.depth);for(let v of triangles){const t=v.tri;ctx.beginPath();ctx.moveTo(t[0],t[1]);ctx.lineTo(t[2],t[3]);ctx.lineTo(t[4],t[5]);ctx.closePath();ctx.fillStyle=v.c;ctx.globalAlpha=v.opacity;ctx.fill();}ctx.globalAlpha=1;triangles.length=0};
  // Same 3D projection for indoor scenes when WebGL is unavailable.
  if(indoor.room){process(indoor.mesh,0,indoor.floor*9);paint();process(indoor.mesh,indoor.floor*9);process(buildDynamic(now));paint();return}
  // Terrain is always behind objects: avoids the painter's-algorithm wedge artifact.
@@ -516,7 +516,10 @@ function drawSoftware(now,eye,aspect,lighting,centerOverride){
  process(softwareWorld,softwareSeaCount*9,softwareSandCount*9);paint();
  process(softwareWorld,softwareSandCount*9,softwareTerrainCount*9);paint();
  process(softwareWorld,softwareTerrainCount*9,softwareGroundCount*9);paint();
- process(softwareWorld,softwareGroundCount*9);process(buildDynamic(now));paint();
+ process(softwareWorld,softwareGroundCount*9);process(buildDynamic(now,false));
+ const ship=buildRocketDynamic(now),alpha=SPACE.phase(now).opacity;
+ if(alpha>0&&ship.length)process(ship,0,ship.length,alpha);
+ paint();
 }
 function resize(){const cssW=Math.max(1,canvas.clientWidth||window.innerWidth||360),cssH=Math.max(1,canvas.clientHeight||window.innerHeight||720);const dpr=ctx2d?1:(renderQuality?renderQuality.ratio(cssW,cssH,window.devicePixelRatio||1):Math.min(window.devicePixelRatio||1,1.7));const width=Math.floor(cssW*dpr),height=Math.floor(cssH*dpr);if(canvas.width!==width||canvas.height!==height){canvas.width=Math.max(1,width);canvas.height=Math.max(1,height)}if(gl)gl.viewport(0,0,canvas.width,canvas.height)}
 let playerFacing=Math.PI,previous=0,npcGiftToday=false,gestures=null;
@@ -628,6 +631,7 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
  if(!roomActive&&skyRenderer)skyRenderer.draw(lighting.top,lighting.horizon);
  if(!roomActive&&festivalRenderer)festivalRenderer.draw(festivalClock,fireworksIntensity,canvas.width/Math.max(1,canvas.clientWidth||1),reducedMotion);
  gl.useProgram(prog);
+ gl.uniform1f(uOpacity,1);
  gl.uniformMatrix4fv(uView,false,lookAt(eye,center,[0,1,0]));
  gl.uniformMatrix4fv(uProj,false,perspective(viewFov*Math.PI/180,aspect,.1,220));
  gl.uniform3f(uFog,...(roomActive?[.89,.80,.68]:lighting.fog));
@@ -637,7 +641,21 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
  gl.uniform1f(uFestivalGlow,festivalLight?.strength||0);
  bindGeometry(roomActive?indoor.buffer:worldBuffer);
  gl.drawArrays(gl.TRIANGLES,0,roomActive?indoor.count:worldVerts);
- const d=buildDynamic(now);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,d,gl.DYNAMIC_DRAW);bindGeometry(dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,d.length/9);
+ const d=buildDynamic(now,false);
+ gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,d,gl.DYNAMIC_DRAW);
+ bindGeometry(dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,d.length/9);
+ // Separate transparent rocket pass; smoke, village and launch tower stay opaque.
+ const shipOpacity=SPACE.phase(now).opacity;
+ if(shipOpacity>0){
+  const ship=buildRocketDynamic(now);
+  if(ship.length){
+   gl.bindBuffer(gl.ARRAY_BUFFER,rocketBuffer);gl.bufferData(gl.ARRAY_BUFFER,ship,gl.DYNAMIC_DRAW);
+   bindGeometry(rocketBuffer);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+   gl.depthMask(false);gl.uniform1f(uOpacity,shipOpacity);
+   gl.drawArrays(gl.TRIANGLES,0,ship.length/9);
+   gl.depthMask(true);gl.disable(gl.BLEND);gl.uniform1f(uOpacity,1);
+  }
+ }
  if(!roomActive&&worldFestivalRenderer){const launchOrigin=state.currentIsland==='commerce'?[52,-4]:[11,-5];worldFestivalRenderer.draw(festivalClock,fireworksIntensity,launchOrigin,lookAt(eye,center,[0,1,0]),perspective(viewFov*Math.PI/180,aspect,.1,220),canvas.width/Math.max(1,canvas.clientWidth||1),reducedMotion)}
  requestAnimationFrame(render)}
 
