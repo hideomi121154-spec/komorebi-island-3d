@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#144d59">
+<meta name="description" content="こもれび島の3Dと2Dを自由に行き来する、オリジナルの交流エリア。">
+<title>🌈 こもれび異世界ひろば | 3D × 2D</title>
+<link rel="stylesheet" href="dimension-hub.css?v=20261114-a1">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js"}}</script>
+</head>
+<body>
+<div id="dimensionApp">
+ <canvas id="dimension3d" aria-label="3Dのこもれび交流広場"></canvas>
+ <canvas id="dimension2d" aria-label="2Dのこもれびガーデン" hidden></canvas>
+ <div id="sceneFade" aria-hidden="true"></div>
+ <header class="world-top">
+  <div class="world-brand"><span class="brand-icon">🌈</span><span><strong>こもれび異世界ひろば</strong><small id="worldName">3D・星の交流広場</small></span></div>
+  <div class="world-status"><span id="connectionStatus" class="status-chip">◯ オフライン体験</span><span id="onlineCount" class="count-chip">1人</span></div>
+ </header>
+ <div class="top-links"><a href="./index.html" class="island-back">🏝️ 島へ戻る</a><button id="toggleWorld" type="button">🚪 2Dの世界へ</button><button id="openFriends" type="button">👥 友達と遊ぶ</button></div>
+ <div id="helpMessage" class="world-hint">🌟 星の門に近づいて「世界を切替」を押そう！</div>
+ <div id="minigameHud" class="minigame-hud" hidden>🌼 集めた花びら <strong id="petals">0</strong> / 8</div>
+ <div id="chatFeed" class="chat-feed" role="log" aria-live="polite" aria-label="プレイヤーの会話"></div>
+ <section class="control-bar" aria-label="移動操作">
+  <div class="movement" aria-label="十字キー">
+   <button class="dir up" data-move="up" aria-label="上に移動">▲</button>
+   <button class="dir left" data-move="left" aria-label="左に移動">◀</button>
+   <button class="dir right" data-move="right" aria-label="右に移動">▶</button>
+   <button class="dir down" data-move="down" aria-label="下に移動">▼</button>
+  </div>
+  <div class="world-actions">
+   <button id="portalAction" type="button">🚪 世界を切替</button>
+   <button id="emoteButton" type="button">👋 あいさつ</button>
+   <button id="chatToggle" type="button">💬 会話</button>
+  </div>
+ </section>
+ <form id="chatForm" class="chat-form" hidden autocomplete="off">
+  <label for="chatInput">みんなに話しかける</label><div><input id="chatInput" maxlength="56" placeholder="こんにちは！" autocomplete="off"><button type="submit">送信</button></div>
+ </form>
+ <aside id="friendsPanel" class="friends-panel" hidden aria-label="友達と遊ぶ">
+  <div class="panel-heading"><strong>👥 友達と遊ぶ</strong><button id="closeFriends" type="button" aria-label="閉じる">✕</button></div>
+  <p id="friendsExplain">招待コードで同じ部屋に入ろう。まずは一人でも3D・2Dを探検できるよ。</p>
+  <label for="playerName">なまえ（14文字以内）</label>
+  <input id="playerName" maxlength="14" placeholder="たびびと" autocomplete="nickname">
+  <label for="roomCode">おへやの合言葉（6文字）</label>
+  <div class="room-entry"><input id="roomCode" maxlength="6" autocapitalize="characters" spellcheck="false" aria-label="6文字の招待コード"><button id="newRoom" type="button">新しく作る</button></div>
+  <div class="invite-actions"><button id="connectRoom" type="button">🌐 この部屋に入る</button><button id="copyRoom" type="button">🔗 招待URLをコピー</button></div>
+  <p id="networkNotice" class="network-notice"></p>
+  <div id="roomPlayers" class="room-players"><strong>入室中の人</strong><div id="playerList">自分だけ（オフライン）</div></div>
+  <small>※招待コードを知る人が参加できます。会話は公開しないでね。島の個人セーブは共有されません。</small>
+ </aside>
+ <div id="startWelcome" class="welcome-screen">
+  <div class="welcome-card">
+   <span class="welcome-icon">🌈</span>
+   <div class="eyebrow">KOMOREBI DIMENSION GATE</div>
+   <h1>3Dから2Dへ。<br>世界を飛び越えよう。</h1>
+   <p>3Dの交流広場を歩いて、絵本のような2Dガーデンへ。友達と一緒に冒険できる世界を育てていこう！</p>
+   <div class="intro-tags"><span>🏙️ 3Dの広場</span><span>🌼 2Dの花びら探し</span><span>👥 招待ルーム</span></div>
+   <button id="enterWorld" type="button">✨ 世界を探検する</button>
+   <small>オンラインサーバー未設定でも、一人用の体験版は遊べます。</small>
+  </div>
+ </div>
+</div>
+<script src="dimension-config.js?v=20261114-a1"></script>
+<script type="module" src="dimension-hub.js?v=20261114-a1"></script>
+</body>
+</html>

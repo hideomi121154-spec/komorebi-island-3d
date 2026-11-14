@@ -42,5 +42,12 @@ jobs:
           node --check kart-next-scene.js
           node --check sealine3d.js
           node --check expansion3d.js
+      - name: Verify 3D/2D dimension worlds and multiplayer server syntax
+        run: |
+          node --check dimension-hub.js
+          node --check dimension-art2d.mjs
+          node --check dimension-scene3d.mjs
+          node --check dimension-protocol.mjs
+          node --check multiplayer/worker.mjs
       - name: Run smoke tests
         run: node --test tests/*.test.mjs
