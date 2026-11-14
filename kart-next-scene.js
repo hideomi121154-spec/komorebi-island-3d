@@ -287,8 +287,8 @@ export async function createRaceView(kart,canvas){
    flag.rotation.z=Math.sin(now*.004+index)*.13;
   });
   clouds.forEach(c=>{c.group.position.x+=dt*(.15+(c.index%5)*.06);if(c.group.position.x>170)c.group.position.x=-123;});
-  const actors=[state.player,...state.opponents];
-  const focus=spectatorCamera==='drive'?state.player:actors.reduce((a,b)=>a.distance>b.distance?a:b);
+  const contenders=[state.player,...state.opponents];
+  const focus=spectatorCamera==='drive'?state.player:contenders.reduce((a,b)=>a.distance>b.distance?a:b);
   const speed=Math.max(0,focus.speed||0);
   // Broadcast camera tracks the actual leading racer rather than the viewer.
   const behind=kart.at(focus.distance-(spectatorCamera==='drive'?9.5:16));
