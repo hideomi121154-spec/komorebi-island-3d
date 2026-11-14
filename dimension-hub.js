@@ -114,6 +114,7 @@ function switchWorld(next){
  window.setTimeout(()=>{
   world=next&&next!==world?next:(world===WORLDS.THREE_D?WORLDS.TWO_D:WORLDS.THREE_D);
   player.world=world;player.x=SPAWN[world].x;player.z=SPAWN[world].z;
+  document.documentElement.dataset.dimension=world;
   if(world===WORLDS.TWO_D)collected=new Set();
   const two=world===WORLDS.TWO_D;
   $('dimension3d').hidden=two;$('dimension2d').hidden=!two;
@@ -172,9 +173,11 @@ async function enter(){
  try{
   const {createDimension3D}=await import('./dimension-scene3d.mjs?v=20261114-a1');
   world3d=createDimension3D($('dimension3d'));
+  document.documentElement.dataset.dimension=WORLDS.THREE_D;
  }catch(error){
   console.error(error);
   world=WORLDS.TWO_D;player.world=world;player.x=0;player.z=3;
+  document.documentElement.dataset.dimension=WORLDS.TWO_D;
   $('dimension3d').hidden=true;$('dimension2d').hidden=false;
   $('worldName').textContent='2D・花びらのガーデン';
   $('toggleWorld').textContent='3D（読込失敗）';
