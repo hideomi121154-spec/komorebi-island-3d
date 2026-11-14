@@ -97,14 +97,20 @@ function facility(b){
 const oldObjects=E.objects;
 E.objects=b=>{oldObjects(b);facility(b);};
 let startedAt=-1;
-const COUNTDOWN=6000,FLIGHT=17500,RESET=28000;
+// After take-off the fuselage fades smoothly into the high sky (8–12 seconds).
+// Leave a short victory hold, then release the camera and prepare another launch.
+const COUNTDOWN=6000,FADE_START=8000,FADE_DURATION=4000;
+const FLIGHT=FADE_START+FADE_DURATION,RESET=COUNTDOWN+FLIGHT+2500;
+const smoothstep=t=>{const v=Math.min(1,Math.max(0,t));return v*v*(3-2*v);};
 function phase(now){
- if(startedAt<0)return {active:false,countdown:0,lift:0,label:'発射準備完了'};
+ if(startedAt<0)return {active:false,countdown:0,lift:0,opacity:1,label:'発射準備完了'};
  const t=Math.max(0,now-startedAt);
- if(t>=RESET){startedAt=-1;return {active:false,countdown:0,lift:0,label:'発射準備完了'};}
- if(t<COUNTDOWN)return{active:true,countdown:Math.max(1,Math.ceil((COUNTDOWN-t)/1000)),lift:0,label:'発射まで '+Math.ceil((COUNTDOWN-t)/1000)+' 秒'};
+ if(t>=RESET){startedAt=-1;return {active:false,countdown:0,lift:0,opacity:1,label:'発射準備完了'};}
+ if(t<COUNTDOWN)return{active:true,countdown:Math.max(1,Math.ceil((COUNTDOWN-t)/1000)),lift:0,opacity:1,label:'発射まで '+Math.ceil((COUNTDOWN-t)/1000)+' 秒'};
  const flight=(t-COUNTDOWN)/1000;
- return{active:true,countdown:0,lift:Math.min(110,flight*flight*.72),label:flight<FLIGHT/1000?'ロケット上昇中！':'打ち上げ成功！'};
+ const opacity=1-smoothstep(((t-COUNTDOWN)-FADE_START)/FADE_DURATION);
+ return {active:true,countdown:0,lift:Math.min(110,flight*flight*.72),
+  opacity,label:opacity>0?'ロケット上昇中！':'打ち上げ成功！'};
 }
 function startLaunch(now){
  if(phase(now).active)return false;
@@ -154,8 +160,8 @@ function drawLaunchSmoke(b,now,elapsed,lift){
 }
 function rocket(b,now){
  const p=phase(now),elapsed=startedAt<0?0:now-startedAt;
- const hidden=p.active&&elapsed>COUNTDOWN+FLIGHT;
- if(hidden){drawLaunchSmoke(b,now,elapsed,p.lift);return;}
+ // Do not construct or render invisible rocket triangles after 100% fade.
+ if(p.opacity<=0)return;
  const x=pad.x,y=p.lift,z=pad.z;
  // Single central fuselage, two side boosters, nosecone and four fins.
  b.cylinder(x,6.35+y,z,.92,10.65,14,'#faf8ed');
@@ -184,7 +190,6 @@ function rocket(b,now){
   b.cylinder(x,1.25+y-flame*.60,z,.58,flame*1.95,12,'#f39c45',.08);
   b.cylinder(x,1.0+y-flame*.70,z,.32,flame*1.55,12,'#ffe39a',.025);
  }
- if(p.active)drawLaunchSmoke(b,now,elapsed,p.lift);
 }
 // A high cloud bank parts as the rocket reaches the sky.
 // Keep the count bounded: low-poly billows instead of expensive particles.
@@ -210,6 +215,16 @@ function drawCloudBreak(b,now){
    .6+progress*.7,.55,.85,'#f9f7ef',4,5);
  }
 }
-function drawDynamic(b,now){rocket(b,now);drawCloudBreak(b,now);}
-window.KomorebiSpaceport={bounds,pad,marker,hangar,viewpoint,phase,startLaunch,drawDynamic,isActive:now=>phase(now).active,reset:()=>{startedAt=-1;}};
+function drawAtmosphere(b,now){
+ const p=phase(now);
+ if(!p.active)return;
+ const elapsed=startedAt<0?0:now-startedAt;
+ // Smoke lingers independently after the ship has fully vanished.
+ drawLaunchSmoke(b,now,elapsed,p.lift);
+ drawCloudBreak(b,now);
+}
+function drawDynamic(b,now){drawAtmosphere(b,now);rocket(b,now);}
+window.KomorebiSpaceport={bounds,pad,marker,hangar,viewpoint,phase,startLaunch,
+ drawDynamic,drawAtmosphere,drawRocket:rocket,
+ isActive:now=>phase(now).active,reset:()=>{startedAt=-1;}};
 })();
