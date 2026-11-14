@@ -181,7 +181,7 @@ function openForecast(){
   const el=document.createElement('div');el.className='racer-row';
   const num=document.createElement('span');num.className='racer-number';num.style.setProperty('--driver-color',DRIVER_COLORS[entry.number-1]);num.textContent=entry.number;
   const desc=document.createElement('div');const name=document.createElement('strong');name.textContent=entry.name;
-  const meta=document.createElement('small');meta.className='racer-meta';meta.textContent='速さ ★'+entry.speed.toFixed(1)+' / 操作性 '+('★'.repeat(entry.handling));
+  const meta=document.createElement('small');meta.className='racer-meta';meta.textContent='速度指数 '+entry.speed.toFixed(1)+' / 操作性 '+('★'.repeat(entry.handling))+' / 調子 '+('★'.repeat(entry.form));
   desc.append(name,meta);el.append(num,desc);box.appendChild(el);
  }
  for(const [i,id] of ['pick1','pick2','pick3'].entries())fillSelect($(id),state.spectatorGrid,i+1);
