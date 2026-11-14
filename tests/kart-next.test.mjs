@@ -7,7 +7,7 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const file=name=>readFileSync(resolve(root,name),'utf8');
 const html=file('kart-next.html'),scene=file('kart-next-scene.js'),controller=file('kart-next.js'),home=file('game.js'),css=file('kart-next.css');
 test('dedicated 3D engine is separate from legacy island graphics and retains saved island',()=>{
- assert.match(html,/src="kart3d\.js\?v=20261113-v39"/);
+ assert.match(html,/src="kart3d\.js\?v=20261114-b1"/);
  assert.match(html,/src="expansion3d\.js/);
  assert.match(home,/window\.location\.href='\.\/kart-next\.html'/);
  assert.match(home,/旧・軽量版で遊ぶ/);
