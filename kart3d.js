@@ -386,7 +386,7 @@ function step(dt){
    const actor=actors[i],entry=race.grid[i],k=actor.distance;
    const swing=1+.048*Math.sin(race.elapsed*(.65+i*.11)+i*1.17+race.seed%13);
    const bend=Math.cos(k*.045+i*.73)*.025*(6-entry.handling);
-   actor.speed=entry.speed*(swing-bend);
+   actor.speed=entry.speed*(1+(entry.form-3.5)*.009)*(swing-bend);
    actor.distance+=Math.max(5,actor.speed)*dt;
    const pos=at(actor.distance),lane=(i%3-1)*.83;
    actor.x=pos.x+Math.cos(pos.yaw)*lane;
