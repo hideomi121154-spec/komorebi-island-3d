@@ -304,7 +304,7 @@ export async function createRaceView(kart,canvas){
   camera.position.lerp(target,alpha);
   camera.lookAt(look);
   camera.fov=spectatorCamera==='overhead'?65:spectatorCamera==='leader'?72:66+Math.min(8,speed*.30);camera.updateProjectionMatrix();
-  sun.position.set(p.x-35,66,p.z+35);sun.target.position.set(p.x,0,p.z);sun.target.updateMatrixWorld();
+  sun.position.set(focus.x-35,66,focus.z+35);sun.target.position.set(focus.x,0,focus.z);sun.target.updateMatrixWorld();
  }
  function render(){if(active)renderer.render(scene,camera);}
  function dispose(){active=false;renderer.dispose();window.removeEventListener('resize',resize);}
