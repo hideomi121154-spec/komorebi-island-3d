@@ -52,6 +52,23 @@ jobs:
             'http://127.0.0.1:8765/kart-next.html?preview=1'
           test -s "$RUNNER_TEMP/grand-prix-mobile.png"
           file "$RUNNER_TEMP/grand-prix-mobile.png"
+      - name: Confirm 8-AI spectator broadcast opens on mobile
+        shell: bash
+        run: |
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          "$CHROME" --headless --no-sandbox --disable-dev-shm-usage --enable-webgl --enable-unsafe-swiftshader --use-angle=swiftshader \
+            --window-size=390,844 --virtual-time-budget=11000 --dump-dom \
+            'http://127.0.0.1:8765/kart-next.html?preview=watch' > "$RUNNER_TEMP/watch-dom.html" 2>/tmp/watch-chrome.log
+          grep -q 'data-kart3d="running"' "$RUNNER_TEMP/watch-dom.html" || {
+            echo 'Spectator race did not launch'
+            tail -60 /tmp/watch-chrome.log
+            exit 1
+          }
+          "$CHROME" --headless --no-sandbox --disable-dev-shm-usage --enable-webgl --enable-unsafe-swiftshader --use-angle=swiftshader \
+            --hide-scrollbars --window-size=390,844 --virtual-time-budget=7800 \
+            "--screenshot=$RUNNER_TEMP/grand-prix-watch-mobile.png" \
+            'http://127.0.0.1:8765/kart-next.html?preview=watch'
+          test -s "$RUNNER_TEMP/grand-prix-watch-mobile.png"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -59,5 +76,7 @@ jobs:
           path: |
             ${{ runner.temp }}/grand-prix-mobile.png
             ${{ runner.temp }}/kart-dom.html
+            ${{ runner.temp }}/watch-dom.html
+            ${{ runner.temp }}/grand-prix-watch-mobile.png
           if-no-files-found: ignore
           retention-days: 5
