@@ -52,6 +52,11 @@ jobs:
             'http://127.0.0.1:8765/kart-next.html?preview=1'
           test -s "$RUNNER_TEMP/grand-prix-mobile.png"
           file "$RUNNER_TEMP/grand-prix-mobile.png"
+          "$CHROME" --headless --no-sandbox --disable-dev-shm-usage --enable-webgl --enable-unsafe-swiftshader --use-angle=swiftshader \
+            --hide-scrollbars --window-size=390,844 --virtual-time-budget=9500 \
+            "--screenshot=$RUNNER_TEMP/grand-prix-forecast.png" \
+            'http://127.0.0.1:8765/kart-next.html?mode=watch'
+          test -s "$RUNNER_TEMP/grand-prix-forecast.png"
       - name: Confirm 8-AI spectator broadcast opens on mobile
         shell: bash
         run: |
@@ -78,5 +83,6 @@ jobs:
             ${{ runner.temp }}/kart-dom.html
             ${{ runner.temp }}/watch-dom.html
             ${{ runner.temp }}/grand-prix-watch-mobile.png
+            ${{ runner.temp }}/grand-prix-forecast.png
           if-no-files-found: ignore
           retention-days: 5
