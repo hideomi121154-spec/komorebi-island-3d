@@ -44,11 +44,23 @@ export function placeTicket(storage,ticket){
  w.history.push({...ticket});
  writeWallet(storage,w);return w;
 }
+export function recoverInterrupted(storage){
+ // On a browser reload the unfinished race cannot be reconstructed reliably.
+ // Cancel its virtual ticket and restore virtual coins once, not repeatedly.
+ const w=readWallet(storage);
+ let count=0;
+ for(const t of w.history)if(t.status==='pending'){
+  t.status='cancelled';t.payout=0;t.finishOrder=[];
+  w.balance+=t.stake;count++;
+ }
+ if(count)writeWallet(storage,w);
+ return {wallet:w,cancelled:count};
+}
 export function settleTicket(storage,id,finishOrder){
  const w=readWallet(storage),i=w.history.findIndex(t=>t.id===id);
  if(i<0)throw Error('精算対象の予想がありません');
  const ticket=w.history[i];
- if(ticket.status==='settled')return {wallet:w,ticket}; // no duplicate payouts
+ if(ticket.status!=='pending')return {wallet:w,ticket}; // settled or refunded never pays twice
  if(!Array.isArray(finishOrder)||finishOrder.length!==8||new Set(finishOrder).size!==8||finishOrder.some(n=>!Number.isInteger(n)||n<1||n>8))throw Error('正式な着順がありません');
  const a=ticket.picks,match=ticket.type==='win'?finishOrder[0]===a[0]:
  ticket.type==='place'?finishOrder.slice(0,3).includes(a[0]):
