@@ -42,3 +42,43 @@ button{cursor:pointer;font:inherit;touch-action:manipulation}
 .errors a{color:#ffe8af}
 @media(max-width:400px){.race-hud{left:7px;right:7px}.title-group{padding:6px}.eyebrow{font-size:8px}.race-actions{top:calc(max(9px,env(safe-area-inset-top)) + 73px)}.pad button{min-width:43px;font-size:12px}.steer button{min-width:45px}.pad{gap:3px}.steer,.action{gap:4px}}
 @media(orientation:landscape) and (max-height:470px){.title-group{padding:3px 8px}.title-group strong{font-size:14px}.status-group{padding:3px 8px}.race-actions{top:calc(max(5px,env(safe-area-inset-top)) + 43px)}#trackMap{top:calc(max(5px,env(safe-area-inset-top)) + 55px);height:95px;width:110px}.pad{bottom:calc(env(safe-area-inset-bottom) + 4px)}.pad button{min-height:52px;font-size:11px}.steer button{font-size:20px}}
+
+/* Forecast / virtual-medal spectator mode. Game currency has no cash value. */
+.watch-entry{display:block;margin-top:13px!important;width:100%;border:2px solid #bdebe7;background:linear-gradient(#d6f6e7,#93d6cb);color:#1c4d52;border-radius:19px;font-size:17px;font-weight:1000;padding:12px}
+.watch-entry:disabled{opacity:.6}
+.medal-note{display:block;font-size:11px;line-height:1.5;color:#d4e4d9;margin:10px auto 0}
+.forecast-overlay{position:absolute;inset:0;z-index:65;display:flex;align-items:flex-start;justify-content:center;padding:max(15px,env(safe-area-inset-top)) 8px max(15px,env(safe-area-inset-bottom));overflow-y:auto;background:linear-gradient(#0e334acc,#113f53eb);overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.forecast-card{width:min(100%,620px);padding:18px 14px 20px;border-radius:22px;background:#11364deb;border:2px solid #d9f3e4;color:#fdf7e9;box-shadow:0 15px 46px #001827a6}
+.forecast-title{display:flex;align-items:center;justify-content:space-between;gap:6px;color:#ffdf91;font-size:11px;font-weight:1000;letter-spacing:.03em}
+.forecast-title button{background:#eff7ed;color:#265466;border:0;padding:8px;border-radius:10px;font-size:11px;font-weight:900}
+.forecast-card h2{font-size:22px;margin:12px 0 6px}
+.preview-disclaimer{font-size:12px;line-height:1.6;color:#dfebe6;margin:3px 0 9px}
+.forecast-wallet{border:1px solid #fff9dc87;border-radius:12px;padding:10px 12px;background:#315b69;color:#fff4dc;font-weight:900}
+.forecast-wallet strong{font-size:22px;color:#ffdb8d}
+.forecast-wallet span{float:right;font-size:11px;color:#c9e9dc}
+.race-lineup{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:12px 0}
+.racer-row{display:flex;align-items:center;gap:7px;border:1px solid #b9d9d775;border-radius:12px;background:#ffffff15;padding:7px 8px;font-size:12px}
+.racer-number{display:grid;place-items:center;width:27px;height:27px;flex:0 0 27px;border-radius:8px;background:var(--driver-color,#e8b871);color:#183b4c;font-weight:1000;font-size:15px}
+.racer-meta{display:block;color:#d2e7dd;font-size:10px;margin-top:2px}
+.forecast-bet-controls{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}
+.forecast-bet-controls label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:800}
+.forecast-bet-controls label[hidden]{display:none}
+.forecast-bet-controls select{width:100%;min-height:44px;background:#f6f3e7;color:#214858;border:1px solid #cadbd0;border-radius:11px;padding:8px;font-size:14px}
+.odds-preview{background:#25566b;border:1px solid #accad1;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:900;line-height:1.45}
+#forecastError{color:#ffcf9f;min-height:0;font-size:12px;margin:5px}
+.watch-primary{border:0;border-radius:15px;background:#ffcf78;color:#4e3c29;padding:13px;min-height:50px;width:100%;font-weight:1000;font-size:16px;box-shadow:0 4px 0 #ad7c3f}
+.history{padding:10px;margin-top:12px;background:#0b3144;border-radius:12px;font-size:11px;color:#e1f1e8}
+.history h3{font-size:12px;margin:0 0 7px}
+.history p{margin:5px 0;border-bottom:1px solid #aac4bb45;padding:4px}
+.spectator-board{position:absolute;left:8px;top:calc(max(9px,env(safe-area-inset-top)) + 150px);width:clamp(156px,39vw,230px);padding:9px;border-radius:14px;background:#123d51dc;border:1px solid #d4eee1;color:#fff4df;z-index:34;pointer-events:auto;font-size:12px}
+.spectator-board strong{font-size:13px}
+#livePositions{display:grid;grid-template-columns:1fr;gap:3px;margin-top:7px;font-size:11px;font-weight:800}
+#livePositions>div{display:flex;gap:6px;justify-content:space-between}
+#spectatorCamera{font-size:11px;font-weight:900;color:#214656;background:#e1f4e8;border:0;border-radius:9px;padding:8px;margin-top:9px;width:100%}
+.spectator-board p{color:#cce2dd;font-size:10px;margin:7px 0 0}
+#hud.spectating .pad{display:none}
+#hud.spectating #auto{display:none}
+#hud.spectating #spectatorBoard{display:block}
+.result-payout{padding:8px;border-radius:12px;background:#ecf5d8;color:#214a41;font-weight:900}
+@media(max-width:390px){.racer-row{font-size:11px;padding:5px}.racer-meta{font-size:9px}.forecast-card h2{font-size:20px}.spectator-board{top:calc(max(9px,env(safe-area-inset-top)) + 140px)}}
+@media(orientation:landscape) and (max-height:470px){.spectator-board{top:calc(max(9px,env(safe-area-inset-top)) + 85px);width:180px;font-size:10px}.forecast-card{max-width:750px}}
