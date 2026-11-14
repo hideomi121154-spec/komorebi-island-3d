@@ -1,6 +1,6 @@
 /* Komorebi Grand Prix Preview 01 — standalone race controller.
    Imported engine failure never affects the legacy island or existing save data. */
-import {TYPES,readWallet,selectValid,estimateOdds,makeTicket,placeTicket,settleTicket,ticketLabel} from './kart-forecast.mjs';
+import {TYPES,readWallet,selectValid,estimateOdds,makeTicket,placeTicket,settleTicket,recoverInterrupted,ticketLabel} from './kart-forecast.mjs';
 const $=id=>document.getElementById(id);
 const DRIVER_COLORS=['#ffc45a','#ef6d82','#70c3d4','#b3a0ef','#7dcc9a','#f0a66c','#72c1c1','#d5b674'];
 const kart=window.KomorebiKart;
@@ -157,7 +157,7 @@ function showHistory(){
  for(const t of rows){
   const row=document.createElement('p');
   const label=ticketLabel(t);
-  row.textContent=label+' / '+(t.status==='settled'?(t.hit?'的中 ＋'+t.payout+' B':'不的中 0 B'):'結果待ち');
+  row.textContent=label+' / '+(t.status==='settled'?(t.hit?'的中 ＋'+t.payout+' B':'不的中 0 B'):t.status==='cancelled'?'途中終了・返還済み':'結果待ち');
   container.appendChild(row);
  }
 }
@@ -260,6 +260,7 @@ function createEngineSound(){
  }catch{return null;}
 }
 async function init(){
+ recoverInterrupted(localStorage);
  if(!kart)throw Error('従来レースのシミュレーションを読み込めません');
  $('loadMessage').textContent='専用3Dエンジンとコースを読み込み中…';
  const {createRaceView}=await import('./kart-next-scene.js?v=20261113-a1');
