@@ -244,9 +244,9 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,
      j%5===0?[1,1,.96]:[1,.83,.48],alpha);
   }
  }
- for(const {spec,age} of active){
+ for(const {spec,age,index} of active){
   const centerX=origin[0]+spec.x,centerZ=origin[1]+spec.z;
-  const seed=showPattern.indexOf(spec)+12;
+  const seed=index+12;
   // White-hot launch rocket rises before the opening. Its glitter trail curls.
   if(age<0){
    const t=clamp(1+age/580),head=1+(spec.y-1)*t*t*(3-2*t);
