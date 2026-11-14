@@ -17,11 +17,11 @@ export function makeRoomCode(cryptoObject=globalThis.crypto){
  return Array.from(bytes,x=>CODE_CHARS[x%CODE_CHARS.length]).join('');
 }
 export function cleanName(value){
- const s=String(value??'').replace(/[<>\x00-\x1F\x7F]/g,'').replace(/\s+/g,' ').trim().slice(0,14);
+ const s=String(value??'').replace(/<[^>]*>/g,'').replace(/[<>\x00-\x1F\x7F]/g,'').replace(/\s+/g,' ').trim().slice(0,14);
  return s||'旅人';
 }
 export function cleanChat(value){
- return String(value??'').replace(/[<>\x00-\x1F\x7F]/g,'').replace(/\s+/g,' ').trim().slice(0,56);
+ return String(value??'').replace(/<[^>]*>/g,'').replace(/[<>\x00-\x1F\x7F]/g,'').replace(/\s+/g,' ').trim().slice(0,56);
 }
 export function validWorld(world){return world===WORLDS.THREE_D||world===WORLDS.TWO_D;}
 export function limitPosition(world,x,z){
