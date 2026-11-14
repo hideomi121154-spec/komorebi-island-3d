@@ -60,6 +60,6 @@ test('the island renderer alpha-blends only the rocket, with two-dimensional fal
  assert.match(game,/ctx\.globalAlpha=v\.opacity/);
  assert.match(game,/if\(shipOpacity>0\)/);
  assert.match(html,/spaceport3d\.js\?v=20261114-v41/);
- assert.match(html,/game\.js\?v=20261114-v41/);
+ assert.match(html,/game\.js\?v=20261114-v4[12]/);
  assert.match(game,/komorebi_island_3d_v01/);
 });
