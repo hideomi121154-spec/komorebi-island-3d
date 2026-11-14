@@ -263,7 +263,7 @@ async function init(){
  recoverInterrupted(localStorage);
  if(!kart)throw Error('従来レースのシミュレーションを読み込めません');
  $('loadMessage').textContent='専用3Dエンジンとコースを読み込み中…';
- const {createRaceView}=await import('./kart-next-scene.js?v=20261113-a1');
+ const {createRaceView}=await import('./kart-next-scene.js?v=20261114-b1');
  state.scene=await createRaceView(kart,$('raceCanvas'));
  // Pre-render the new world before the player presses start.
  const start=kart.at(3);
