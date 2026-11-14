@@ -11,7 +11,7 @@ let saved={};try{saved=JSON.parse(localStorage.getItem(MY_KEY)||'{}')||{};}catch
 const nick=cleanName(saved.name||'たびびと');
 const player={id:'offline',name:nick,world:WORLDS.THREE_D,...SPAWN.plaza3d,color:Number.isInteger(saved.color)?saved.color%6:Math.floor(Math.random()*6),facing:0};
 let world=player.world,started=false,connection=null,connected=false,connecting=false,players=new Map(),myId='offline';
-let world3d=null,frame=0,last=0,lastSent=0,worldLock=false,collected=new Set();
+let world3d=null,threeUnavailable=false,frame=0,last=0,lastSent=0,worldLock=false,collected=new Set();
 const inputs={up:false,down:false,left:false,right:false};
 const art2d=createDimension2D($('dimension2d'));
 const room=normalizeRoomCode(url.searchParams.get('room'))||makeRoomCode();
@@ -110,6 +110,8 @@ function handlePacket(msg){
 }
 function switchWorld(next){
  if(worldLock||!started)return;
+ const requested=next&&next!==world?next:(world===WORLDS.THREE_D?WORLDS.TWO_D:WORLDS.THREE_D);
+ if(requested===WORLDS.THREE_D&&threeUnavailable){eventChat('3Dを表示できない端末のため、2Dの庭で遊べます','notice');return;}
  worldLock=true;$('sceneFade').classList.add('active');
  window.setTimeout(()=>{
   world=next&&next!==world?next:(world===WORLDS.THREE_D?WORLDS.TWO_D:WORLDS.THREE_D);
@@ -176,6 +178,7 @@ async function enter(){
   document.documentElement.dataset.dimension=WORLDS.THREE_D;
  }catch(error){
   console.error(error);
+  threeUnavailable=true;
   world=WORLDS.TWO_D;player.world=world;player.x=0;player.z=3;
   document.documentElement.dataset.dimension=WORLDS.TWO_D;
   $('dimension3d').hidden=true;$('dimension2d').hidden=false;

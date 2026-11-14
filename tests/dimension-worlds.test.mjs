@@ -23,6 +23,8 @@ test('3D and pixel-art 2D worlds have independent renderers and a real world swi
  assert.match(scene,/new THREE\.WebGLRenderer/);
  assert.match(scene,/new THREE\.PerspectiveCamera/);
  assert.match(scene,/new THREE\.HemisphereLight/);
+ assert.match(js,/if\(requested===WORLDS\.THREE_D&&threeUnavailable\)/);
+ assert.match(js,/threeUnavailable=true/);
  assert.match(scene,/const gate=new THREE\.Group/);
  assert.match(art,/function createDimension2D/);
  assert.match(art,/drawHouse/);
