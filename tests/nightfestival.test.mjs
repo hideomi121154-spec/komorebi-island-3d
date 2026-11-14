@@ -149,7 +149,7 @@ test('Festival loop, phone detail scaling and reduced motion are deterministic',
  assert.match(game,/get\('demo'\)==='fireworks'/);
  assert.match(game,/festivalShow&&!roomActive\?festivalOrigin/);
  assert.match(game,/cameraPitch=1\.23/);
- assert.match(html,/nightfestival\.js\?v=20261114-v42/);
+ assert.match(html,/nightfestival\.js\?v=20261114-v43/);
  assert.match(html,/game\.js\?v=(?:20261112-v25|(?:20261113-v(?:2[6789]|3[012345679])|20261114-v4[012]))/);
 });
 
