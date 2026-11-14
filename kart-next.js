@@ -277,6 +277,7 @@ async function init(){
  $('startRace').addEventListener('click',()=>{if(!state.engine)state.engine=createEngineSound();});
  $('restart').addEventListener('click',()=>{if(!state.engine)state.engine=createEngineSound();});
  // Headless Chrome may start the race for visual regression screenshots.
+ if(new URLSearchParams(location.search).get('mode')==='watch')openForecast();
  if(new URLSearchParams(location.search).get('preview')==='watch'){
   openForecast();$('stake').value='0';$('watchBegin').click();
  }
