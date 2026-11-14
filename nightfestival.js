@@ -402,6 +402,19 @@ function createBurstBillboards(gl){
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   textures[kind]=texture;
  }
+ // Three small procedural face sprites. No files downloaded, no licensed art.
+ for(const kind of FACE_KINDS){
+  renderFaceTexture(c,kind);
+  const texture=gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D,texture);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,canvas);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  textures[kind]=texture;
+ }
  gl.bindTexture(gl.TEXTURE_2D,null);
  return {
   draw(ms,intensity,origin,view,proj){
@@ -417,10 +430,10 @@ function createBurstBillboards(gl){
    for(const {spec,age} of spectacleEventsAt(ms)){
     if(age<0||age>spec.life)continue;
     const t=clamp(age/spec.life);
-    const grow=.22+.83*Math.pow(Math.min(1,t*1.8),.60);
-    const opacity=intensity*Math.pow(1-t,spec.kind==='gold'?.60:.80)*.86;
+    const grow=spec.kind==='face'?.32+.86*Math.pow(Math.min(1,t*2.1),.60):.22+.83*Math.pow(Math.min(1,t*1.8),.60);
+    const opacity=intensity*Math.pow(1-t,spec.kind==='face'?.58:spec.kind==='gold'?.60:.80)*(spec.kind==='face'?1:.86);
     if(opacity<.025)continue;
-    const radius=spec.r*1.10*grow;
+    const radius=spec.r*(spec.kind==='face'?1.48:1.10)*grow;
     const center=[origin[0]+spec.x,spec.y-(spec.kind==='gold'?3.0:1.6)*t*t,origin[1]+spec.z];
     const vertices=[];
     for(const [ix,iy,u,v] of [[-1,-1,0,0],[1,-1,1,0],[-1,1,0,1],[1,1,1,1]]){
@@ -432,7 +445,7 @@ function createBurstBillboards(gl){
     gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.DYNAMIC_DRAW);
     gl.vertexAttribPointer(pos,3,gl.FLOAT,false,20,0);
     gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);
-    gl.bindTexture(gl.TEXTURE_2D,textures[spec.kind]);
+    gl.bindTexture(gl.TEXTURE_2D,textures[spec.kind==='face'?spec.faceType:spec.kind]);
     gl.uniform1f(opacityLoc,opacity);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
    }
