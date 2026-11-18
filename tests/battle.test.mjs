@@ -88,3 +88,18 @@ test('mobile page loads battle script before main game and provides working cont
  assert.match(game,/function finishIslandBattle/);
  assert.match(game,/battleWins/);
 });
+
+
+test('every cinematic phase continues to draw BOTH creatures with finite 3D geometry',()=>{
+ const b=battle(),s=b.create();
+ s.cinematic={id:'thunder',at:0,duration:3400};
+ const samples=[100,740,1290,1850,2600,3150,3400];
+ for(const time of samples){
+  const g=mockMesh();
+  b.drawDynamic(g,time,s);
+  assert.ok(g.draws>35,'missing actors during spell phase at '+time+'ms');
+  assert.equal(g.invalid,0,'invalid geometry during spell phase at '+time+'ms');
+  const cam=b.camera(s,time);
+  for(const v of [...cam.eye,...cam.center])assert.ok(Number.isFinite(v));
+ }
+});
