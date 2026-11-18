@@ -105,6 +105,41 @@ function drawStatic(b){
  b.box(x,.092,z,1.2,.017,.085,'#fff5e3');
  b.box(x,.092,z,.085,.017,1.12,'#fff5e3');
 }
+function drawBattleScene(b){
+ // Dedicated scenic arena while fighting: the 3D village is deliberately omitted.
+ // This avoids the foreground of the island hiding creatures on portrait phones.
+ const x=marker.x,z=marker.z;
+ b.ellipseDisc(x,-.23,z,14.3,10.5,'#e8d4a5',48);
+ b.ellipseDisc(x,-.16,z,13.9,10.1,'#8fcf9c',48);
+ b.ellipseDisc(x,-.10,z,10.25,6.0,'#a5d59b',40);
+ b.ellipseDisc(x,-.08,z,5.15,3.33,'#dfbd93',38);
+ drawStatic(b);
+ // Two raised circular platforms keep combatants easy to locate.
+ for(const xx of[x-1.88,x+1.85]){
+  b.cylinder(xx,.07,z+.40,1.47,.26,20,'#b4c5a0');
+  b.ellipseDisc(xx,.212,z+.40,1.35,1.12,'#eee6c8',28);
+  b.ellipseDisc(xx,.219,z+.40,1.17,.96,'#d1e9c7',28);
+ }
+ // Festival lanterns and spectators on the far side, clear of the combatants.
+ for(const xx of[x-7.5,x+7.5]){
+  for(const zz of[z-4.7,z+3.4]){
+   b.cylinder(xx,1.65,zz,.12,3.30,6,'#927e68');
+   b.sphere(xx,3.38,zz,.36,.43,.36,'#fff0b4',6,8);
+   b.cylinder(xx,3.82,zz,.18,.16,6,'#eecb83');
+  }
+ }
+ for(let i=0;i<8;i++){
+  const xx=x-4.0+i*1.17,zz=z-5.55;
+  b.cylinder(xx,.66,zz,.24,.74,6,['#bba6d4','#87b8cb','#f0bc85','#91bf9f'][i%4]);
+  b.sphere(xx,1.28,zz,.28,.29,.27,'#f4ddbd',5,7);
+  b.sphere(xx,1.53,zz,.31,.13,.29,['#87695d','#b29274','#d0a568'][i%3],5,7);
+ }
+ for(let i=0;i<30;i++){
+  const xx=x-9.8+(i*1.73)%19.6,zz=z-8.9+(i*3.31)%14.7;
+  if(Math.abs(xx-x)<4.7&&Math.abs(zz-z)<3.3)continue;
+  b.sphere(xx,.19,zz,.14,.12,.13,['#fce8a2','#eac4e2','#fff4e4'][i%3],4,5);
+ }
+}
 function sphere(b,x,y,z,s,c,lat=5,lon=8){b.sphere(x,y,z,s,s*.88,s,c,lat,lon);}
 function sparky(b,x,y,z,now){
  // A golden hedgehog / otter-like spark spirit, with starry quills and antenna,
@@ -182,6 +217,10 @@ function drawDynamic(b,now,session){
  trainer(b,now);
  fx(b,session,now);
 }
-function camera(){return {eye:[marker.x+.3,11.7,marker.z+15.8],center:[marker.x,1.0,marker.z+.1],fov:53};}
-window.KomorebiBattle={marker,moves,create:define,move,switchFriend,item,flee,drawStatic,drawDynamic,camera,damage};
+function camera(){
+ // Portrait composition: project the monsters into the open middle of the
+ // screen, ABOVE the bottom command menu, rather than behind it.
+ return {eye:[marker.x+.12,8.0,marker.z+13.4],center:[marker.x,-2.0,marker.z+.20],fov:46};
+}
+window.KomorebiBattle={marker,moves,create:define,move,switchFriend,item,flee,drawStatic,drawBattleScene,drawDynamic,camera,damage};
 })();
