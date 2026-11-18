@@ -49,6 +49,8 @@ test('live island battle starts from visible button and 3D command UI, wins rewa
  assert.equal(s.foe.name,'ハルリザ');
  node('battleAttackBtn')._handlers.get('click')();
  assert.equal(node('battleMoves').hidden,false,'fight button must expose four attacks');
+ assert.equal(node('battleActions').hidden,true,'move choices must replace main buttons, not stack under them');
+ assert.equal(node('battleBackBtn').hidden,false);
  assert.equal(api.battleAction('thunder'),true);
  assert.ok(api.getBattle().foe.hp<s.foe.hp);
  api.battleAction('thunder');
@@ -81,4 +83,17 @@ test('player may forfeit a battle and resume without losing coins or save',()=>{
  assert.equal(api.getState().battleWins,0);
  assert.equal(api.getState().x,original.x);
  assert.equal(api.getState().z,original.z);
+});
+
+test('back button restores compact battle commands without ending the duel',()=>{
+ const {api,node}=boot();
+ assert.equal(api.startIslandBattle(),true);
+ node('battleAttackBtn')._handlers.get('click')();
+ assert.equal(node('battleActions').hidden,true);
+ node('battleBackBtn')._handlers.get('click')();
+ assert.equal(node('battleActions').hidden,false);
+ assert.equal(node('battleMoves').hidden,true);
+ assert.equal(api.getBattle().phase,'command');
+ api.finishIslandBattle();
+ assert.equal(api.getBattle(),null);
 });
