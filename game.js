@@ -322,7 +322,7 @@ function buildHouse(b,x,z,shop=false){const walls=shop?'#ffdcaa':'#fce5b9',roof=
 }
 function buildBench(b,x,z){b.box(x,.58,z,1.9,.22,.65,'#ba8c67');b.box(x,.93,z-.31,1.9,.67,.19,'#ba8c67');for(const q of[-.75,.75]){b.box(x+q,.28,z,0.15,.55,.48,'#7e7661')}}
 let softwareGroundCount=0,softwareTerrainCount=0,softwareSandCount=0,softwareSeaCount=0;
-function buildStatic(){const b=new MeshBuilder();
+function buildStatic(){const b=new MeshBuilder();if(battleSession?.active){softwareSeaCount=softwareSandCount=softwareTerrainCount=softwareGroundCount=0;BATTLE.drawBattleScene(b);return b.toFloat();}
  // Water plane, pale sandy shoreline, raised oval island.
  b.box(19,-.67,0,270,.20,240,'#79c5c8');softwareSeaCount=b.vertices.length/9;
  const land=(rx,rz,y,edgeBottom,topCol,sideCol,seed)=>{const seg=52,arr=[];const ox=EXPANSION.landCenter?.x||0,oz=EXPANSION.landCenter?.z||0;for(let k=0;k<seg;k++){const a=2*Math.PI*k/seg;const wobble=1+Math.sin(a*7+seed)*.017+Math.cos(a*11+seed)*.012;arr.push([ox+Math.cos(a)*rx*wobble,oz+Math.sin(a)*rz*wobble])}for(let k=0;k<seg;k++){const p=arr[k],q=arr[(k+1)%seg];b.tri([ox,y,oz],[q[0],y,q[1]],[p[0],y,p[1]],topCol);b.quad([p[0],y,p[1]],[q[0],y,q[1]],[ox+(q[0]-ox)*.98,edgeBottom,oz+(q[1]-oz)*.98],[ox+(p[0]-ox)*.98,edgeBottom,oz+(p[1]-oz)*.98],sideCol)}};
@@ -450,7 +450,7 @@ function buildFishingGeometry(b,now){
   }
 }
 
-function buildDynamic(now,includeRocket=true){const b=new MeshBuilder();if(indoor.room){drawRoomActors(b,now);return b.toFloat()}let bounce=(Math.sin(now*.011)*.045);if(!railRide.active&&!KART.active())buildAvatar(b,state.x,state.z,playerFacing,bounce,false);buildAvatar(b,1.9,.9,Math.sin(now*.00031)*.65,Math.sin(now*.002)*.02,true);
+function buildDynamic(now,includeRocket=true){const b=new MeshBuilder();if(battleSession?.active){BATTLE.drawDynamic(b,now,battleSession);return b.toFloat()}if(indoor.room){drawRoomActors(b,now);return b.toFloat()}let bounce=(Math.sin(now*.011)*.045);if(!railRide.active&&!KART.active())buildAvatar(b,state.x,state.z,playerFacing,bounce,false);buildAvatar(b,1.9,.9,Math.sin(now*.00031)*.65,Math.sin(now*.002)*.02,true);
  MOKO.draw(b,mokoPose,speech.actor==='moko'?Math.atan2(state.x-mokoPose.x,state.z-mokoPose.z):null,now);
  drawAvailableSupplies(b);
  shells.forEach((s,i)=>{if(state.shells.includes(i))return;b.sphere(s.x,.08,s.z,.27,.17,.26,'#fff0d5',5,7);b.sphere(s.x+.12,.20,s.z,.09,.09,.09,'#fae0b3',4,5)});
@@ -641,7 +641,7 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
   }
  if($('nightSky')?.style)$('nightSky').style.opacity=roomActive?'0':String(lighting.stars);
  if(ctx2d){drawSoftware(festivalClock,eye,aspect,lighting,center);requestAnimationFrame(render);return;}
- const indoorShade=roomActive?.06:lighting.darkness;
+ const indoorShade=roomActive?.06:battleSession?.active?.06:lighting.darkness;
  gl.clearColor(roomActive?.86:lighting.top[0],roomActive?.84:lighting.top[1],roomActive?.77:lighting.top[2],1);
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  if(!roomActive&&skyRenderer)skyRenderer.draw(lighting.top,lighting.horizon);
@@ -874,7 +874,7 @@ function startIslandBattle(){
  cameraPitch=0;cameraYaw=0;cameraZoom=1;cameraPan.x=0;cameraPan.z=0;
  for(const k of Object.keys(input))input[k]=false;
  $('battleMoves').dataset.open='no';
- $('battleHud').hidden=false;$('app').classList.add('battling');
+ $('battleHud').hidden=false;$('app').classList.add('battling');rebuildWorld();
  $('battleBtn').classList.add('active');
  updateBattleHud();updateHud();
  return true;
@@ -882,7 +882,7 @@ function startIslandBattle(){
 function finishIslandBattle(){
  if(!battleSession?.active)return false;
  const pos=battleBefore;
- battleSession.active=false;battleSession=null;battleBefore=null;
+ battleSession.active=false;battleSession=null;battleBefore=null;rebuildWorld();
  $('battleHud').hidden=true;$('app').classList.remove('battling');
  $('battleBtn').classList.remove('active');
  paused=false;
