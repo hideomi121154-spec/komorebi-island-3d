@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#e1f6e6">
   <meta name="description" content="こもれび島 3D — 島で歩く、集める、育てる。オリジナルの小さな生活ゲーム。">
   <title>こもれび島 3D | 小さな島の暮らし</title>
-  <link rel="stylesheet" href="styles.css?v=20261113-v38">
+  <link rel="stylesheet" href="styles.css?v=20261118-b1">
 </head>
 <body>
 <div id="app">
@@ -24,6 +24,7 @@
   </div>
   <div id="statusBar"><span id="missionShort">🍎 果物を3個集めよう</span><span id="saveStatus">● セーブ済</span></div>
   <div id="islandNamePill" class="island-name-pill">🌿 こもれび島</div>
+  <button type="button" id="battleBtn" class="island-battle-entry" aria-label="島のオリジナルモンスターバトルを始める">⚔️ バトル</button>
   <div class="edge-buttons"><button id="rotateLeft" aria-label="カメラを左回転">↶</button><button id="rotateRight" aria-label="カメラを右回転">↷</button><button id="islandMapBtn" aria-label="拡張された島の地図を開く" title="島マップ">🗺</button><button id="redevelopmentViewBtn" class="active" aria-label="島の再開発を見渡す・通常カメラに戻す" title="再開発を見渡す">🏗️</button><button id="seaLineBtn" aria-label="こもれびシーラインの路線図・駅へ移動" title="海上列車と商業島">🚆</button><button id="spaceportBtn" aria-label="こもれび宇宙港のロケット発射台へ" title="ロケット発射台">🚀</button><button id="industryBtn" aria-label="自動車工場と完成車輸出港へ" title="自動車産業地区">🏭</button><button id="kartBtn" aria-label="こもれびサーキットでカートレース" title="カートレース場">🏎️</button><a class="dimension-link" id="dimensionGateBtn" href="./dimension-hub.html" aria-label="3Dと2Dの異世界ひろばへ" title="3Dと2Dの世界・交流ひろば">🌈</a></div>
   <button id="redevelopmentHud" class="redevelopment-status" aria-label="島の再開発 32%・詳細を開く" type="button"><span class="redevelopment-top"><strong id="redevelopmentLabel">🏗️ 島の再開発中 · 基礎・低層階を建設中</strong><strong id="redevelopmentPercent">32%</strong></span><span class="redevelopment-track"><span id="redevelopmentFill" class="redevelopment-fill" style="width:32%"></span></span></button>
   <div id="spaceHud" class="space-launch-hud" role="status" aria-live="polite" hidden></div>
@@ -36,6 +37,27 @@
       <div class="kart-pedals"><button id="kartBrake" type="button" aria-label="ブレーキ">減速</button><button id="kartDrift" type="button" aria-label="ドリフト">💨 ドリフト</button><button id="kartItem" type="button" aria-label="獲得したアイテムを使う" disabled>🎁 アイテム</button><button id="kartRescue" type="button" aria-label="コースに戻る">↩ 復帰</button></div>
     </div>
   </div>
+  <section id="battleHud" class="battle-hud" aria-label="島のモンスターバトル" hidden>
+    <div class="battle-hud-top"><strong>⚔️ こもれび バトル広場</strong><button id="battleQuitBtn" type="button">✕ やめる</button></div>
+    <div class="battle-hp-grid">
+      <div class="battle-hp-card"><strong id="battlePlayerName">⚡ ピリモ Lv.16</strong><span>HP <span id="battlePlayerHP">48 / 48</span></span><div class="battle-meter"><span id="battlePlayerFill"></span></div></div>
+      <div class="battle-hp-card"><strong id="battleFoeName">🍃 ハルリザ Lv.15</strong><span>HP <span id="battleFoeHP">52 / 52</span></span><div class="battle-meter"><span id="battleFoeFill"></span></div></div>
+    </div>
+    <p id="battleMessage" class="battle-message" role="status" aria-live="polite">好きな技を選ぼう！</p>
+    <div class="battle-action-grid" id="battleActions">
+      <button id="battleAttackBtn" type="button" class="battle-attack">⚔️ たたかう</button>
+      <button id="battleFriendBtn" type="button">🌬️ なかま</button>
+      <button id="battleItemBtn" type="button">🧰 どうぐ ×1</button>
+      <button id="battleRunBtn" type="button">🏃 にげる</button>
+    </div>
+    <div id="battleMoves" class="battle-move-grid" data-open="no" hidden>
+      <button type="button" data-battle-move="thunder">⚡ ひかりスパーク</button>
+      <button type="button" data-battle-move="quick">💨 ひらりアタック</button>
+      <button type="button" data-battle-move="burst">🌟 きらめきボール</button>
+      <button type="button" data-battle-move="rest">💚 ひとやすみ</button>
+    </div>
+    <button id="battleEndBtn" class="battle-end" type="button" hidden>🏝️ 島の散策に戻る</button>
+  </section>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="festival-controls" aria-label="花火カメラ操作"><button type="button" id="festivalViewBtn">🎆 花火を見る</button><button type="button" id="fireworksOverheadBtn">🛰️ 真上から見る</button></div>
   <div class="bottom-ui">
@@ -85,6 +107,7 @@
 <script src="nightfestival.js?v=20261114-v43" defer></script>
 <script src="render-quality.js?v=20261113-v32" defer></script>
 <script src="camera-gestures.js?v=20261113-v32" defer></script>
-<script src="game.js?v=20261114-v42" defer></script>
+<script src="battle3d.js?v=20261118-b1" defer></script>
+<script src="game.js?v=20261118-b1" defer></script>
 </body>
 </html>
