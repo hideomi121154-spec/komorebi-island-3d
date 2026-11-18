@@ -1,0 +1,186 @@
+/* こもれび島 3D - experimental original creature battle.
+   All creatures, meshes and gameplay are original; no third-party game assets. */
+(()=>{
+'use strict';
+const marker={id:'battleArena',x:-.7,z:10.2,r:2.65,icon:'⚔️',name:'島のバトル広場'};
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const define=()=>({
+ active:true,phase:'command',turn:0,activeIndex:0,kit:1,result:null,
+ team:[
+  {id:'pirimo',name:'ピリモ',type:'spark',icon:'⚡',level:16,hp:48,maxHp:48},
+  {id:'lumino',name:'ルミノ',type:'wind',icon:'🌬️',level:15,hp:42,maxHp:42}
+ ],
+ foe:{id:'haruriza',name:'ハルリザ',type:'leaf',icon:'🍃',level:15,hp:52,maxHp:52},
+ log:'🌿 森の対戦相手が現れた！ 好きな技を選んでね。',
+ effect:null
+});
+const moves=[
+ {id:'thunder',name:'⚡ ひかりスパーク',type:'spark',power:15,detail:'草に強い・命中100%'},
+ {id:'quick',name:'💨 ひらりアタック',type:'normal',power:10,detail:'すばやい一撃'},
+ {id:'burst',name:'🌟 きらめきボール',type:'spark',power:12,detail:'光の力で攻撃'},
+ {id:'rest',name:'💚 ひとやすみ',type:'heal',power:13,detail:'HPを13回復'}
+];
+const alive = p=>Math.max(0,p.hp)>0;
+const unit=(s)=>s.team[s.activeIndex];
+function damage(power,type,foeType,rand){
+ const base=power+Math.floor(clamp(Number(rand?.()??.5),0,.9999)*4);
+ const multiplier=type==='spark'&&foeType==='leaf'?1.35:type==='leaf'&&foeType==='spark'?.78:1;
+ return Math.max(1,Math.round(base*multiplier));
+}
+function enemyReply(s,rand=()=>.5){
+ if(!alive(s.foe))return;
+ const hero=unit(s),leaf= s.turn%3===1;
+ const n=damage(leaf?9:8,leaf?'leaf':'normal',hero.type,rand);
+ hero.hp=Math.max(0,hero.hp-n);
+ s.log+='　'+s.foe.name+'の '+(leaf?'はっぱカッター':'たいあたり')+'！ '+hero.name+'に'+n+'ダメージ！';
+ s.effect={type:'leaf',target:'hero',at:0};
+ if(!alive(hero)){
+  const reserve=s.team.findIndex((p,i)=>i!==s.activeIndex&&alive(p));
+  if(reserve>=0){s.activeIndex=reserve;s.log+='　'+unit(s).name+'が応援に駆けつけた！';}
+  else{s.phase='end';s.result='lose';s.log+='　おしい！ また挑戦しよう。';}
+ }
+}
+function move(s,id,rand=()=>.5){
+ if(!s||s.phase!=='command')return false;
+ const m=moves.find(x=>x.id===id);if(!m)return false;
+ const hero=unit(s);s.turn++;
+ if(m.type==='heal'){
+  const before=hero.hp;hero.hp=Math.min(hero.maxHp,hero.hp+m.power);
+  s.log=hero.name+'は休んでHPを'+(hero.hp-before)+'回復した！';
+  s.effect={type:'heal',target:'hero',at:0};
+ }else{
+  const n=damage(m.power,m.type,s.foe.type,rand);
+  s.foe.hp=Math.max(0,s.foe.hp-n);
+  s.log=hero.name+'の '+m.name.replace(/^[^ ]+ /,'')+'！ '+s.foe.name+'に'+n+'ダメージ！';
+  if(m.type==='spark'&&s.foe.type==='leaf')s.log+=' 効果ばつぐん！';
+  s.effect={type:m.type,target:'foe',at:0};
+ }
+ if(!alive(s.foe)){s.result='win';s.phase='end';s.log+='　🏆 '+hero.name+'の勝利！';return true;}
+ enemyReply(s,rand);
+ return true;
+}
+function switchFriend(s){
+ if(!s||s.phase!=='command')return false;
+ const next=s.team.findIndex((p,i)=>i!==s.activeIndex&&alive(p));
+ if(next<0){s.log='いま交代できる仲間はいないよ。';return false;}
+ s.activeIndex=next;s.turn++;s.log='🌬️ '+unit(s).name+'に交代した！';
+ enemyReply(s);return true;
+}
+function item(s){
+ if(!s||s.phase!=='command'||s.kit<=0)return false;
+ const hero=unit(s);s.kit--;s.turn++;
+ const healed=Math.min(18,hero.maxHp-hero.hp);
+ hero.hp+=healed;s.log='🧰 きずぐすりで '+hero.name+'のHPが'+healed+'回復！';
+ s.effect={type:'heal',target:'hero',at:0};enemyReply(s);return true;
+}
+function flee(s){
+ if(!s||s.phase!=='command')return false;
+ s.phase='end';s.result='flee';s.log='🏃 バトルをやめて島の散策に戻ろう。';return true;
+}
+function elementTree(b,x,z,h,type){
+ b.cylinder(x,.64,z,.17,1.26,6,'#926e52');
+ if(type==='pine'){b.cylinder(x,1.8,z,.72,1.45,6,'#4a9b80',0);b.cylinder(x,2.5,z,.48,1.1,6,'#74bf8e',0);}
+ else {b.sphere(x,1.85,z,.90,.81,.84,'#78ba84',5,8);b.sphere(x+.28,2.04,z-.2,.50,.48,.49,'#9ad49a',5,7);}
+}
+function drawStatic(b){
+ const {x,z}=marker;
+ b.ellipseDisc(x,.066,z,4.15,3.0,'#e8d6aa',30);
+ b.ellipseDisc(x,.077,z,3.84,2.72,'#e0bd94',30);
+ b.ellipseDisc(x,.086,z,3.35,2.28,'#efdbb9',30);
+ for(let i=0;i<18;i++){
+  const t=i*2*Math.PI/18;
+  b.sphere(x+4.10*Math.cos(t),.16,z+3.0*Math.sin(t),.12,.10,.13,'#fff0cd',4,5);
+ }
+ // A set of small spectator bleachers and a friendly scoreboard.
+ for(const xx of[x-4.38,x+4.35]){
+  b.box(xx,.38,z-.95,.52,.55,2.5,'#d8c6a4');
+  b.box(xx,.75,z-.95,.58,.18,2.5,'#bda47d');
+ }
+ b.box(x,1.28,z-3.15,2.55,1.0,.14,'#e8d4ae');
+ b.box(x,1.29,z-3.02,2.22,.74,.07,'#7eada2');
+ for(const off of[-1.02,1.02])b.cylinder(x+off,.73,z-3.14,.09,1.28,6,'#ab8b66');
+ for(const [xx,zz] of [[x-5.15,z+2.6],[x+5.25,z+2.5],[x-5.2,z-2.7]])elementTree(b,xx,zz,1,'broad');
+ // Small painted lines mark the centre and approach path.
+ b.box(x,.092,z,1.2,.017,.085,'#fff5e3');
+ b.box(x,.092,z,.085,.017,1.12,'#fff5e3');
+}
+function sphere(b,x,y,z,s,c,lat=5,lon=8){b.sphere(x,y,z,s,s*.88,s,c,lat,lon);}
+function sparky(b,x,y,z,now){
+ // A golden hedgehog / otter-like spark spirit, with starry quills and antenna,
+ // distinct from existing copyrighted game character silhouettes.
+ const bob=Math.sin(now*.0034)*.075;
+ b.sphere(x,y+.78+bob,z,.78,.75,.69,'#f7ce60',7,10);
+ b.sphere(x,y+.52+bob,z+.49,.48,.38,.27,'#ffedb1',5,8);
+ for(const dir of[-1,1]){
+  b.sphere(x+dir*.55,y+.24+bob,z+.3,.27,.19,.3,'#dba54e',5,7);
+  b.sphere(x+dir*.38,y+1.04+bob,z+.55,.087,.10,.06,'#383d43',5,7);
+  b.sphere(x+dir*.27,y+.76+bob,z+.645,.13,.08,.05,'#e8a972',4,7);
+ }
+ b.sphere(x,y+.70+bob,z+.74,.11,.08,.08,'#b98247',4,6);
+ for(const dx of[-.50,0,.50]){
+  b.tri([x+dx-.23,y+1.22+bob,z-.29],[x+dx,y+1.94+bob,z-.08],[x+dx+.23,y+1.22+bob,z-.29],'#fce07a');
+  b.tri([x+dx-.23,y+1.22+bob,z-.29],[x+dx,y+1.94+bob,z-.08],[x+dx+.23,y+1.22+bob,z-.29],'#f1b74d');
+ }
+ b.cylinder(x,.87+bob,z-.71,.20,1.15,6,'#eec05a',.10);
+ b.sphere(x,.3+bob,z+.24,.20,.15,.22,'#f4cd73',4,6);
+}
+function leafling(b,x,y,z,now){
+ const bob=Math.sin(now*.0029+1.4)*.065;
+ b.sphere(x,y+.80+bob,z,.89,.64,.93,'#5dc3b3',7,10);
+ b.sphere(x,y+1.25+bob,z+.48,.49,.45,.50,'#6dd2bc',6,9);
+ for(const dir of[-1,1]){
+  b.sphere(x+dir*.63,y+.26+bob,z+.48,.36,.25,.44,'#419e91',5,7);
+  b.sphere(x+dir*.26,y+1.36+bob,z+.90,.09,.12,.09,'#335d60',5,7);
+  b.tri([x+dir*.23,y+1.67+bob,z-.12],[x+dir*.69,y+2.45+bob,z-.27],[x+dir*.15,y+2.07+bob,z+.44],'#7ac770');
+ }
+ for(const k of[-1,0,1]){
+  b.tri([x+k*.38-.31,y+1.44+bob,z-.40],[x+k*.39,y+2.60+bob,z-.48],[x+k*.38+.32,y+1.42+bob,z-.44],'#66bd6a');
+ }
+ b.sphere(x,y+1.07+bob,z+1.02,.15,.09,.10,'#b0e9d6',4,6);
+}
+function cloudling(b,x,y,z,now){
+ const bob=Math.sin(now*.003)*.1;
+ b.sphere(x,y+.86+bob,z,.72,.57,.69,'#a8d5f7',6,9);
+ for(const k of[-1,0,1])b.sphere(x+k*.41,y+1.04+bob,z-.12,.37,.34,.4,'#e4f4ff',5,7);
+ b.sphere(x-.21,y+1.02+bob,z+.53,.10,.13,.06,'#5c7194',4,6);
+ b.sphere(x+.21,y+1.02+bob,z+.53,.10,.13,.06,'#5c7194',4,6);
+ for(const dir of[-1,1])b.sphere(x+dir*.78,y+.59+bob,z,.40,.19,.22,'#c9e8f9',4,6);
+}
+function trainer(b,now){
+ const x=marker.x+3.6,z=marker.z-1.3;
+ b.sphere(x,1.75,z,.34,.41,.32,'#f1d0b0',5,7);
+ b.sphere(x,2.02,z,.39,.21,.39,'#846d63',5,7);
+ b.sphere(x,.97,z,.48,.65,.37,'#e3a2bb',5,7);
+ b.cylinder(x-.18,.31,z,.12,.62,6,'#647c85');
+ b.cylinder(x+.18,.31,z,.12,.62,6,'#647c85');
+ b.sphere(x-.28,1.43,z+.09,.15,.27,.12,'#f3dab8',4,6);
+ b.sphere(x+.30,1.45+Math.sin(now*.004)*.06,z+.1,.15,.26,.12,'#f3dab8',4,6);
+ b.box(x,2.21,z,.81,.14,.73,'#f9c481');
+}
+function fx(b,s,now){
+ const e=s?.effect;if(!e)return;
+ const elapsed=now-e.at;if(elapsed<0||elapsed>1000)return;
+ const t=elapsed/1000,f=1-t;
+ const target=e.target==='foe'?{x:marker.x+1.85,z:marker.z+.24}:{x:marker.x-1.82,z:marker.z+.35};
+ const col=e.type==='leaf'?'#87d26e':e.type==='heal'?'#a4eabd':'#ffe17d';
+ for(let i=0;i<20;i++){
+  const theta=i*2.39996+Math.sin(t*4),radius=f*(.2+(i%7)*.30);
+  const yy=.55+(i%5)*.21+(t*1.8);
+  const px=target.x+Math.cos(theta)*radius,pz=target.z+Math.sin(theta)*radius;
+  b.sphere(px,yy,pz,.065+.05*f,.075+.06*f,.06,col,4,5);
+ }
+}
+function drawDynamic(b,now,session){
+ // Characters can be seen sparring when the player walks by;
+ // turns and damage only begin when the battle overlay is activated.
+ const y=0;
+ const id=session?.active?session.team[session.activeIndex].id:'pirimo';
+ if(id==='lumino')cloudling(b,marker.x-1.88,y,marker.z+.55,now);
+ else sparky(b,marker.x-1.88,y,marker.z+.55,now);
+ leafling(b,marker.x+1.85,y,marker.z+.27,now);
+ trainer(b,now);
+ fx(b,session,now);
+}
+function camera(){return {eye:[marker.x+.3,11.7,marker.z+15.8],center:[marker.x,1.0,marker.z+.1],fov:53};}
+window.KomorebiBattle={marker,moves,create:define,move,switchFriend,item,flee,drawStatic,drawDynamic,camera,damage};
+})();
