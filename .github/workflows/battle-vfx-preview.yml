@@ -54,7 +54,7 @@ jobs:
         with:
           name: battle-spell-phone-frames
           path: |
-            \${{ runner.temp }}/battle-charge.png
-            \${{ runner.temp }}/battle-impact.png
-            \${{ runner.temp }}/battle-counter.png
+            ${{ runner.temp }}/battle-charge.png
+            ${{ runner.temp }}/battle-impact.png
+            ${{ runner.temp }}/battle-counter.png
           retention-days: 5
