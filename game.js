@@ -21,20 +21,22 @@ if(!REDEVELOPMENT)throw Error('redevelopment3d.js is required');
 const SEA=window.KomorebiSeaLine;
 if(!SEA)throw Error('sealine3d.js is required');
 const LAUNCH_AUDIO=window.KomorebiLaunchAudio||null;
+const BATTLE=window.KomorebiBattle||{marker:null,drawStatic:()=>{},drawDynamic:()=>{},camera:()=>null};
 const KART=window.KomorebiKart||{places:[],drawTerrain:()=>{},drawStatic:()=>{},drawDynamic:()=>{},active:()=>false,camera:()=>null,step:()=>{},bindControls:()=>{},keyInput:()=>false,getState:()=>({active:false}),start:()=>false,stop:()=>{}};
  const INDUSTRY=window.KomorebiIndustry||{places:[],factory:{x:21,z:27},dock:{x:48,z:29.5},ship:{x:69,z:29.5},drawDynamic:()=>{},metrics:()=>({inTransit:0,loaded:0})};
 const SPACE=window.KomorebiSpaceport||{marker:{x:-24,z:-6.5},bounds:{x:-7,z:-1,rx:34,rz:28},pad:{x:-24,z:-13},phase:()=>({active:false,label:'宇宙港を準備中'}),startLaunch:()=>false,drawDynamic:()=>{}};
-const initial = {version:1,day:1,timeMinutes:480,realDateKey:null,coins:120,x:0,z:3,angle:0,inventory:{berry:0,wood:0,shell:0,fish:0,carrot:0,seed:2,coffee:0,souvenir:0,snack:0},harvested:[],shells:[],farm:[null,null,null],furniture:0,houseLevel:1,talkedDay:0,mokoGiftDay:0,questBerries:0,questSold:false,questGrown:false,claimed:[false,false,false],welcomeSeen:false,redevelopmentProgress:32,redevelopmentDateKey:null,currentIsland:'home',seaLineRides:0};
+const initial = {version:1,day:1,timeMinutes:480,realDateKey:null,coins:120,x:0,z:3,angle:0,inventory:{berry:0,wood:0,shell:0,fish:0,carrot:0,seed:2,coffee:0,souvenir:0,snack:0},harvested:[],shells:[],farm:[null,null,null],furniture:0,houseLevel:1,talkedDay:0,mokoGiftDay:0,questBerries:0,questSold:false,questGrown:false,claimed:[false,false,false],welcomeSeen:false,battleWins:0,redevelopmentProgress:32,redevelopmentDateKey:null,currentIsland:'home',seaLineRides:0};
 const itemLabels={berry:'果物',wood:'木材',shell:'貝がら',fish:'魚',carrot:'にんじん',seed:'種',coffee:'コーヒー',souvenir:'商業島みやげ',snack:'おやつ'};
 const itemIcons={berry:'🍎',wood:'🪵',shell:'🐚',fish:'🐟',carrot:'🥕',seed:'🌱',coffee:'☕',souvenir:'🎁',snack:'🍪'};
 const basePrice={berry:32,wood:20,shell:27,fish:74,carrot:46};
 const KEY='komorebi_island_3d_v01';
-function readSave(){try{const p=JSON.parse(localStorage.getItem(KEY)||'null');if(!p||p.version!==1)return structuredCloneSafe(initial);const s=Object.assign(structuredCloneSafe(initial),p);s.inventory=Object.assign({},initial.inventory,p.inventory||{});if(!Array.isArray(s.farm)||s.farm.length!==3)s.farm=[null,null,null];if(!Array.isArray(s.claimed))s.claimed=[false,false,false];s.timeMinutes=DAYLIGHT.normalMinutes(s.timeMinutes);s.realDateKey=typeof p.realDateKey==='string'?p.realDateKey:null;s.redevelopmentProgress=REDEVELOPMENT.clamp(p.redevelopmentProgress);s.redevelopmentDateKey=typeof p.redevelopmentDateKey==='string'?p.redevelopmentDateKey:DAYLIGHT.realTimeAt(Date.now()).dateKey;s.currentIsland=SEA.isCommercial(s.x,s.z)?'commerce':'home';s.seaLineRides=Math.max(0,Math.floor(Number(p.seaLineRides)||0));return s;}catch{return structuredCloneSafe(initial)}}
+function readSave(){try{const p=JSON.parse(localStorage.getItem(KEY)||'null');if(!p||p.version!==1)return structuredCloneSafe(initial);const s=Object.assign(structuredCloneSafe(initial),p);s.inventory=Object.assign({},initial.inventory,p.inventory||{});if(!Array.isArray(s.farm)||s.farm.length!==3)s.farm=[null,null,null];if(!Array.isArray(s.claimed))s.claimed=[false,false,false];s.timeMinutes=DAYLIGHT.normalMinutes(s.timeMinutes);s.realDateKey=typeof p.realDateKey==='string'?p.realDateKey:null;s.redevelopmentProgress=REDEVELOPMENT.clamp(p.redevelopmentProgress);s.redevelopmentDateKey=typeof p.redevelopmentDateKey==='string'?p.redevelopmentDateKey:DAYLIGHT.realTimeAt(Date.now()).dateKey;s.currentIsland=SEA.isCommercial(s.x,s.z)?'commerce':'home';s.seaLineRides=Math.max(0,Math.floor(Number(p.seaLineRides)||0));s.battleWins=Math.max(0,Math.floor(Number(p.battleWins)||0));return s;}catch{return structuredCloneSafe(initial)}}
 function structuredCloneSafe(v){return JSON.parse(JSON.stringify(v))}
 let state=readSave();
 const input={up:false,down:false,left:false,right:false};
 let panelType='',paused=false,gameReady=false,nearest=null,toaster=null,saveTimer=null,tick=0;
 const railRide={active:false,from:'home',to:'commerce',startedAt:0,progress:0,duration:7200};
+let battleSession=null,battleBefore=null;
 
 const fishing={stage:'idle',token:0,timer:null,deadline:0,stageAt:0,focusReturn:null};
 const BITE_WINDOW_MS=1600;
@@ -307,7 +309,7 @@ function updateMoko(now){
  }
 }
 
-const things=[{id:'home',x:-6,z:-2.4,r:2.05,icon:'🏡',name:'わたしの家の入口'}, {id:'shop',x:6,z:-2.4,r:2.05,icon:'🏪',name:'こもれび商店の入口'}, {id:'npc',x:1.9,z:.9,r:2.2,icon:'🐱',name:'住民のミミ'}, mokoThing, {id:'pond',x:-7,z:6,r:3.5,icon:'🎣',name:'おさかな池'}, ...farmPlots.map((p,i)=>({id:'plot'+i,x:p.x,z:p.z,r:1.55,icon:'🥕',name:'畑 '+(i+1)})),...resourceSpots.map((p,i)=>({id:'resource'+i,x:p.x,z:p.z,r:1.70,icon:p.type==='fruit'?'🧺':'📦',name:p.name})),...shells.map((p,i)=>({id:'shell'+i,x:p.x,z:p.z,r:1.5,icon:'🐚',name:'貝がら'})),...EXPANSION.places,REDEVELOPMENT.marker,...SEA.stations,...SEA.places,...INDUSTRY.places,...KART.places];
+const things=[{id:'home',x:-6,z:-2.4,r:2.05,icon:'🏡',name:'わたしの家の入口'}, {id:'shop',x:6,z:-2.4,r:2.05,icon:'🏪',name:'こもれび商店の入口'}, {id:'npc',x:1.9,z:.9,r:2.2,icon:'🐱',name:'住民のミミ'}, mokoThing, {id:'pond',x:-7,z:6,r:3.5,icon:'🎣',name:'おさかな池'}, ...farmPlots.map((p,i)=>({id:'plot'+i,x:p.x,z:p.z,r:1.55,icon:'🥕',name:'畑 '+(i+1)})),...resourceSpots.map((p,i)=>({id:'resource'+i,x:p.x,z:p.z,r:1.70,icon:p.type==='fruit'?'🧺':'📦',name:p.name})),...shells.map((p,i)=>({id:'shell'+i,x:p.x,z:p.z,r:1.5,icon:'🐚',name:'貝がら'})),...EXPANSION.places,REDEVELOPMENT.marker,...SEA.stations,...SEA.places,...INDUSTRY.places,...KART.places,...(BATTLE.marker?[BATTLE.marker]:[])];
 function hasResource(t){if(t.id.startsWith('resource'))return !resourceCollected(Number(t.id.slice(8)));if(t.id.startsWith('shell'))return !state.shells.includes(Number(t.id.slice(5)));return true}
 function findNearby(){if(!indoor.room){const station=SEA.nearestStation(state.x,state.z);if(station)return station;
  // The whole viewing apron around the rocket is an active control area.
@@ -361,6 +363,7 @@ function buildStatic(){const b=new MeshBuilder();
  KART.drawStatic(b);
  REDEVELOPMENT.drawStatic(b,state.redevelopmentProgress);
  SEA.drawStatic(b);
+ BATTLE.drawStatic(b);
  return b.toFloat()}
 function buildAvatar(b,x,z,yaw,bob=0,npc=false){b.setTransform(x,-.035+bob,z,yaw);
  const tunic=npc?'#e9a5a2':(['#66b8a3','#df987d','#a694ca'][state.outfit||0]||'#66b8a3'),hair=npc?'#d7a17b':'#63483f',face=npc?'#fbdfc6':'#f6d8ba';
@@ -468,6 +471,7 @@ function buildDynamic(now,includeRocket=true){const b=new MeshBuilder();if(indoo
   else SPACE.drawAtmosphere(b,now);
   INDUSTRY.drawDynamic(b,now);
   KART.drawDynamic(b,now);
+  BATTLE.drawDynamic(b,now,battleSession);
  return b.toFloat()}
 function buildRocketDynamic(now){const b=new MeshBuilder();SPACE.drawRocket(b,now);return b.toFloat()}
 let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0,viewFov=48;
@@ -593,7 +597,7 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
  if(!indoor.room)updateMoko(now);
  const spacePhase=SPACE.phase(now),spaceHud=$('spaceHud');if(rocketCameraActive&&!spacePhase.active)restoreRocketCamera();const launchView=rocketCameraActive&&spacePhase.active&&!indoor.room;if(spaceHud){spaceHud.hidden=!!indoor.room||!spacePhase.active;if(!spaceHud.hidden&&spaceHud.textContent!=='🚀 '+spacePhase.label)spaceHud.textContent='🚀 '+spacePhase.label;}
   if(railRide.active)updateSeaRide(now);
- const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&!railRide.active&&!rocketCameraActive&&!KART.active()&&(sx||sy)){if(!indoor.room){leaveOverviewForMovement();cameraPan.x=0;cameraPan.z=0;}const move=screenMoveVector(sx,sy,indoor.room?0:viewHeading());let dx=move.x*speed*dt,dz=move.z*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);if(SEA.isCommercial(x,z))return SEA.walkable(x,z);if(!EXPANSION.canWalk(x,z)||REDEVELOPMENT.within(x,z))return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
+ const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&!railRide.active&&!rocketCameraActive&&!KART.active()&&!battleSession?.active&&(sx||sy)){if(!indoor.room){leaveOverviewForMovement();cameraPan.x=0;cameraPan.z=0;}const move=screenMoveVector(sx,sy,indoor.room?0:viewHeading());let dx=move.x*speed*dt,dz=move.z*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);if(SEA.isCommercial(x,z))return SEA.walkable(x,z);if(!EXPANSION.canWalk(x,z)||REDEVELOPMENT.within(x,z))return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
  const fishingActive=fishing.stage!=='idle',roomActive=!!indoor.room;
   const travelPoint=railRide.active?SEA.pointAt(railRide.from==='home'?railRide.progress:1-railRide.progress):null;
   const festivalOrigin=state.currentIsland==='commerce'?[52,-4]:[11,-5];
@@ -615,10 +619,10 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
    spectator.eye[0]+=Math.sin(now*.11)*shake;
    spectator.eye[1]+=Math.cos(now*.09)*shake*.45;
   }
-  const kartCamera=KART.camera();
-  const eye=kartCamera?kartCamera.eye:roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):spectator?spectator.eye:travelPoint?[camFocus.x-8.5,12.5,camFocus.z+18.5]:[camFocus.x+Math.sin(scenicAngle)*distance*Math.cos(pitch),baseHeight+distance*Math.sin(pitch),camFocus.z+Math.cos(scenicAngle)*distance*Math.cos(pitch)];
- const center=kartCamera?kartCamera.center:roomActive?[0,.95,-.35]:spectator?spectator.center:[camFocus.x,clamp(-cameraPitch,0,1.25)*28,camFocus.z];
- viewFov=kartCamera?kartCamera.fov:roomActive?52:(spectator?spectator.fov:industrialOverview?68:travelPoint?56:seaLineOverview?70:overviewMode?54:48);
+  const kartCamera=KART.camera();const battleCamera=battleSession?.active?BATTLE.camera():null;
+  const eye=battleCamera?battleCamera.eye:kartCamera?kartCamera.eye:roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):spectator?spectator.eye:travelPoint?[camFocus.x-8.5,12.5,camFocus.z+18.5]:[camFocus.x+Math.sin(scenicAngle)*distance*Math.cos(pitch),baseHeight+distance*Math.sin(pitch),camFocus.z+Math.cos(scenicAngle)*distance*Math.cos(pitch)];
+ const center=battleCamera?battleCamera.center:kartCamera?kartCamera.center:roomActive?[0,.95,-.35]:spectator?spectator.center:[camFocus.x,clamp(-cameraPitch,0,1.25)*28,camFocus.z];
+ viewFov=battleCamera?battleCamera.fov:kartCamera?kartCamera.fov:roomActive?52:(spectator?spectator.fov:industrialOverview?68:travelPoint?56:seaLineOverview?70:overviewMode?54:48);
   updateSpeechPosition(eye,center,aspect,viewFov*Math.PI/180);
  const lighting=DAYLIGHT.paletteAt(KART.active()?15*60:festivalShow&&!roomActive?22*60+30:state.timeMinutes);
   const fireworksIntensity=festivalShow?1:lighting.stars;
@@ -775,7 +779,7 @@ function save(){try{const snapshot=(indoor.room||indoor.transition)&&indoor.orig
 function updateRedevelopmentHud(){const p=REDEVELOPMENT.clamp(state.redevelopmentProgress);$('redevelopmentPercent').textContent=p+'%';$('redevelopmentLabel').textContent=p>=100?'🏙️ 新しいマンションが完成！':'🏗️ 島の再開発中 · '+REDEVELOPMENT.stage(p);if($('redevelopmentFill').style)$('redevelopmentFill').style.width=p+'%';$('redevelopmentHud').setAttribute?.('aria-label','島の再開発 '+p+'%・詳細を開く')}
 function updateHud(){ updateClockHud();updateRedevelopmentHud();$('coinPill').textContent='🪙 '+state.coins;if($('islandNamePill'))$('islandNamePill').textContent=state.currentIsland==='commerce'?'🛍️ 商業島・みなと島':'🌿 こもれび島';$('redevelopmentViewBtn').textContent=state.currentIsland==='commerce'?'🏙️':'🏗️';
  let msg='🎉 おねがい達成！';if(!state.claimed[0])msg='🍎 果物を3個集めよう '+Math.min(3,state.questBerries)+'/3';else if(!state.claimed[1])msg='🏪 お店で何か売ってみよう';else if(!state.claimed[2])msg='🥕 畑でにんじんを育てよう';$('missionShort').textContent=msg}
-function setContext(){if(KART.active())return;if(fishing.stage!=='idle'||indoor.transition||watering.active||railRide.active)return;const t=nearest;if(indoor.room){const names={exit:'島に出る',clerk:'店員さんと話す',seeds:'商品を見る',goods:'買取をお願い',bed:'ベッドで休む',dresser:'着替える',table:'作業テーブルを見る'};$('interactHint').textContent=t?t.icon+' '+t.name+' に近づいたよ':'🏠 室内を歩いて探検しよう';$('actionBtn').textContent=t?'✨ '+names[t.id]:'✨ 調べる';return}$('interactHint').textContent=t?t.icon+' '+t.name+' が近くにあるよ':'🌱 島を自由に探検しよう';$('actionBtn').textContent=t?'✨ '+(t.id==='shop'?'お店に入る':(t.id==='npc'||t.id==='moko')?'話しかける':t.id==='home'?'家に入る':t.id==='cottage'?'コテージに入る':t.id==='seaStationHome'||t.id==='seaStationCity'?'列車に乗る':t.id.startsWith('city')?'施設を利用する':t.id==='redevelopment'?'工事現場を見る':t.id==='kartTrack'?'カートレース':t.id==='industrialFactory'?'工場を見る':t.id==='industrialPort'?'積み込み港を見る':t.id==='spaceport'?(SPACE.phase(performance.now()).active?'発射進行中':'🚀 ロケット発射'):t.id==='camp'?'休憩する':t.id==='falls'?'滝を眺める':t.id==='pier'?'海を眺める':t.id==='pond'?'釣りをする':t.id.startsWith('plot')?plotActionLabel(Number(t.id.slice(4))):t.id.startsWith('shell')?'拾う':t.id.startsWith('resource')?'受け取る':'採集する'):'✨ 調べる'}
+function setContext(){if(KART.active()||battleSession?.active)return;if(fishing.stage!=='idle'||indoor.transition||watering.active||railRide.active)return;const t=nearest;if(indoor.room){const names={exit:'島に出る',clerk:'店員さんと話す',seeds:'商品を見る',goods:'買取をお願い',bed:'ベッドで休む',dresser:'着替える',table:'作業テーブルを見る'};$('interactHint').textContent=t?t.icon+' '+t.name+' に近づいたよ':'🏠 室内を歩いて探検しよう';$('actionBtn').textContent=t?'✨ '+names[t.id]:'✨ 調べる';return}$('interactHint').textContent=t?t.icon+' '+t.name+' が近くにあるよ':'🌱 島を自由に探検しよう';$('actionBtn').textContent=t?'✨ '+(t.id==='shop'?'お店に入る':(t.id==='npc'||t.id==='moko')?'話しかける':t.id==='home'?'家に入る':t.id==='cottage'?'コテージに入る':t.id==='seaStationHome'||t.id==='seaStationCity'?'列車に乗る':t.id.startsWith('city')?'施設を利用する':t.id==='redevelopment'?'工事現場を見る':t.id==='battleArena'?'バトルをする':t.id==='kartTrack'?'カートレース':t.id==='industrialFactory'?'工場を見る':t.id==='industrialPort'?'積み込み港を見る':t.id==='spaceport'?(SPACE.phase(performance.now()).active?'発射進行中':'🚀 ロケット発射'):t.id==='camp'?'休憩する':t.id==='falls'?'滝を眺める':t.id==='pier'?'海を眺める':t.id==='pond'?'釣りをする':t.id.startsWith('plot')?plotActionLabel(Number(t.id.slice(4))):t.id.startsWith('shell')?'拾う':t.id.startsWith('resource')?'受け取る':'採集する'):'✨ 調べる'}
 function give(id,amount){state.inventory[id]=(state.inventory[id]||0)+amount}
 function price(id){return Math.max(1,Math.round(basePrice[id]*(.86+(state.day*37+id.length*13)%29/100)))}
 function maybeQuest(){if(!state.claimed[0]&&state.questBerries>=3){state.claimed[0]=true;state.coins+=70;showToast('🎉 おねがい達成！ 70コインをゲット');return}if(state.claimed[0]&&!state.claimed[1]&&state.questSold){state.claimed[1]=true;state.coins+=80;showToast('🎉 商売の達人！ 80コインをゲット');return}if(state.claimed[1]&&!state.claimed[2]&&state.questGrown){state.claimed[2]=true;state.coins+=100;showToast('🎉 初めての収穫！ 100コインをゲット')}}
@@ -818,7 +822,7 @@ function stopKartRace(){
  if(kartPriorView){overviewMode=kartPriorView.overviewMode;seaLineOverview=kartPriorView.seaLineOverview;industrialOverview=kartPriorView.industrialOverview;festivalShow=kartPriorView.festivalShow;cameraYaw=kartPriorView.yaw;cameraPitch=kartPriorView.pitch;cameraZoom=kartPriorView.zoom;cameraPan.x=kartPriorView.panX;cameraPan.z=kartPriorView.panZ;camFocus.x=kartPriorView.focusX;camFocus.z=kartPriorView.focusZ;}
  kartPriorView=null;$('redevelopmentViewBtn').classList.toggle('active',overviewMode);nearest=findNearby();setContext();showToast('🌿 こもれび島に戻ったよ');
 }
-function interact(){if(paused)return;if(indoor.room){interactInside();return}const t=findNearby();if(!t){showToast('🌿 気になる場所に近づいて「調べる」を押そう');return}const id=t.id;
+function interact(){if(paused||battleSession?.active)return;if(indoor.room){interactInside();return}const t=findNearby();if(!t){showToast('🌿 気になる場所に近づいて「調べる」を押そう');return}const id=t.id;
  if(id.startsWith('resource')){const i=Number(id.slice(8));const p=resourceSpots[i];if(!p||resourceCollected(i))return;state.harvested.push(100+i);if(p.type==='lumber'){give('wood',2);showToast('📦 建設資材から木材2個を受け取った！')}else{give('berry',2);state.questBerries+=2;showToast('🧺 かごから果物2個を受け取った！')}maybeQuest()}
  else if(id.startsWith('shell')){const i=Number(id.slice(5));state.shells.push(i);give('shell',1);showToast('🐚 貝がらを拾った！')}
  else if(id.startsWith('plot')){const i=Number(id.slice(4)),f=state.farm[i];
@@ -828,6 +832,7 @@ function interact(){if(paused)return;if(indoor.room){interactInside();return}con
   else{beginWatering(i);return}
  }
  else if(id==='pond'){startFishing()}
+  else if(id==='battleArena'){startIslandBattle();return}
  else if(id==='npc'){const first=state.talkedDay!==state.day;npcGiftToday=first;state.talkedDay=state.day;if(first){give('seed',1);save()}openRoomDialogue('mimi')}
  else if(id==='moko'){
   const first=state.mokoGiftDay!==state.day;
