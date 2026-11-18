@@ -254,3 +254,64 @@
 /* 2D x 3D world-gate launcher: same visual weight as the existing island icons. */
 .edge-buttons .dimension-link{display:grid;place-items:center;flex:none;width:42px;height:42px;text-decoration:none;background:#fffcee;border:2px solid #ffffffb5;border-radius:50%;color:#518571;font-size:26px;box-shadow:var(--shadow);touch-action:manipulation}
 .edge-buttons .dimension-link:focus-visible{outline:3px solid #97d2f4}
+
+
+/* v1.4 experimental island creature battle. Supports portrait iPhone Safari. */
+.island-battle-entry{
+ position:absolute;z-index:5;top:calc(env(safe-area-inset-top) + 207px);left:15px;
+ padding:9px 14px;border:1.5px solid #fff8e4;border-radius:22px;
+ background:linear-gradient(145deg,#fff9e6f2,#ffdfaaea);
+ box-shadow:0 4px 12px #427f7444;color:#77532f;
+ font-size:14px;font-weight:900;touch-action:manipulation;
+}
+.island-battle-entry:active{transform:translateY(1px)}
+.battle-hud[hidden],.battle-move-grid[hidden],.battle-action-grid[hidden],.battle-end[hidden]{display:none!important}
+.battle-hud{
+ position:absolute;z-index:19;left:50%;transform:translateX(-50%);
+ bottom:calc(env(safe-area-inset-bottom) + 14px);
+ width:min(94vw,460px);display:flex;flex-direction:column;gap:9px;
+ color:#325c55;pointer-events:auto;font-family:inherit;
+}
+.battle-hud-top{display:flex;align-items:center;justify-content:space-between;gap:12px;
+ border-radius:22px;padding:9px 13px;background:#fffdf1ee;
+ border:2px solid #fff;box-shadow:0 5px 13px #3f776b38;font-size:14px}
+.battle-hud-top button{border:0;background:#f1eee5;border-radius:17px;
+ padding:6px 13px;color:#607d75;font-weight:800;font-size:12px;cursor:pointer}
+.battle-hp-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.battle-hp-card{border-radius:20px;border:2px solid #fff;background:#fffdf1f2;
+ box-shadow:0 5px 13px #316b6740;padding:9px 12px;display:flex;flex-direction:column;gap:4px;
+ min-width:0;color:#345d56}
+.battle-hp-card strong{display:block;font-size:clamp(12px,3vw,15px);white-space:nowrap;
+ overflow:hidden;text-overflow:ellipsis}
+.battle-hp-card>span{display:flex;justify-content:space-between;font-size:12px;font-weight:750;gap:7px}
+.battle-meter{height:8px;background:#d6dedb;border-radius:10px;overflow:hidden}
+.battle-meter>span{display:block;width:100%;height:100%;border-radius:9px;
+ background:linear-gradient(90deg,#7bcda0,#44b884);transition:width .35s ease}
+.battle-meter>span.low{background:linear-gradient(90deg,#f4b57d,#ee7976)}
+.battle-message{margin:0;padding:10px 14px;border-radius:19px;border:2px solid #fff;
+ background:#f9fff2f5;box-shadow:0 5px 15px #2c807450;color:#305d58;
+ line-height:1.4;min-height:47px;font-size:13px;font-weight:800}
+.battle-action-grid,.battle-move-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.battle-action-grid button,.battle-move-grid button,.battle-end{
+ border:2px solid #ffffffdd;border-radius:19px;min-height:53px;
+ background:#fafff5f0;box-shadow:0 4px 0 #a3cdc0a8;
+ color:#39665e;font-size:clamp(13px,3.8vw,17px);font-weight:900;
+ text-align:center;cursor:pointer;touch-action:manipulation;padding:7px 8px}
+.battle-action-grid .battle-attack{background:linear-gradient(#ffdf99,#f6c879);
+ color:#75512b;box-shadow:0 4px 0 #c99d56b0}
+.battle-move-grid{padding:7px;border-radius:18px;background:#fdfbf2d9}
+.battle-move-grid button{font-size:12px;min-height:44px}
+.battle-hud button:disabled{opacity:.48;cursor:not-allowed}
+.battle-hud button:active:not(:disabled){transform:translateY(2px);box-shadow:none}
+.battle-end{background:#d2f1d8;box-shadow:0 4px 0 #8fbda1}
+#app.battling .bottom-ui,#app.battling .edge-buttons,#app.battling .redevelopment-status,
+#app.battling .festival-controls,#app.battling .island-battle-entry,#app.battling .island-name-pill{display:none!important}
+@media(max-height:760px){
+ .battle-hud{gap:6px;bottom:calc(env(safe-area-inset-bottom) + 7px)}
+ .battle-hp-card{padding:6px 9px}
+ .battle-hud-top{padding:6px 12px}
+ .battle-action-grid button{min-height:42px}
+ .battle-message{padding:7px 11px;min-height:39px}
+ .island-battle-entry{top:calc(env(safe-area-inset-top) + 190px)}
+}
+@media(prefers-reduced-motion:reduce){.battle-meter>span{transition:none}}
