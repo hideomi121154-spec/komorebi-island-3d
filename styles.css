@@ -325,3 +325,8 @@
 #app.battling .battle-hud-top{background:#fbf7e9f2}
 #app.battling .battle-message{max-height:100px;overflow-y:auto}
 @media(max-width:430px){#app.battling .battle-hud{width:95vw}}
+
+/* compact navigation: move options REPLACE the four base controls instead of stacking */
+.battle-nav{display:flex;align-items:center;gap:5px}
+.battle-hud-top .battle-nav button{white-space:nowrap;padding:6px 9px;font-size:11px}
+.battle-hud-top .battle-nav button[hidden]{display:none!important}
