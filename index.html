@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#e1f6e6">
   <meta name="description" content="こもれび島 3D — 島で歩く、集める、育てる。オリジナルの小さな生活ゲーム。">
   <title>こもれび島 3D | 小さな島の暮らし</title>
-  <link rel="stylesheet" href="styles.css?v=20261118-b1">
+  <link rel="stylesheet" href="styles.css?v=20261118-b2">
 </head>
 <body>
 <div id="app">
@@ -38,7 +38,7 @@
     </div>
   </div>
   <section id="battleHud" class="battle-hud" aria-label="島のモンスターバトル" hidden>
-    <div class="battle-hud-top"><strong>⚔️ こもれび バトル広場</strong><button id="battleQuitBtn" type="button">✕ やめる</button></div>
+    <div class="battle-hud-top"><strong>⚔️ こもれび バトル広場</strong><div class="battle-nav"><button id="battleBackBtn" type="button" hidden>↩ 技を戻す</button><button id="battleQuitBtn" type="button">✕ やめる</button></div></div>
     <div class="battle-hp-grid">
       <div class="battle-hp-card"><strong id="battlePlayerName">⚡ ピリモ Lv.16</strong><span>HP <span id="battlePlayerHP">48 / 48</span></span><div class="battle-meter"><span id="battlePlayerFill"></span></div></div>
       <div class="battle-hp-card"><strong id="battleFoeName">🍃 ハルリザ Lv.15</strong><span>HP <span id="battleFoeHP">52 / 52</span></span><div class="battle-meter"><span id="battleFoeFill"></span></div></div>
@@ -107,7 +107,7 @@
 <script src="nightfestival.js?v=20261114-v43" defer></script>
 <script src="render-quality.js?v=20261113-v32" defer></script>
 <script src="camera-gestures.js?v=20261113-v32" defer></script>
-<script src="battle3d.js?v=20261118-b1" defer></script>
-<script src="game.js?v=20261114-v42&battle=20261118-b1" defer></script>
+<script src="battle3d.js?v=20261118-b2" defer></script>
+<script src="game.js?v=20261114-v42&battle=20261118-b2" defer></script>
 </body>
 </html>
