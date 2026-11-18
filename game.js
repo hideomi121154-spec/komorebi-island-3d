@@ -822,6 +822,83 @@ function stopKartRace(){
  if(kartPriorView){overviewMode=kartPriorView.overviewMode;seaLineOverview=kartPriorView.seaLineOverview;industrialOverview=kartPriorView.industrialOverview;festivalShow=kartPriorView.festivalShow;cameraYaw=kartPriorView.yaw;cameraPitch=kartPriorView.pitch;cameraZoom=kartPriorView.zoom;cameraPan.x=kartPriorView.panX;cameraPan.z=kartPriorView.panZ;camFocus.x=kartPriorView.focusX;camFocus.z=kartPriorView.focusZ;}
  kartPriorView=null;$('redevelopmentViewBtn').classList.toggle('active',overviewMode);nearest=findNearby();setContext();showToast('🌿 こもれび島に戻ったよ');
 }
+
+function updateBattleHud(){
+ if(!battleSession?.active)return;
+ const s=battleSession,hero=s.team[s.activeIndex],foe=s.foe,ended=s.phase==='end';
+ $('battlePlayerName').textContent=hero.icon+' '+hero.name+' Lv.'+hero.level;
+ $('battleFoeName').textContent=foe.icon+' '+foe.name+' Lv.'+foe.level;
+ $('battlePlayerHP').textContent=hero.hp+' / '+hero.maxHp;
+ $('battleFoeHP').textContent=foe.hp+' / '+foe.maxHp;
+ $('battlePlayerFill').style.width=(hero.hp/hero.maxHp*100)+'%';
+ $('battleFoeFill').style.width=(foe.hp/foe.maxHp*100)+'%';
+ $('battlePlayerFill').classList.toggle('low',hero.hp/hero.maxHp<=.3);
+ $('battleFoeFill').classList.toggle('low',foe.hp/foe.maxHp<=.3);
+ $('battleMessage').textContent=s.log;
+ $('battleActions').hidden=ended;
+ $('battleMoves').hidden=ended||$('battleMoves').dataset.open!=='yes';
+ $('battleEndBtn').hidden=!ended;
+ if(ended)$('battleEndBtn').textContent=s.result==='win'?'🏆 勝利！ 島に戻る':'🏝️ 島の散策に戻る';
+ $('battleItemBtn').disabled=s.kit<=0;
+ $('battleItemBtn').textContent='🧰 どうぐ ×'+s.kit;
+}
+function battleAction(id){
+ const s=battleSession;
+ if(!s?.active||s.phase!=='command')return false;
+ let success=false;
+ if(id==='friend')success=BATTLE.switchFriend(s);
+ else if(id==='item')success=BATTLE.item(s);
+ else if(id==='flee')success=BATTLE.flee(s);
+ else success=BATTLE.move(s,id);
+ if(!success){updateBattleHud();return false;}
+ if(s.effect)s.effect.at=performance.now();
+ $('battleMoves').dataset.open='no';
+ if(s.phase==='end'&&s.result==='win'){
+  state.battleWins=(state.battleWins||0)+1;
+  state.coins+=60;
+  s.log+='　🪙 ごほうび60コイン！';
+  updateHud();save();
+ }
+ updateBattleHud();
+ return true;
+}
+function startIslandBattle(){
+ if(!BATTLE.create||battleSession?.active||paused||indoor.room||railRide.active||
+    KART.active()||rocketCameraActive||fishing.stage!=='idle'||watering.active)return false;
+ battleBefore={x:state.x,z:state.z,island:state.currentIsland,angle:state.angle,
+   overviewMode,seaLineOverview,industrialOverview,festivalShow,
+   cameraPitch,cameraYaw,cameraZoom,panX:cameraPan.x,panZ:cameraPan.z};
+ battleSession=BATTLE.create();state.x=BATTLE.marker.x-4.25;state.z=BATTLE.marker.z+1.95;
+ state.currentIsland='home';
+ paused=true;overviewMode=false;seaLineOverview=false;industrialOverview=false;festivalShow=false;
+ cameraPitch=0;cameraYaw=0;cameraZoom=1;cameraPan.x=0;cameraPan.z=0;
+ for(const k of Object.keys(input))input[k]=false;
+ $('battleMoves').dataset.open='no';
+ $('battleHud').hidden=false;$('app').classList.add('battling');
+ $('battleBtn').classList.add('active');
+ updateBattleHud();updateHud();
+ return true;
+}
+function finishIslandBattle(){
+ if(!battleSession?.active)return false;
+ const pos=battleBefore;
+ battleSession.active=false;battleSession=null;battleBefore=null;
+ $('battleHud').hidden=true;$('app').classList.remove('battling');
+ $('battleBtn').classList.remove('active');
+ paused=false;
+ if(pos){
+  state.x=pos.x;state.z=pos.z;state.angle=pos.angle;state.currentIsland=pos.island;
+  overviewMode=pos.overviewMode;seaLineOverview=pos.seaLineOverview;industrialOverview=pos.industrialOverview;
+  festivalShow=pos.festivalShow;
+  cameraPitch=pos.cameraPitch;cameraYaw=pos.cameraYaw;cameraZoom=pos.cameraZoom;
+  cameraPan.x=pos.panX;cameraPan.z=pos.panZ;
+  camFocus.x=state.x;camFocus.z=state.z;
+ }
+ nearest=findNearby();updateHud();setContext();save();
+ showToast('🌿 いつもの島の暮らしに戻ったよ！');
+ return true;
+}
+
 function interact(){if(paused||battleSession?.active)return;if(indoor.room){interactInside();return}const t=findNearby();if(!t){showToast('🌿 気になる場所に近づいて「調べる」を押そう');return}const id=t.id;
  if(id.startsWith('resource')){const i=Number(id.slice(8));const p=resourceSpots[i];if(!p||resourceCollected(i))return;state.harvested.push(100+i);if(p.type==='lumber'){give('wood',2);showToast('📦 建設資材から木材2個を受け取った！')}else{give('berry',2);state.questBerries+=2;showToast('🧺 かごから果物2個を受け取った！')}maybeQuest()}
  else if(id.startsWith('shell')){const i=Number(id.slice(5));state.shells.push(i);give('shell',1);showToast('🐚 貝がらを拾った！')}
