@@ -825,7 +825,7 @@ function stopKartRace(){
 
 function updateBattleHud(){
  if(!battleSession?.active)return;
- const s=battleSession,hero=s.team[s.activeIndex],foe=s.foe,ended=s.phase==='end';
+ const s=battleSession,hero=s.team[s.activeIndex],foe=s.foe,ended=s.phase==='end',movesOpen=$('battleMoves').dataset.open==='yes';
  $('battlePlayerName').textContent=hero.icon+' '+hero.name+' Lv.'+hero.level;
  $('battleFoeName').textContent=foe.icon+' '+foe.name+' Lv.'+foe.level;
  $('battlePlayerHP').textContent=hero.hp+' / '+hero.maxHp;
@@ -835,8 +835,9 @@ function updateBattleHud(){
  $('battlePlayerFill').classList.toggle('low',hero.hp/hero.maxHp<=.3);
  $('battleFoeFill').classList.toggle('low',foe.hp/foe.maxHp<=.3);
  $('battleMessage').textContent=s.log;
- $('battleActions').hidden=ended;
- $('battleMoves').hidden=ended||$('battleMoves').dataset.open!=='yes';
+ $('battleActions').hidden=ended||movesOpen;
+ $('battleMoves').hidden=ended||!movesOpen;
+ $('battleBackBtn').hidden=ended||!movesOpen;
  $('battleEndBtn').hidden=!ended;
  if(ended)$('battleEndBtn').textContent=s.result==='win'?'🏆 勝利！ 島に戻る':'🏝️ 島の散策に戻る';
  $('battleItemBtn').disabled=s.kit<=0;
@@ -868,8 +869,8 @@ function startIslandBattle(){
  battleBefore={x:state.x,z:state.z,island:state.currentIsland,angle:state.angle,
    overviewMode,seaLineOverview,industrialOverview,festivalShow,
    cameraPitch,cameraYaw,cameraZoom,panX:cameraPan.x,panZ:cameraPan.z};
- battleSession=BATTLE.create();state.x=BATTLE.marker.x-4.25;state.z=BATTLE.marker.z+1.95;
- state.currentIsland='home';
+ battleSession=BATTLE.create();
+ // Do not modify saved world coordinates: the battle is a temporary camera scene.
  paused=true;overviewMode=false;seaLineOverview=false;industrialOverview=false;festivalShow=false;
  cameraPitch=0;cameraYaw=0;cameraZoom=1;cameraPan.x=0;cameraPan.z=0;
  for(const k of Object.keys(input))input[k]=false;
@@ -1211,6 +1212,7 @@ function importSave(){
 function exportSave(){const data=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const url=URL.createObjectURL(data),a=document.createElement('a');a.href=url;a.download='komorebi-save-day'+state.day+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);showToast('セーブデータを書き出したよ')}
 function bindControls(){KART.bindControls(stopKartRace);
  $('battleBtn')?.addEventListener('click',()=>{if(!battleSession?.active)startIslandBattle();else finishIslandBattle()});
+ $('battleBackBtn')?.addEventListener('click',()=>{$('battleMoves').dataset.open='no';updateBattleHud()});
  $('battleAttackBtn')?.addEventListener('click',()=>{if(!battleSession?.active||battleSession.phase==='end')return;const el=$('battleMoves');el.dataset.open=el.dataset.open==='yes'?'no':'yes';updateBattleHud()});
  $('battleFriendBtn')?.addEventListener('click',()=>battleAction('friend'));
  $('battleItemBtn')?.addEventListener('click',()=>battleAction('item'));
