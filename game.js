@@ -676,7 +676,8 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
   }
  }
  if(!roomActive&&worldFestivalRenderer){const launchOrigin=state.currentIsland==='commerce'?[52,-4]:[11,-5];worldFestivalRenderer.draw(festivalClock,fireworksIntensity,launchOrigin,lookAt(eye,center,[0,1,0]),perspective(viewFov*Math.PI/180,aspect,.1,220),canvas.width/Math.max(1,canvas.clientWidth||1),reducedMotion)}
- requestAnimationFrame(render)}
+ paintBattleOverlay(now,battleCamera);
+  requestAnimationFrame(render)}
 
 // The phone's wall clock (formatted as Japan Standard Time) owns the game's date and sky.
 // Manual fast-forward is intentionally disabled in real-time mode.
