@@ -37,7 +37,7 @@ test('real compositing generates bright bolts, shockwave rings and moving projec
  fx.paint(counter.ctx,2650,seq,camera,marker,414,896,false);
  assert.ok(charge.calls.fill>=25);
  assert.ok(travel.calls.stroke>7);
- assert.ok(impact.calls.arc>15);
+ assert.ok(impact.calls.arc>=4&&impact.calls.lines>25,'impact combines expanding rings and radial flash rays');
  assert.ok(impact.calls.gradient>1);
  assert.ok(counter.calls.fill>5);
  assert.equal(fx.paint(impact.ctx,4000,seq,camera,marker,414,896,false),false);
