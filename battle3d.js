@@ -3,7 +3,7 @@
 (()=>{
 'use strict';
 const marker={id:'battleArena',x:-.7,z:10.2,r:2.65,icon:'⚔️',name:'島のバトル広場'};
-const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
 const define=()=>({
  active:true,phase:'command',turn:0,activeIndex:0,kit:1,result:null,
  team:[
