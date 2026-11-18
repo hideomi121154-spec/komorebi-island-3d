@@ -57,6 +57,7 @@ function move(s,id,rand=()=>.5){
  }
  if(!alive(s.foe)){s.result='win';s.phase='end';s.log+='　🏆 '+hero.name+'の勝利！';return true;}
  enemyReply(s,rand);
+ s.effect={type:m.type,target:m.type==='heal'?'hero':'foe',at:0};
  return true;
 }
 function switchFriend(s){
@@ -71,7 +72,7 @@ function item(s){
  const hero=unit(s);s.kit--;s.turn++;
  const healed=Math.min(18,hero.maxHp-hero.hp);
  hero.hp+=healed;s.log='🧰 きずぐすりで '+hero.name+'のHPが'+healed+'回復！';
- s.effect={type:'heal',target:'hero',at:0};enemyReply(s);return true;
+ enemyReply(s);s.effect={type:'heal',target:'hero',at:0};return true;
 }
 function flee(s){
  if(!s||s.phase!=='command')return false;
