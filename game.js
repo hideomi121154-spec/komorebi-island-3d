@@ -21,6 +21,9 @@ if(!REDEVELOPMENT)throw Error('redevelopment3d.js is required');
 const SEA=window.KomorebiSeaLine;
 if(!SEA)throw Error('sealine3d.js is required');
 const LAUNCH_AUDIO=window.KomorebiLaunchAudio||null;
+const BATTLEFX=window.KomorebiBattleEffects||null;
+const battleFxCanvas=$('battleFxCanvas');
+const battleFxCtx=battleFxCanvas?.getContext?.('2d',{alpha:true})||null;
 const BATTLE=window.KomorebiBattle||{marker:null,drawStatic:()=>{},drawDynamic:()=>{},camera:()=>null};
 const KART=window.KomorebiKart||{places:[],drawTerrain:()=>{},drawStatic:()=>{},drawDynamic:()=>{},active:()=>false,camera:()=>null,step:()=>{},bindControls:()=>{},keyInput:()=>false,getState:()=>({active:false}),start:()=>false,stop:()=>{}};
  const INDUSTRY=window.KomorebiIndustry||{places:[],factory:{x:21,z:27},dock:{x:48,z:29.5},ship:{x:69,z:29.5},drawDynamic:()=>{},metrics:()=>({inTransit:0,loaded:0})};
@@ -619,12 +622,12 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
    spectator.eye[0]+=Math.sin(now*.11)*shake;
    spectator.eye[1]+=Math.cos(now*.09)*shake*.45;
   }
-  const kartCamera=KART.camera();const battleCamera=battleSession?.active?BATTLE.camera():null;
+  const kartCamera=KART.camera();const battleCamera=battleSession?.active?BATTLE.camera(battleSession,now):null;
   const eye=battleCamera?battleCamera.eye:kartCamera?kartCamera.eye:roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):spectator?spectator.eye:travelPoint?[camFocus.x-8.5,12.5,camFocus.z+18.5]:[camFocus.x+Math.sin(scenicAngle)*distance*Math.cos(pitch),baseHeight+distance*Math.sin(pitch),camFocus.z+Math.cos(scenicAngle)*distance*Math.cos(pitch)];
  const center=battleCamera?battleCamera.center:kartCamera?kartCamera.center:roomActive?[0,.95,-.35]:spectator?spectator.center:[camFocus.x,clamp(-cameraPitch,0,1.25)*28,camFocus.z];
  viewFov=battleCamera?battleCamera.fov:kartCamera?kartCamera.fov:roomActive?52:(spectator?spectator.fov:industrialOverview?68:travelPoint?56:seaLineOverview?70:overviewMode?54:48);
   updateSpeechPosition(eye,center,aspect,viewFov*Math.PI/180);
- const lighting=DAYLIGHT.paletteAt(KART.active()?15*60:festivalShow&&!roomActive?22*60+30:state.timeMinutes);
+ const lighting=DAYLIGHT.paletteAt(battleSession?.active?13*60+45:KART.active()?15*60:festivalShow&&!roomActive?22*60+30:state.timeMinutes);
   const fireworksIntensity=festivalShow?1:lighting.stars;
   const festivalClock=festivalShow?Math.max(0,now-festivalStartedAt)+1800:now;
   if(festivalShow&&!roomActive&&!reducedMotion&&FESTIVAL?.spectacleEventsAt){
@@ -640,7 +643,7 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.
    }
   }
  if($('nightSky')?.style)$('nightSky').style.opacity=roomActive?'0':String(lighting.stars);
- if(ctx2d){drawSoftware(festivalClock,eye,aspect,lighting,center);requestAnimationFrame(render);return;}
+ if(ctx2d){drawSoftware(festivalClock,eye,aspect,lighting,center);paintBattleOverlay(now,battleCamera);requestAnimationFrame(render);return;}
  const indoorShade=roomActive?.06:battleSession?.active?.06:lighting.darkness;
  gl.clearColor(roomActive?.86:lighting.top[0],roomActive?.84:lighting.top[1],roomActive?.77:lighting.top[2],1);
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
@@ -823,9 +826,22 @@ function stopKartRace(){
  kartPriorView=null;$('redevelopmentViewBtn').classList.toggle('active',overviewMode);nearest=findNearby();setContext();showToast('🌿 こもれび島に戻ったよ');
 }
 
+function paintBattleOverlay(now,battleCamera){
+ if(!battleFxCtx||!battleFxCanvas||!BATTLEFX)return;
+ const width=canvas.clientWidth||window.innerWidth||390,height=canvas.clientHeight||window.innerHeight||844;
+ const ratio=Math.min(1.5,window.devicePixelRatio||1),pw=Math.round(width*ratio),ph=Math.round(height*ratio);
+ if(battleFxCanvas.width!==pw||battleFxCanvas.height!==ph){battleFxCanvas.width=pw;battleFxCanvas.height=ph}
+ battleFxCtx.setTransform(ratio,0,0,ratio,0,0);
+ const session=battleSession?.active?battleSession:null,seq=session?.cinematic;
+ if(!session){battleFxCtx.clearRect(0,0,width,height);return}
+ BATTLEFX.paint(battleFxCtx,now,seq,battleCamera||BATTLE.camera(),BATTLE.marker,width,height,reducedMotion);
+ $('app').classList.toggle('vfx-impact',BATTLEFX.active(seq,now)&&BATTLEFX.phase(seq,now)==='impact');
+ if(seq&&!BATTLEFX.active(seq,now)){session.cinematic=null;$('app').classList.remove('vfx-impact');updateBattleHud()}
+}
+
 function updateBattleHud(){
  if(!battleSession?.active)return;
- const s=battleSession,hero=s.team[s.activeIndex],foe=s.foe,ended=s.phase==='end',movesOpen=$('battleMoves').dataset.open==='yes';
+ const s=battleSession,hero=s.team[s.activeIndex],foe=s.foe,ended=s.phase==='end',movesOpen=$('battleMoves').dataset.open==='yes',animating=!!BATTLEFX?.active(s.cinematic,performance.now());
  $('battlePlayerName').textContent=hero.icon+' '+hero.name+' Lv.'+hero.level;
  $('battleFoeName').textContent=foe.icon+' '+foe.name+' Lv.'+foe.level;
  $('battlePlayerHP').textContent=hero.hp+' / '+hero.maxHp;
@@ -840,12 +856,14 @@ function updateBattleHud(){
  $('battleBackBtn').hidden=ended||!movesOpen;
  $('battleEndBtn').hidden=!ended;
  if(ended)$('battleEndBtn').textContent=s.result==='win'?'🏆 勝利！ 島に戻る':'🏝️ 島の散策に戻る';
- $('battleItemBtn').disabled=s.kit<=0;
+ $('battleItemBtn').disabled=animating||s.kit<=0;
+ for(const id of ['battleAttackBtn','battleFriendBtn','battleRunBtn'])$(id).disabled=animating;
+ document.querySelectorAll('[data-battle-move]').forEach(btn=>{btn.disabled=animating});
  $('battleItemBtn').textContent='🧰 どうぐ ×'+s.kit;
 }
 function battleAction(id){
  const s=battleSession;
- if(!s?.active||s.phase!=='command')return false;
+ if(!s?.active||s.phase!=='command'||BATTLEFX?.active(s.cinematic,performance.now()))return false;
  let success=false;
  if(id==='friend')success=BATTLE.switchFriend(s);
  else if(id==='item')success=BATTLE.item(s);
@@ -853,6 +871,7 @@ function battleAction(id){
  else success=BATTLE.move(s,id);
  if(!success){updateBattleHud();return false;}
  if(s.effect)s.effect.at=performance.now();
+ s.cinematic=id==='flee'?null:BATTLEFX?.create(id,performance.now(),reducedMotion)||null;
  $('battleMoves').dataset.open='no';
  if(s.phase==='end'&&s.result==='win'){
   state.battleWins=(state.battleWins||0)+1;
@@ -883,7 +902,7 @@ function startIslandBattle(){
 function finishIslandBattle(){
  if(!battleSession?.active)return false;
  const pos=battleBefore;
- battleSession.active=false;battleSession=null;battleBefore=null;rebuildWorld();
+ battleSession.active=false;battleSession=null;battleBefore=null;$('app').classList.remove('vfx-impact');rebuildWorld();
  $('battleHud').hidden=true;$('app').classList.remove('battling');
  $('battleBtn').classList.remove('active');
  paused=false;
