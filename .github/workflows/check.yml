@@ -41,6 +41,7 @@ jobs:
           node --check kart-next.js
           node --check kart-next-scene.js
           node --check sealine3d.js
+          node --check battle3d.js
           node --check expansion3d.js
       - name: Verify 3D/2D dimension worlds and multiplayer server syntax
         run: |
