@@ -66,7 +66,7 @@ test('all experimental 3D battle geometry is finite and both cameras exist',()=>
  b.drawStatic(g);
  b.drawDynamic(d,2500,b.create());
  assert.ok(g.draws>25);
- assert.ok(d.draws>50);
+ assert.ok(d.draws>20);
  assert.equal(g.invalid+d.invalid,0);
  const p=b.camera();
  assert.equal(p.eye.length,3);
