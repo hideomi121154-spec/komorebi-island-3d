@@ -30,7 +30,7 @@ function boot(){
  const context={window:{addEventListener(){},devicePixelRatio:1},document,navigator:{},performance:{now:()=>now},console,
    requestAnimationFrame(){},setTimeout(){return 1},clearTimeout(){},
    localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)}};
- for(const script of ['daynight.js','moko3d.js','expansion3d.js','redevelopment3d.js','sealine3d.js','battle3d.js','game.js'])
+ for(const script of ['daynight.js','moko3d.js','expansion3d.js','redevelopment3d.js','sealine3d.js','battle3d.js','battle-effects.js','game.js'])
   new Script(src(script)).runInNewContext(context);
  const start=events.get('DOMContentLoaded');assert.ok(start);start();
  const api=context.window.__komorebiTest;assert.ok(api,'game boots with commercial island');
@@ -39,7 +39,7 @@ function boot(){
 }
 
 test('live island battle starts from visible button and 3D command UI, wins reward once and returns home',()=>{
- const {api,node,storage}=boot();
+ const {api,node,storage,clock}=boot();
  const startPosition=api.getState(),coins=api.getState().coins;
  node('battleBtn')._handlers.get('click')();
  let s=api.getBattle();
@@ -53,8 +53,11 @@ test('live island battle starts from visible button and 3D command UI, wins rewa
  assert.equal(node('battleBackBtn').hidden,false);
  assert.equal(api.battleAction('thunder'),true);
  assert.ok(api.getBattle().foe.hp<s.foe.hp);
- api.battleAction('thunder');
- api.battleAction('thunder');
+ assert.equal(api.battleAction('thunder'),false,'rapid taps cannot skip the attack animation');
+ clock(3501);
+ assert.equal(api.battleAction('thunder'),true);
+ clock(7002);
+ assert.equal(api.battleAction('thunder'),true);
  s=api.getBattle();
  assert.equal(s.result,'win');
  assert.equal(s.phase,'end');
