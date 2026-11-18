@@ -206,21 +206,105 @@ function fx(b,s,now){
   b.sphere(px,yy,pz,.065+.05*f,.075+.06*f,.06,col,4,5);
  }
 }
+const lerp=(a,b,t)=>a+(b-a)*t;
+function ribbon(b,ax,ay,az,bx,by,bz,w,col){
+ const dx=bx-ax,dy=by-ay,len=Math.hypot(dx,dy)||1,nx=-dy/len*w,ny=dx/len*w;
+ b.quad([ax+nx,ay+ny,az],[bx+nx,by+ny,bz],[bx-nx,by-ny,bz],[ax-nx,ay-ny,az],col);
+}
+function combatPose(s,now){
+ const seq=s?.cinematic;
+ if(!seq)return {heroX:0,heroY:0,foeX:0,foeY:0,t:1,id:null};
+ const t=clamp((now-seq.at)/seq.duration,0,1),id=seq.id;
+ const attack= !['item','rest','friend'].includes(id);
+ const lunge=attack&&t>.16&&t<.54?Math.sin(Math.PI*clamp((t-.16)/.38)):0;
+ const hit=attack&&t>.51&&t<.72?Math.sin(Math.PI*clamp((t-.51)/.21)):0;
+ const reply=attack&&t>.74&&t<.94?Math.sin(Math.PI*clamp((t-.74)/.20)):0;
+ return {id,t,heroX:.45*lunge-.13*reply*Math.sin(t*150),heroY:.46*lunge+.23*reply,
+  foeX:.23*hit*Math.sin(t*150)-.26*reply,foeY:.23*hit+.40*reply};
+}
+function drawSpell3D(b,now,s){
+ const seq=s?.cinematic;if(!seq)return;
+ const t=(now-seq.at)/seq.duration;if(t<0||t>1)return;
+ const {x,z}=marker,hero={x:x-1.88,y:1.24,z:z+.57},foe={x:x+1.85,y:1.30,z:z+.37};
+ const isHeal=['rest','item','friend'].includes(seq.id),yellow=seq.id==='thunder';
+ const main=isHeal?'#a1f9bd':yellow?'#fff3a8':seq.id==='burst'?'#ffe9a5':'#c2f4ff';
+ const glow=isHeal?'#74d89a':yellow?'#f3c953':seq.id==='burst'?'#f5c77b':'#95d8e9';
+ if(isHeal){
+  for(let i=0;i<3;i++){
+   const rr=.48+(i%3)*.32+.18*Math.sin(t*9+i),a=t*5+i*2.094;
+   b.sphere(hero.x+Math.cos(a)*rr,1.1+t*1.1,hero.z+Math.sin(a)*rr,.17,.19,.17,main,5,7);
+  }
+  for(let i=0;i<16;i++){
+   const a=i*Math.PI*2/16+t*4,rr=1.0+.6*Math.sin(t*5+i);
+   b.sphere(hero.x+rr*Math.cos(a),.4+(i%5)*.27+t*.7,hero.z+rr*Math.sin(a),.07,.10,.07,'#dfffea',4,5);
+  }
+  return;
+ }
+ if(t<.24){
+  const p=t/.24,r=.7+p*.7;
+  b.sphere(hero.x,hero.y+.06,hero.z,r,r*.73,r*.68,glow,7,10);
+  for(let i=0;i<14;i++){
+   const a=i*2.399+p*6;
+   b.sphere(hero.x+Math.cos(a)*r,hero.y+Math.sin(a)*r,hero.z+.68,.08,.10,.08,main,4,5);
+  }
+ }else if(t<.51){
+  const p=clamp((t-.24)/.27),xx=lerp(hero.x,foe.x,p),yy=hero.y+.16*Math.sin(p*12);
+  for(let i=0;i<4;i++){
+   const offset=(i-1.5)*.17;
+   ribbon(b,hero.x,hero.y+offset,hero.z+.78,
+     xx,yy+offset+Math.sin(p*19+i)*.18,foe.z+.87,.065,main);
+  }
+  b.sphere(xx,yy,foe.z+.82,.64,.61,.58,main,8,10);
+  b.sphere(xx,yy,foe.z+1.20,.29,.26,.26,'#fffefa',6,8);
+  for(let i=0;i<17;i++){
+   const a=i*2.399+p*10,dist=.44+(i%4)*.20;
+   b.sphere(xx+Math.cos(a)*dist,yy+Math.sin(a)*dist,foe.z+.9,.08,.08,.08,glow,4,5);
+  }
+ }else if(t<.73){
+  const p=clamp((t-.51)/.22),strength=1-p,r=.4+1.5*p;
+  for(let i=0;i<30;i++){
+   const a=i*Math.PI*2/30,dist=r*(.85+(i%5)*.17);
+   b.sphere(foe.x+Math.cos(a)*dist,foe.y+Math.sin(a)*dist,foe.z+.87,
+     .11+.21*strength,.12+.2*strength,.12, i%4===0?'#ffffff':main,4,5);
+  }
+  b.sphere(foe.x,foe.y,foe.z+.9,.45+.9*strength,.43+.7*strength,.34+.5*strength,'#fff7d7',7,9);
+  for(let i=0;i<7;i++){
+   const a=i*Math.PI*2/7+p*7;
+   ribbon(b,foe.x,foe.y,foe.z+1.3,
+      foe.x+Math.cos(a)*(1.2+2*p),foe.y+Math.sin(a)*(1.2+2*p),foe.z+1.31,.08,main);
+  }
+ }else if(t<.93){
+  const p=clamp((t-.73)/.20),xx=lerp(foe.x,hero.x,p);
+  b.sphere(xx,1.3+.30*Math.sin(p*9),foe.z+.8,.46,.33,.36,'#75e5ac',7,8);
+  for(let i=0;i<17;i++){
+   const a=i*2.399+p*10,r=.52+(i%4)*.26;
+   b.tri([xx+Math.cos(a)*r,1.3+Math.sin(a)*r,foe.z+1],
+    [xx+Math.cos(a+.3)*(r+.38),1.35+Math.sin(a+.3)*(r+.38),foe.z+.92],
+    [xx+Math.cos(a+.45)*r,1.0+Math.sin(a+.45)*r,foe.z+1.03],'#9df0a3');
+  }
+ }
+}
+
 function drawDynamic(b,now,session){
  // Characters can be seen sparring when the player walks by;
  // turns and damage only begin when the battle overlay is activated.
- const y=0;
+ const y=0,p=combatPose(session,now);
  const id=session?.active?session.team[session.activeIndex].id:'pirimo';
- if(id==='lumino')cloudling(b,marker.x-1.88,y,marker.z+.55,now);
- else sparky(b,marker.x-1.88,y,marker.z+.55,now);
- leafling(b,marker.x+1.85,y,marker.z+.27,now);
+ if(id==='lumino')cloudling(b,marker.x-1.88+p.heroX,y+p.heroY,marker.z+.55,now);
+ else sparky(b,marker.x-1.88+p.heroX,y+p.heroY,marker.z+.55,now);
+ leafling(b,marker.x+1.85+p.foeX,y+p.foeY,marker.z+.27,now);
  trainer(b,now);
- fx(b,session,now);
+ drawSpell3D(b,now,session);
+ if(!session?.cinematic)fx(b,session,now);
 }
-function camera(){
- // Portrait composition: project the monsters into the open middle of the
- // screen, ABOVE the bottom command menu, rather than behind it.
- return {eye:[marker.x+.12,8.0,marker.z+13.4],center:[marker.x,-2.0,marker.z+.20],fov:46};
+function camera(session,now=0){
+ // Fixed portrait stage, subtle reactive shake on impact (not a full-screen strobe).
+ const fx=session?.cinematic,t=fx?clamp((now-fx.at)/fx.duration,0,1):1;
+ const hit=t>.51&&t<.66?.13*Math.sin(t*160):0;
+ const counter=t>.85&&t<.91?.07*Math.sin(t*100):0;
+ return {eye:[marker.x+.12+hit+counter,8.0,marker.z+13.4],
+  center:[marker.x+hit*.7,-2.0,marker.z+.20],
+  fov:t>.48&&t<.70?44:46};
 }
 window.KomorebiBattle={marker,moves,create:define,move,switchFriend,item,flee,drawStatic,drawBattleScene,drawDynamic,camera,damage};
 })();
