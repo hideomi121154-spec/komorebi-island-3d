@@ -169,75 +169,27 @@ for(let i=0;i<12;i++){
   z:Math.sin(angle)*radius,r:4.2+(i%4)*.65,color:surroundColors[i%surroundColors.length],
   rays:105+(i%3)*25,life:3650+(i%3)*360,kind:i%4===0?'gold':i%3===0?'pink':'green'});
 }
-// Cascading willow fireworks: golden curtains descend toward the sea and shoreline.
-// Visual sparks fade above the terrain; there are no physical falling objects.
-for(let i=0;i<6;i++){
- const a=TWO_PI*(i+.25)/6;
- showPattern.push({at:550+i*880,x:Math.cos(a)*13,y:39+(i%2)*5,
-  z:Math.sin(a)*13,r:6.2+(i%3)*.6,color:i%2?[1,.85,.54]:[.95,.73,.39],
-  rays:145,life:6900,kind:'willow'});
+// Additional small, medium and large traditional chrysanthemum fireworks.
+// Stagger launches around the skyline to avoid one overwhelming flash on phones.
+for(let i=0;i<30;i++){
+ const angle=TWO_PI*i/30;
+ const radius=8+(i%5)*3.4;
+ const size=i%6===0?6.1:i%3===0?3.7:1.5+(i%4)*.38;
+ showPattern.push({at:300+i*293,x:Math.cos(angle)*radius,
+  y:19+(i%7)*2.7,z:Math.sin(angle)*radius,r:size,
+  color:surroundColors[(i+2)%surroundColors.length],
+  rays:size>5?170:size>3?105:52,life:size>5?4500:size>3?3300:2400,
+  kind:i%4===0?'gold':i%4===1?'pink':i%4===2?'green':'red'});
 }
 const showPalette={gold:[1,.72,.31],red:[1,.23,.32],pink:[1,.30,.72],green:[.38,1,.63]};
 // Exactly one surprise in each group of ten launches, at a seeded random
 // position. This avoids dry spells without inflating the stated 10% frequency.
-const FACE_KINDS=['face-round','face-bunny','face-cat'];
-const faceColors={outline:[1,.93,.72],eye:[.57,.91,1],blush:[1,.46,.65],mouth:[1,.76,.85],spark:[.87,1,.9]};
-function rareAtCycle(cycle){return {slot:2+Math.floor(random(cycle*14033+791)*8),kind:FACE_KINDS[cycle%3]};}
-function faceShape(kind){
- const pts=[],put=(x,y,c='outline',size=1)=>pts.push({x,y,color:faceColors[c],size});
- const oval=(x,y,rx,ry,n,c='outline')=>{for(let i=0;i<n;i++){let a=TWO_PI*i/n;put(x+rx*Math.cos(a),y+ry*Math.sin(a),c);}};
- const line=(ax,ay,bx,by,n,c='outline')=>{for(let i=0;i<=n;i++){let t=i/n;put(ax+(bx-ax)*t,ay+(by-ay)*t,c);}};
- const bend=(a,b,c,n,color='outline')=>{for(let i=0;i<=n;i++){let t=i/n,u=1-t;put(u*u*a[0]+2*u*t*b[0]+t*t*c[0],u*u*a[1]+2*u*t*b[1]+t*t*c[1],color);}};
- oval(0,0,.68,.64,94);
- for(const x of[-.23,.23]){oval(x,-.10,.073,.095,13,'eye');put(x-.02,-.13,'spark',1.7);}
- for(const x of[-.40,.40])oval(x,.21,.10,.05,13,'blush');
- bend([-.10,.26],[0,.40],[.10,.26],16,'mouth');
- if(kind==='face-bunny'){
-  for(const side of[-1,1]){
-   bend([side*.30,-.54],[side*.62,-1.43],[side*.26,-1.31],31);
-   bend([side*.26,-1.31],[side*.09,-1.30],[side*.08,-.60],25);
-   bend([side*.25,-.67],[side*.30,-1.07],[side*.24,-1.17],15,'blush');
-  }
- }else if(kind==='face-cat'){
-  for(const side of[-1,1]){
-   line(side*.38,-.51,side*.68,-1.00,17);
-   line(side*.68,-1.00,side*.12,-.62,18);
-   line(side*.39,-.67,side*.53,-.84,10,'blush');
-   for(let i=-1;i<=1;i++)line(side*.44,.25+i*.04,side*.80,.23+i*.09,7,'mouth');
-  }
- }else{for(const side of[-1,1])oval(side*.61,-.46,.11,.11,16,'spark');}
- for(let i=0;i<20;i++){let a=TWO_PI*i/20,r=1.02+(i%3)*.055;put(Math.cos(a)*r,Math.sin(a)*r*.8,'spark',i%5===0?1.3:.70);}
- return pts;
-}
-const FACE_SHAPES=Object.fromEntries(FACE_KINDS.map(k=>[k,faceShape(k)]));
-function renderFaceTexture(ctx,kind){
- ctx.clearRect(0,0,512,512);ctx.save();ctx.translate(256,282);
- for(const p of FACE_SHAPES[kind]){
-  const rgb=p.color.map(n=>Math.round(n*255)).join(','),x=p.x*178,y=p.y*178;
-  ctx.shadowBlur=11;ctx.shadowColor='rgba('+rgb+',.98)';
-  ctx.fillStyle='rgba('+rgb+',.48)';ctx.beginPath();ctx.arc(x,y,3.0*p.size,0,TWO_PI);ctx.fill();
-  ctx.shadowBlur=3;ctx.fillStyle='rgba(255,255,240,.95)';
-  ctx.beginPath();ctx.arc(x,y,Math.max(.9,1.35*p.size),0,TWO_PI);ctx.fill();
- }
- ctx.restore();
-}
-
 function spectacleEventsAt(ms){
  const t=Math.max(0,ms),cycle=Math.floor(t/SHOW_CYCLE),phase=t%SHOW_CYCLE;
- const rare=rareAtCycle(cycle);
- return showPattern.flatMap((base,index)=>{
-  const isRare=index===rare.slot&&base.kind!=='willow';
-  const start=isRare?RARE_AT:base.at;
-  const life=isRare?RARE_LIFE:base.life;
-  // Wrap across cycle boundaries so long descending willow trails do not
-  // disappear halfway down simply because the next volley begins.
-  const age=phase-start;
+ return showPattern.flatMap((spec,index)=>{
+  const age=phase-spec.at;
   const wrappedAge=age< -580?age+SHOW_CYCLE:age;
-  if(wrappedAge< -580||wrappedAge>=life)return [];
-  // The rare face is a dedicated final firework, never behind the giant
-  // gold chrysanthemum. Keep nine normal launches in their original slots.
-  const spec=isRare?
-   {...base,at:start,life,r:3.7,y:28,color:[1,.91,.78],kind:'face',faceType:rare.kind}:base;
+  if(wrappedAge< -580||wrappedAge>=spec.life)return [];
   return [{spec,age:wrappedAge,index,cycle}];
  });
 }
@@ -288,56 +240,6 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,
     const a=.95*(1-u)*intensity;
     add(centerX+.19*Math.sin(seed+i*1.5+t*3),Math.max(.07,head-dy),centerZ,
       i===0?13:4.0,i%4===0?[1,1,.96]:[1,.72,.35],a);
-   }
-   continue;
-  }
-  if(spec.kind==='face'){
-   const t=clamp(age/spec.life),grow=.32+.68*Math.pow(Math.min(1,t*2.3),.63);
-   const fade=Math.pow(1-t,.65)*intensity;
-   if(includeFaceOutline)for(const p of FACE_SHAPES[spec.faceType]){
-    // Canvas2D fallback draws these points. WebGL shows the face on a single
-    // camera-facing billboard instead to prevent duplicated/misaligned lines.
-    add(centerX+p.x*spec.r*grow,spec.y-p.y*spec.r*grow-.8*t*t,centerZ,
-     5.8*p.size,p.color,fade*(.85+.15*Math.sin(age*.008+p.x*31)));
-   }
-   for(let j=0;j<35;j++){
-    const a=TWO_PI*j/35,r=spec.r*(.80+.25*random(seed+j*47))*grow;
-    add(centerX+Math.cos(a)*r,spec.y+Math.sin(a)*r-.8*t*t,
-      centerZ+.35*Math.sin(a*3),3.5,faceColors.spark,fade*.62);
-   }
-   continue;
-  }
-  // Willow is NOT a chrysanthemum with increased gravity. Its filaments
-  // must hang BELOW the burst, with vertical downward ribbons at all times.
-  if(spec.kind==='willow'){
-   const t=clamp(age/spec.life);
-   const fade=Math.pow(1-t,.65)*intensity;
-   const rays=Math.floor(100*density);
-   const spread=spec.r*(.35+.65*Math.min(1,t*2));
-   const drop=38*t*t;
-   for(let j=0;j<rays;j++){
-    const a=TWO_PI*j/rays+random(seed*13+j*23)*.13;
-    const reach=(.52+.48*random(seed*89+j*17))*spread;
-    const topY=spec.y+1.1*Math.sin(a*3)-2.8*Math.min(1,t*3);
-    const tipY=Math.max(.5,topY-drop*(.80+.20*random(seed*19+j*31)));
-    const x=centerX+Math.cos(a)*reach;
-    const z=centerZ+Math.sin(a)*reach*.8;
-    const strands=16;
-    for(let k=0;k<strands;k++){
-     const u=k/(strands-1);
-     // The filament is a hanging vertical curtain: never a radial spoke.
-     const y=topY+(tipY-topY)*u;
-     const sway=Math.sin(a*3+u*5+age*.001)*.18*u;
-     const alpha=fade*(.38+.62*u)*Math.min(1,(y-.4)/2);
-     if(alpha<.025)continue;
-     const px=x+sway,pz=z+.1*Math.sin(u*4+a);
-     add(px,y,pz,k===strands-1?7.8:4.4,k%5===0?[1,1,.83]:spec.color,alpha);
-     if(lineSegments&&k>0&&lineSegments.length<maxPoints*16){
-      const py=topY+(tipY-topY)*(k-1)/(strands-1);
-      lineSegments.push(px,py,pz,1,1,.84,.48,alpha*.85);
-      lineSegments.push(px,y,pz,1,1,.84,.48,alpha*.85);
-     }
-    }
    }
    continue;
   }
