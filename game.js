@@ -455,6 +455,7 @@ function buildFishingGeometry(b,now){
 
 function buildDynamic(now,includeRocket=true){const b=new MeshBuilder();if(battleSession?.active){BATTLE.drawDynamic(b,now,battleSession);return b.toFloat()}if(indoor.room){drawRoomActors(b,now);return b.toFloat()}let bounce=(Math.sin(now*.011)*.045);if(!railRide.active&&!KART.active())buildAvatar(b,state.x,state.z,playerFacing,bounce,false);buildAvatar(b,1.9,.9,Math.sin(now*.00031)*.65,Math.sin(now*.002)*.02,true);
  MOKO.draw(b,mokoPose,speech.actor==='moko'?Math.atan2(state.x-mokoPose.x,state.z-mokoPose.z):null,now);
+ window.KomorebiIslandLife?.drawDynamic(b,now);
  drawAvailableSupplies(b);
  shells.forEach((s,i)=>{if(state.shells.includes(i))return;b.sphere(s.x,.08,s.z,.27,.17,.26,'#fff0d5',5,7);b.sphere(s.x+.12,.20,s.z,.09,.09,.09,'#fae0b3',4,5)});
  farmPlots.forEach((p,i)=>{const f=state.farm[i];if(!f)return;
