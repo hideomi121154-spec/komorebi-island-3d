@@ -7,8 +7,8 @@
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 function create(options={}){
  const mode=['auto','ultra','balanced','battery'].includes(options.mode)?options.mode:'auto';
- const budget=Number.isFinite(options.pixelBudget)?options.pixelBudget:2200000;
- let limit=mode==='ultra'?2.5:mode==='balanced'?1.6:mode==='battery'?1:1.65;
+ const budget=Number.isFinite(options.pixelBudget)?options.pixelBudget:3200000;
+ let limit=mode==='ultra'?3:mode==='balanced'?1.65:mode==='battery'?1:1.95;
  let last=0,frames=0,sum=0,lastChange=0,interactive=false;
  function observe(now){
   if(!Number.isFinite(now))return;
@@ -18,8 +18,8 @@ function create(options={}){
    if(delta>0&&delta<180){frames++;sum+=delta;}
    if(frames>=120&&now-lastChange>=4500){
     const avg=sum/frames;
-    if(avg>28)limit=clamp(limit-.22,1.15,2.15);
-    else if(avg<18.7)limit=clamp(limit+.10,1.15,2.15);
+    if(avg>28)limit=clamp(limit-.18,1.2,2.4);
+    else if(avg<18.7)limit=clamp(limit+.12,1.2,2.4);
     lastChange=now;frames=0;sum=0;
    }
   }
