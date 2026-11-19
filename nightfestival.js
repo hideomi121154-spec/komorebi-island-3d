@@ -307,6 +307,40 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,
    }
    continue;
   }
+  // Willow is NOT a chrysanthemum with increased gravity. Its filaments
+  // must hang BELOW the burst, with vertical downward ribbons at all times.
+  if(spec.kind==='willow'){
+   const t=clamp(age/spec.life);
+   const fade=Math.pow(1-t,.65)*intensity;
+   const rays=Math.floor(100*density);
+   const spread=spec.r*(.35+.65*Math.min(1,t*2));
+   const drop=38*t*t;
+   for(let j=0;j<rays;j++){
+    const a=TWO_PI*j/rays+random(seed*13+j*23)*.13;
+    const reach=(.52+.48*random(seed*89+j*17))*spread;
+    const topY=spec.y+1.1*Math.sin(a*3)-2.8*Math.min(1,t*3);
+    const tipY=Math.max(.5,topY-drop*(.80+.20*random(seed*19+j*31)));
+    const x=centerX+Math.cos(a)*reach;
+    const z=centerZ+Math.sin(a)*reach*.8;
+    const strands=16;
+    for(let k=0;k<strands;k++){
+     const u=k/(strands-1);
+     // The filament is a hanging vertical curtain: never a radial spoke.
+     const y=topY+(tipY-topY)*u;
+     const sway=Math.sin(a*3+u*5+age*.001)*.18*u;
+     const alpha=fade*(.38+.62*u)*Math.min(1,(y-.4)/2);
+     if(alpha<.025)continue;
+     const px=x+sway,pz=z+.1*Math.sin(u*4+a);
+     add(px,y,pz,k===strands-1?7.8:4.4,k%5===0?[1,1,.83]:spec.color,alpha);
+     if(lineSegments&&k>0&&lineSegments.length<maxPoints*16){
+      const py=topY+(tipY-topY)*(k-1)/(strands-1);
+      lineSegments.push(px,py,pz,1,1,.84,.48,alpha*.85);
+      lineSegments.push(px,y,pz,1,1,.84,.48,alpha*.85);
+     }
+    }
+   }
+   continue;
+  }
   // A complete spherical shell projected through the camera. Radial trails,
   // gravity, changing radii, colored sparks and twinkling tips create
   // gold willow, crimson chrysanthemum and smaller flower bursts.
