@@ -147,7 +147,16 @@ const showPattern=[
  {at:1780,x:4.9,y:19,z:1,r:2.4,color:[1,.64,.32],rays:93,life:4150,kind:'gold'},
  {at:2050,x:-2.0,y:23,z:3,r:1.8,color:[1,.32,.71],rays:78,life:3320,kind:'pink'},
  {at:2540,x:3.2,y:14,z:-1,r:1.8,color:[.35,.94,1],rays:73,life:3200,kind:'green'},
- {at:3030,x:-4.5,y:23,z:-4,r:2.1,color:[1,.75,.38],rays:82,life:3630,kind:'gold'}
+ {at:3030,x:-4.5,y:23,z:-4,r:2.1,color:[1,.75,.38],rays:82,life:3630,kind:'gold'},
+ // Grand finale: staggered volleys across the entire skyline, not a single cluster.
+ {at:3500,x:-9.0,y:25,z:-6,r:4.6,color:[.41,.80,1],rays:160,life:4300,kind:'pink'},
+ {at:3700,x:9.0,y:27,z:-5,r:5.1,color:[1,.75,.38],rays:200,life:5000,kind:'gold'},
+ {at:4050,x:-6.4,y:31,z:-9,r:6.4,color:[1,.72,.31],rays:240,life:5250,kind:'gold'},
+ {at:4330,x:6.2,y:30,z:-8,r:5.4,color:[1,.30,.72],rays:175,life:4600,kind:'pink'},
+ {at:4850,x:0,y:34,z:-11,r:7.1,color:[1,.84,.54],rays:265,life:5200,kind:'gold'},
+ {at:5300,x:-11.5,y:19,z:2,r:3.8,color:[.38,1,.63],rays:130,life:3850,kind:'green'},
+ {at:5600,x:11.5,y:21,z:1,r:4.1,color:[.42,.78,1],rays:135,life:3900,kind:'pink'},
+ {at:5950,x:0,y:23,z:4,r:4.7,color:[1,.23,.32],rays:155,life:4000,kind:'red'}
 ];
 const showPalette={gold:[1,.72,.31],red:[1,.23,.32],pink:[1,.30,.72],green:[.38,1,.63]};
 // Exactly one surprise in each group of ten launches, at a seeded random
@@ -224,7 +233,7 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,
  if(intensity<=.005||reducedMotion)return new Float32Array(0);
  const output=[],active=spectacleEventsAt(ms);
  const density=clamp(detail,.45,1);
- const maxPoints=Math.ceil(11000*density);
+ const maxPoints=Math.ceil(15500*density);
  function add(x,y,z,size,col,alpha){
   if(alpha<.025||output.length>=maxPoints*8)return;
   output.push(x,y,z,size,col[0],col[1],col[2],clamp(alpha));
