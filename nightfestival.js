@@ -173,9 +173,9 @@ for(let i=0;i<12;i++){
 // Visual sparks fade above the terrain; there are no physical falling objects.
 for(let i=0;i<6;i++){
  const a=TWO_PI*(i+.25)/6;
- showPattern.push({at:1150+i*760,x:Math.cos(a)*13,y:22+(i%2)*5,
-  z:Math.sin(a)*13,r:4.3+(i%3)*.5,color:i%2?[1,.85,.54]:[.95,.73,.39],
-  rays:115,life:6500,kind:'willow'});
+ showPattern.push({at:550+i*880,x:Math.cos(a)*13,y:39+(i%2)*5,
+  z:Math.sin(a)*13,r:6.2+(i%3)*.6,color:i%2?[1,.85,.54]:[.95,.73,.39],
+  rays:145,life:6900,kind:'willow'});
 }
 const showPalette={gold:[1,.72,.31],red:[1,.23,.32],pink:[1,.30,.72],green:[.38,1,.63]};
 // Exactly one surprise in each group of ten launches, at a seeded random
@@ -226,15 +226,19 @@ function spectacleEventsAt(ms){
  const t=Math.max(0,ms),cycle=Math.floor(t/SHOW_CYCLE),phase=t%SHOW_CYCLE;
  const rare=rareAtCycle(cycle);
  return showPattern.flatMap((base,index)=>{
-  const isRare=index===rare.slot;
+  const isRare=index===rare.slot&&base.kind!=='willow';
   const start=isRare?RARE_AT:base.at;
   const life=isRare?RARE_LIFE:base.life;
-  if(phase<start-580||phase>=start+life)return [];
+  // Wrap across cycle boundaries so long descending willow trails do not
+  // disappear halfway down simply because the next volley begins.
+  const age=phase-start;
+  const wrappedAge=age< -580?age+SHOW_CYCLE:age;
+  if(wrappedAge< -580||wrappedAge>=life)return [];
   // The rare face is a dedicated final firework, never behind the giant
   // gold chrysanthemum. Keep nine normal launches in their original slots.
   const spec=isRare?
    {...base,at:start,life,r:3.7,y:28,color:[1,.91,.78],kind:'face',faceType:rare.kind}:base;
-  return [{spec,age:phase-start,index,cycle}];
+  return [{spec,age:wrappedAge,index,cycle}];
  });
 }
 function burstLighting(ms,intensity){
@@ -309,7 +313,7 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,
   const t=clamp(age/spec.life);
   const fade=Math.pow(1-t,spec.kind==='willow'?.48:spec.kind==='gold'?.72:.95)*intensity;
   const expand=spec.r*Math.pow(Math.min(1,t*1.70),.57)*(1+.09*t);
-  const fall=(spec.kind==='willow'?29:spec.kind==='gold'?5.3:2.8)*t*t;
+  const fall=(spec.kind==='willow'?43:spec.kind==='gold'?5.3:2.8)*t*t;
   const rays=Math.max(32,Math.floor(spec.rays*density));
   const trails=spec.kind==='willow'?19:spec.kind==='gold'?12:spec.kind==='red'?10:8;
   if(t<.19)add(centerX,spec.y,centerZ,27,[1,1,.9],fade*(1-t/.19));
@@ -322,7 +326,7 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,
    const uy=latitude;
    const variation=.74+.49*random(seed*381+j*67);
    const arc=spec.kind==='gold'?1.0:1.0;
-   const radius=expand*variation*arc;
+   const radius=expand*variation*arc*(spec.kind==='willow'?.72:1);
    const flicker=.76+.24*Math.sin(age*.010+j*3.41);
    let previousTrailPoint=null;
    for(let k=0;k<trails;k++){
