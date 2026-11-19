@@ -7,8 +7,8 @@
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 function create(options={}){
  const mode=['auto','ultra','balanced','battery'].includes(options.mode)?options.mode:'auto';
- const budget=Number.isFinite(options.pixelBudget)?options.pixelBudget:3200000;
- let limit=mode==='ultra'?3:mode==='balanced'?1.65:mode==='battery'?1:1.95;
+ const budget=Number.isFinite(options.pixelBudget)?options.pixelBudget:4200000;
+ let limit=mode==='ultra'?3.6:mode==='balanced'?1.65:mode==='battery'?1:2.15;
  let last=0,frames=0,sum=0,lastChange=0,interactive=false;
  function observe(now){
   if(!Number.isFinite(now))return;
@@ -32,7 +32,7 @@ function create(options={}){
   // Keep the canvas dimensions stable while dragging: resizing the WebGL
   // drawing buffer at touchstart/touchend produces visible stalls on iOS.
   // Auto already uses a moderately lower resolution budget for mobile GPUs.
-  return clamp(Math.min(deviceRatio||1,limit,pixelCap),.75,3);
+  return clamp(Math.min(mode==='ultra'?Math.max(1,deviceRatio||1)*1.18:(deviceRatio||1),limit,pixelCap),.75,3.6);
  }
  function current(){return {mode,limit,pixelBudget:budget,interactive};}
  return {observe,ratio,current,setInteractive,isInteractive:()=>interactive};
