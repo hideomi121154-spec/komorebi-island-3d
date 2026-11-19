@@ -378,19 +378,6 @@ function createBurstBillboards(gl){
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   textures[kind]=texture;
  }
- // Three small procedural face sprites. No files downloaded, no licensed art.
- for(const kind of FACE_KINDS){
-  renderFaceTexture(c,kind);
-  const texture=gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D,texture);
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,canvas);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-  textures[kind]=texture;
- }
  gl.bindTexture(gl.TEXTURE_2D,null);
  return {
   draw(ms,intensity,origin,view,proj){
@@ -501,5 +488,5 @@ function drawCanvas(ctx,width,height,ms,intensity,reducedMotion=false){
    fireworks[i+3]*.44,[fireworks[i+4],fireworks[i+5],fireworks[i+6]],fireworks[i+7]);
  ctx.restore();
 }
-window.KomorebiNightFestival={CYCLE,ROCKET_MS,BURST_MS,stars,eventsAt,fireworkAt,makeParticles,burstLighting,createRenderer,drawCanvas,worldParticles,createWorldRenderer,SHOW_CYCLE,RARE_AT,RARE_LIFE,showPattern,spectacleEventsAt,FACE_KINDS,FACE_SHAPES,rareAtCycle};
+window.KomorebiNightFestival={CYCLE,ROCKET_MS,BURST_MS,stars,eventsAt,fireworkAt,makeParticles,burstLighting,createRenderer,drawCanvas,worldParticles,createWorldRenderer,SHOW_CYCLE,RARE_AT,RARE_LIFE,showPattern,spectacleEventsAt};
 })();
