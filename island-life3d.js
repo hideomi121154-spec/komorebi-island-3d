@@ -91,20 +91,55 @@ function monster(b,a,t){
  if(leaf){b.cylinder(0,1.66,0,.07,.30,5,'#689d56');b.sphere(.19,1.78,0,.27,.09,.15,'#76b968',5,7)}
  else b.sphere(0,1.66,-.07,.25,.19,.24,'#e8f8fb',5,7);
 }
+// Independent, spatially separated destinations. Each resident pauses at landmarks
+// instead of circling a common centre. No randomness per frame: motion is smooth.
+const paths=[
+ [[-8.7,1.2],[-7.9,2.4],[-6.9,1.7],[-8.3,.5]],
+ [[1.8,2.5],[3.5,2.0],[4.1,3.1],[2.7,4.0]],
+ [[7.4,3.6],[8.9,3.1],[9.2,4.8],[7.7,5.0]],
+ [[-8.0,7.5],[-7.5,8.2],[-6.7,8.0]],
+ [[9.6,-1.2],[10.1,-.4],[9.8,.2]],
+ [[-3.5,7.0],[-2.4,7.6],[-1.6,6.8],[-2.8,6.1]],
+ [[2.8,-6.9],[4.2,-7.1],[4.7,-5.9],[3.3,-5.5]],
+ [[-10.2,4.7],[-9.3,5.4],[-9.8,6.2]],
+ [[5.8,8.3],[6.9,8.7],[7.3,7.6]],
+ [[-10.6,-3.4],[-9.4,-2.7],[-9.8,-1.5]],
+ [[8.1,7.0],[9.6,7.5],[10.1,6.1],[8.7,5.7]],
+ [[-5.2,-7.7],[-4.1,-8.4],[-3.4,-7.3]]
+];
+const pause=[2.8,1.2,2.4,8,5,6,3,2.1,3.5,7,1.1,4.5];
+const pace=[.8,1.1,.65,.4,.55,.35,.95,1.0,.85,.32,1.8,.7];
+const phases=[0,5.1,12.4,3.3,9.2,18.1,7.6,14.2,2.4,8.1,11.2,6.3];
 function pose(a,now){
- const t=now*a.speed*TAU+a.phase;
- // Smooth, looping paths remain inside the grassy plaza instead of crossing buildings.
- const x=a.x+Math.cos(t)*a.rx,z=a.z+Math.sin(t)*a.rz;
- const vx=-Math.sin(t)*a.rx,vz=Math.cos(t)*a.rz;
- const yaw=Math.atan2(vx,vz);
- return {x,z,yaw,t:now*.001+a.phase};
+ const index=residents.indexOf(a);
+ if(index<0)return {x:a.x,z:a.z,yaw:0,t:now*.001,walking:false};
+ const route=paths[index],speed=pace[index],stop=pause[index];
+ let total=0;const segments=[];
+ for(let i=0;i<route.length;i++){
+  const from=route[i],to=route[(i+1)%route.length];
+  const d=Math.hypot(to[0]-from[0],to[1]-from[1]);
+  const travel=d/speed;
+  segments.push({from,to,travel,start:total});
+  total+=travel+stop;
+ }
+ let time=((now*.001+phases[index])%total+total)%total;
+ let segment=segments[segments.length-1];
+ for(const item of segments)if(time<item.start+item.travel+stop){segment=item;break}
+ const elapsed=time-segment.start;
+ const walking=elapsed<segment.travel;
+ const u=walking?Math.max(0,Math.min(1,elapsed/segment.travel)):1;
+ const eased=u*u*(3-2*u);
+ const x=segment.from[0]+(segment.to[0]-segment.from[0])*eased;
+ const z=segment.from[1]+(segment.to[1]-segment.from[1])*eased;
+ const yaw=Math.atan2(segment.to[0]-segment.from[0],segment.to[1]-segment.from[1]);
+ return {x,z,yaw,t:now*.001+phases[index],walking};
 }
 function drawDynamic(b,now){
  for(const a of residents){
-  const p=pose(a,now),bob=Math.abs(Math.sin(p.t*6))*(a.kind==='monster'?.12:.045);
+  const p=pose(a,now),bob=p.walking?Math.abs(Math.sin(p.t*6))*(a.kind==='monster'?.12:.045):a.kind==='monster'?.035*Math.sin(p.t*2):0;
   ground(b,p.x,p.z);
   b.setTransform(p.x,bob,p.z,p.yaw);
-  if(a.kind==='person')person(b,a,p.t,true);
+  if(a.kind==='person')person(b,a,p.t,p.walking);
   else if(a.kind==='monster')monster(b,a,p.t);
   else if(a.variant==='panda')panda(b,p.t);
   else if(a.variant==='dog')dog(b,p.t);
