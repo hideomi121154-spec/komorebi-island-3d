@@ -169,6 +169,14 @@ for(let i=0;i<12;i++){
   z:Math.sin(angle)*radius,r:4.2+(i%4)*.65,color:surroundColors[i%surroundColors.length],
   rays:105+(i%3)*25,life:3650+(i%3)*360,kind:i%4===0?'gold':i%3===0?'pink':'green'});
 }
+// Cascading willow fireworks: golden curtains descend toward the sea and shoreline.
+// Visual sparks fade above the terrain; there are no physical falling objects.
+for(let i=0;i<6;i++){
+ const a=TWO_PI*(i+.25)/6;
+ showPattern.push({at:1150+i*760,x:Math.cos(a)*13,y:22+(i%2)*5,
+  z:Math.sin(a)*13,r:4.3+(i%3)*.5,color:i%2?[1,.85,.54]:[.95,.73,.39],
+  rays:115,life:6500,kind:'willow'});
+}
 const showPalette={gold:[1,.72,.31],red:[1,.23,.32],pink:[1,.30,.72],green:[.38,1,.63]};
 // Exactly one surprise in each group of ten launches, at a seeded random
 // position. This avoids dry spells without inflating the stated 10% frequency.
@@ -299,11 +307,11 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,
   // gravity, changing radii, colored sparks and twinkling tips create
   // gold willow, crimson chrysanthemum and smaller flower bursts.
   const t=clamp(age/spec.life);
-  const fade=Math.pow(1-t,spec.kind==='gold'?.72:.95)*intensity;
+  const fade=Math.pow(1-t,spec.kind==='willow'?.48:spec.kind==='gold'?.72:.95)*intensity;
   const expand=spec.r*Math.pow(Math.min(1,t*1.70),.57)*(1+.09*t);
-  const fall=(spec.kind==='gold'?5.3:2.8)*t*t;
+  const fall=(spec.kind==='willow'?29:spec.kind==='gold'?5.3:2.8)*t*t;
   const rays=Math.max(32,Math.floor(spec.rays*density));
-  const trails=spec.kind==='gold'?12:spec.kind==='red'?10:8;
+  const trails=spec.kind==='willow'?19:spec.kind==='gold'?12:spec.kind==='red'?10:8;
   if(t<.19)add(centerX,spec.y,centerZ,27,[1,1,.9],fade*(1-t/.19));
   for(let j=0;j<rays;j++){
    const latitude=1-2*((j+.5)/rays);
@@ -318,16 +326,16 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,
    const flicker=.76+.24*Math.sin(age*.010+j*3.41);
    let previousTrailPoint=null;
    for(let k=0;k<trails;k++){
-    const relative=1-k*(spec.kind==='gold'?.045:spec.kind==='red'?.060:.071);
+    const relative=1-k*(spec.kind==='willow'?.027:spec.kind==='gold'?.045:spec.kind==='red'?.060:.071);
     const x=centerX+ux*radius*relative;
     const z=centerZ+uz*radius*relative;
     const gravity=fall*(1+(1-relative)*.36);
-    const y=spec.y+uy*radius*relative-gravity;
+    const y=Math.max(.35,spec.y+uy*radius*relative-gravity);
     const twinkle=(k===0?flicker:1)*(.98-k*.078);
     const white=k===0||j%17===0&&k<2;
     const color=white?[1,1,.87]:spec.color;
-    const pointSize=k===0?(spec.kind==='gold'?12.4:11.5):spec.kind==='gold'?7.4:6.7;
-    const alpha=fade*twinkle;
+    const pointSize=k===0?(spec.kind==='willow'?9.2:spec.kind==='gold'?12.4:11.5):spec.kind==='willow'?5.8:spec.kind==='gold'?7.4:6.7;
+    const alpha=fade*twinkle*(spec.kind==='willow'?Math.min(1,Math.max(0,(y-.35)/2.2)):.99);
     add(x,y,z,pointSize,color,alpha);
     // Real connected ribbons, so the long golden/red tails never look like a dotted ring.
     if(lineSegments&&previousTrailPoint&&lineSegments.length<maxPoints*16){
