@@ -158,6 +158,17 @@ const showPattern=[
  {at:5600,x:11.5,y:21,z:1,r:4.1,color:[.42,.78,1],rays:135,life:3900,kind:'pink'},
  {at:5950,x:0,y:23,z:4,r:4.7,color:[1,.23,.32],rays:155,life:4000,kind:'red'}
 ];
+// Twelve launch positions on a full ring around the festival viewing point.
+// World-space X/Z placement makes the show genuinely visible in every direction
+// when the player rotates the camera (not a flat panorama pasted on screen).
+const surroundColors=[[1,.79,.40],[.43,.83,1],[1,.40,.72],[.48,1,.70],[.87,.68,1],[1,.54,.35]];
+for(let i=0;i<12;i++){
+ const angle=TWO_PI*i/12;
+ const radius=19+(i%3)*3.2;
+ showPattern.push({at:3250+i*235,x:Math.cos(angle)*radius,y:27+(i%4)*3.2,
+  z:Math.sin(angle)*radius,r:4.2+(i%4)*.65,color:surroundColors[i%surroundColors.length],
+  rays:105+(i%3)*25,life:3650+(i%3)*360,kind:i%4===0?'gold':i%3===0?'pink':'green'});
+}
 const showPalette={gold:[1,.72,.31],red:[1,.23,.32],pink:[1,.30,.72],green:[.38,1,.63]};
 // Exactly one surprise in each group of ten launches, at a seeded random
 // position. This avoids dry spells without inflating the stated 10% frequency.
