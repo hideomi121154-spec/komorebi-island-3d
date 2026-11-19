@@ -303,7 +303,7 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,
 function createBurstBillboards(gl){
  if(typeof document==='undefined'||!document.createElement)return null;
  const canvas=document.createElement('canvas');
- canvas.width=canvas.height=512;
+ canvas.width=canvas.height=768;
  const c=canvas.getContext('2d');
  if(!c)return null;
  const schemes={
@@ -424,7 +424,7 @@ function createBurstBillboards(gl){
 }
 function createWorldRenderer(gl){
  const vertex="attribute vec4 aWorld;attribute vec4 aTint;uniform mat4 uView;uniform mat4 uProj;uniform float uScale;varying vec4 vTint;void main(){vec4 p=uView*vec4(aWorld.xyz,1.0);gl_Position=uProj*p;float d=max(8.0,-p.z);gl_PointSize=clamp(aWorld.w*uScale*min(2.0,28.0/d),1.5,42.0);vTint=aTint;}";
- const fragment="precision mediump float;varying vec4 vTint;uniform float uLine;void main(){if(uLine>.5){gl_FragColor=vec4(vTint.rgb*1.15,vTint.a);return;}float r=length(gl_PointCoord-vec2(.5))*2.0;float halo=pow(max(0.0,1.0-r),2.1);float core=1.0-smoothstep(.02,.61,r);float a=(.26*halo+.97*core)*vTint.a;gl_FragColor=vec4(vTint.rgb*(.84+.25*core),a);}";
+ const fragment="precision mediump float;varying vec4 vTint;uniform float uLine;void main(){if(uLine>.5){gl_FragColor=vec4(vTint.rgb*1.15,vTint.a);return;}float r=length(gl_PointCoord-vec2(.5))*2.0;float halo=pow(max(0.0,1.0-r),3.2);float core=1.0-smoothstep(.025,.35,r);float glint=1.0-smoothstep(.0,.11,r);float a=(.15*halo+.78*core+.24*glint)*vTint.a;gl_FragColor=vec4(vTint.rgb*(.82+.38*glint),a);}";
  const program=gl.createProgram();
  const vs=createShader(gl,gl.VERTEX_SHADER,vertex),fs=createShader(gl,gl.FRAGMENT_SHADER,fragment);
  gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);
@@ -436,7 +436,7 @@ function createWorldRenderer(gl){
  try{billboards=createBurstBillboards(gl)}catch(error){console.warn('Procedural firework glows disabled:',error)}
  return {
   draw(ms,intensity,origin,view,proj,pixelRatio,reducedMotion=false){
-   const detail=(pixelRatio||1)<1.35?.66:1;
+   const detail=(pixelRatio||1)<1.35?.68:(pixelRatio||1)>=1.85?1.18:1;
    const lineSegments=[];
    const points=worldParticles(ms,intensity,origin,reducedMotion,detail,lineSegments,false);
    if(!points.length)return;
