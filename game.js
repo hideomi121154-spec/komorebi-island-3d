@@ -371,13 +371,15 @@ function buildStatic(){const b=new MeshBuilder();if(battleSession?.active){softw
 function buildAvatar(b,x,z,yaw,bob=0,npc=false){b.setTransform(x,-.035+bob,z,yaw);
  const tunic=npc?'#e9a5a2':(['#66b8a3','#df987d','#a694ca'][state.outfit||0]||'#66b8a3'),hair=npc?'#d7a17b':'#63483f',face=npc?'#fbdfc6':'#f6d8ba';
  for(let side of[-1,1]){b.box(side*.19,.34,0,.26,.63,.31,npc?'#f3d5b4':'#a9b7d6');b.sphere(side*.19,.09,.085,.22,.16,.25,'#f4e9ca',4,7)}
- b.sphere(0,.94,0,.53,.66,.37,tunic,6,10);
- b.sphere(0,1.68,.075,.48,.48,.45,face,7,10);
- b.sphere(0,1.96,-.055,.49,.27,.46,hair,5,9);
- for(let s of[-1,1]){b.sphere(s*.17,1.70,.48,.048,.065,.025,'#3b3e36',4,5);b.sphere(s*.34,1.56,.435,.12,.06,.035,'#e9aaa5',4,5);b.sphere(s*.6,.94,.06,.18,.42,.23,face,5,7)}
+ b.sphere(0,.94,0,.53,.66,.37,tunic,9,14);
+ b.sphere(0,1.68,.075,.48,.48,.45,face,10,16);
+ b.sphere(0,1.96,-.055,.49,.27,.46,hair,8,14);
+ for(let s of[-1,1]){b.sphere(s*.17,1.70,.48,.048,.065,.025,'#3b3e36',4,5);b.sphere(s*.34,1.56,.435,.12,.06,.035,'#e9aaa5',4,5);b.sphere(s*.6,.94,.06,.18,.42,.23,face,8,11)}
  b.sphere(0,1.57,.51,.09,.055,.03,npc?'#b98377':'#d5a18a',4,5);
+ // Tiny eye highlights add expression without changing face proportions.
+ for(const side of [-1,1])b.sphere(side*.17-.014,1.725,.506,.018,.021,.009,'#fffaf0',4,5);
  if(npc){for(let s of[-1,1]){const a=[s*.39,2.11,-.02],c=[s*.56,2.59,.0],d=[s*.11,2.20,.0];b.tri(a,c,d,hair);b.tri(a,d,c,hair)}b.sphere(0,1.28,.42,.23,.20,.08,'#fce6b0',5,7)}
- else{b.sphere(0,2.18,-.05,.48,.18,.47,'#f9d384',5,10);b.cylinder(0,2.2,.2,.46,.08,10,'#e2b574');b.box(0,.93,-.42,.74,.70,.22,'#a68b62')}
+ else{b.sphere(0,2.18,-.05,.48,.18,.47,'#f9d384',8,14);b.cylinder(0,2.2,.2,.46,.08,14,'#e2b574');b.box(0,.93,-.42,.74,.70,.22,'#a68b62')}
  b.clearTransform()}
 
 function fishingSegment(b,a,c,r,col){
