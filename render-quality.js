@@ -10,6 +10,7 @@ function create(options={}){
  const budget=Number.isFinite(options.pixelBudget)?options.pixelBudget:4200000;
  let limit=mode==='ultra'?3.6:mode==='balanced'?1.65:mode==='battery'?1:2.15;
  let last=0,frames=0,sum=0,lastChange=0,interactive=false;
+ let revision=0;
  function observe(now){
   if(!Number.isFinite(now))return;
   if(last>0&&mode==='auto'){
@@ -18,8 +19,10 @@ function create(options={}){
    if(delta>0&&delta<180){frames++;sum+=delta;}
    if(frames>=120&&now-lastChange>=4500){
     const avg=sum/frames;
+    const before=limit;
     if(avg>28)limit=clamp(limit-.18,1.2,2.4);
     else if(avg<18.7)limit=clamp(limit+.12,1.2,2.4);
+    if(limit!==before)revision++;
     lastChange=now;frames=0;sum=0;
    }
   }
@@ -34,7 +37,7 @@ function create(options={}){
   // Auto already uses a moderately lower resolution budget for mobile GPUs.
   return clamp(Math.min(mode==='ultra'?Math.max(1,deviceRatio||1)*1.18:(deviceRatio||1),limit,pixelCap),.75,3.6);
  }
- function current(){return {mode,limit,pixelBudget:budget,interactive};}
+ function current(){return {mode,limit,pixelBudget:budget,interactive,revision};}
  return {observe,ratio,current,setInteractive,isInteractive:()=>interactive};
 }
 function modeFromSearch(search=''){

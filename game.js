@@ -371,13 +371,15 @@ function buildStatic(){const b=new MeshBuilder();if(battleSession?.active){softw
 function buildAvatar(b,x,z,yaw,bob=0,npc=false){b.setTransform(x,-.035+bob,z,yaw);
  const tunic=npc?'#e9a5a2':(['#66b8a3','#df987d','#a694ca'][state.outfit||0]||'#66b8a3'),hair=npc?'#d7a17b':'#63483f',face=npc?'#fbdfc6':'#f6d8ba';
  for(let side of[-1,1]){b.box(side*.19,.34,0,.26,.63,.31,npc?'#f3d5b4':'#a9b7d6');b.sphere(side*.19,.09,.085,.22,.16,.25,'#f4e9ca',4,7)}
- b.sphere(0,.94,0,.53,.66,.37,tunic,6,10);
- b.sphere(0,1.68,.075,.48,.48,.45,face,7,10);
- b.sphere(0,1.96,-.055,.49,.27,.46,hair,5,9);
- for(let s of[-1,1]){b.sphere(s*.17,1.70,.48,.048,.065,.025,'#3b3e36',4,5);b.sphere(s*.34,1.56,.435,.12,.06,.035,'#e9aaa5',4,5);b.sphere(s*.6,.94,.06,.18,.42,.23,face,5,7)}
+ b.sphere(0,.94,0,.53,.66,.37,tunic,9,14);
+ b.sphere(0,1.68,.075,.48,.48,.45,face,10,16);
+ b.sphere(0,1.96,-.055,.49,.27,.46,hair,8,14);
+ for(let s of[-1,1]){b.sphere(s*.17,1.70,.48,.048,.065,.025,'#3b3e36',4,5);b.sphere(s*.34,1.56,.435,.12,.06,.035,'#e9aaa5',4,5);b.sphere(s*.6,.94,.06,.18,.42,.23,face,8,11)}
  b.sphere(0,1.57,.51,.09,.055,.03,npc?'#b98377':'#d5a18a',4,5);
+ // Tiny eye highlights add expression without changing face proportions.
+ for(const side of [-1,1])b.sphere(side*.17-.014,1.725,.506,.018,.021,.009,'#fffaf0',4,5);
  if(npc){for(let s of[-1,1]){const a=[s*.39,2.11,-.02],c=[s*.56,2.59,.0],d=[s*.11,2.20,.0];b.tri(a,c,d,hair);b.tri(a,d,c,hair)}b.sphere(0,1.28,.42,.23,.20,.08,'#fce6b0',5,7)}
- else{b.sphere(0,2.18,-.05,.48,.18,.47,'#f9d384',5,10);b.cylinder(0,2.2,.2,.46,.08,10,'#e2b574');b.box(0,.93,-.42,.74,.70,.22,'#a68b62')}
+ else{b.sphere(0,2.18,-.05,.48,.18,.47,'#f9d384',8,14);b.cylinder(0,2.2,.2,.46,.08,14,'#e2b574');b.box(0,.93,-.42,.74,.70,.22,'#a68b62')}
  b.clearTransform()}
 
 function fishingSegment(b,a,c,r,col){
@@ -480,8 +482,8 @@ function buildDynamic(now,includeRocket=true){const b=new MeshBuilder();if(battl
 function buildRocketDynamic(now){const b=new MeshBuilder();SPACE.drawRocket(b,now);return b.toFloat()}
 let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0,viewFov=48;
 let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,uOpacity=null,festivalRenderer=null,worldFestivalRenderer=null,skyRenderer=null,worldBuffer=null,dynamicBuffer=null,rocketBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine'),cameraZoom=1,cameraPitch=0,cameraYaw=0,festivalShow=false,festivalStartedAt=0,lastRareBurstKey=null,fireworksAudio=null,rocketCameraActive=false,rocketCameraMode='pad',rocketViewOrigin=null,rocketPriorView=null,industrialOverview=false;
-const vShader=`attribute vec3 aPos;attribute vec3 aNormal;attribute vec3 aColor;uniform mat4 uProjection;uniform mat4 uView;varying vec3 vColor;varying float vDepth;void main(){vec4 p=uView*vec4(aPos,1.0);gl_Position=uProjection*p;float sun=max(0.0,dot(normalize(aNormal),normalize(vec3(0.5,0.92,0.45))));float light=0.76+sun*0.25;vColor=aColor*light;vDepth=length(p.xyz);}`;
-const fShader=`precision mediump float;varying vec3 vColor;varying float vDepth;uniform vec3 uFog;uniform float uBrightness;uniform vec3 uFestivalTint;uniform float uFestivalGlow;uniform float uOpacity;void main(){vec3 c=mix(vColor,uFog,smoothstep(62.0,130.0,vDepth)*0.12);vec3 night=mix(c,c*vec3(0.22,0.34,0.58),clamp(uBrightness,0.0,1.0));gl_FragColor=vec4(clamp(night+uFestivalTint*uFestivalGlow,0.0,1.0),uOpacity);}`;
+const vShader=`attribute vec3 aPos;attribute vec3 aNormal;attribute vec3 aColor;uniform mat4 uProjection;uniform mat4 uView;varying vec3 vColor;varying float vDepth;void main(){vec4 p=uView*vec4(aPos,1.0);gl_Position=uProjection*p;vec3 n=normalize(aNormal);vec3 sunDir=normalize(vec3(0.5,0.92,0.45));float sun=max(0.0,dot(n,sunDir));float skyFill=0.5+0.5*n.y;float ambient=mix(0.64,0.81,skyFill);float diffuse=0.31*sun;float bounce=0.045*max(0.0,-n.y);vColor=aColor*(ambient+diffuse+bounce);vDepth=length(p.xyz);}`;
+const fShader=`precision mediump float;varying vec3 vColor;varying float vDepth;uniform vec3 uFog;uniform float uBrightness;uniform vec3 uFestivalTint;uniform float uFestivalGlow;uniform float uOpacity;void main(){float distanceFog=smoothstep(42.0,145.0,vDepth);float fogAmount=distanceFog*0.22;vec3 c=mix(vColor,uFog,fogAmount);vec3 night=mix(c,c*vec3(0.22,0.34,0.58),clamp(uBrightness,0.0,1.0));gl_FragColor=vec4(clamp(night+uFestivalTint*uFestivalGlow,0.0,1.0),uOpacity);}`;
 function makeShader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error('Shader error: '+gl.getShaderInfoLog(s));return s}
 function initializeGL(){gl=canvas.getContext('webgl',{alpha:false,antialias:true,preserveDrawingBuffer:false})||canvas.getContext('experimental-webgl',{alpha:false,antialias:true});if(!gl){ctx2d=canvas.getContext('2d',{alpha:false});if(!ctx2d)throw Error('描画機能が利用できません');softwareWorld=buildStatic();return;}prog=gl.createProgram();gl.attachShader(prog,makeShader(gl.VERTEX_SHADER,vShader));gl.attachShader(prog,makeShader(gl.FRAGMENT_SHADER,fShader));gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw Error('WebGL setup failed');gl.useProgram(prog);positionLoc=gl.getAttribLocation(prog,'aPos');normalLoc=gl.getAttribLocation(prog,'aNormal');colorLoc=gl.getAttribLocation(prog,'aColor');uView=gl.getUniformLocation(prog,'uView');uProj=gl.getUniformLocation(prog,'uProjection');uFog=gl.getUniformLocation(prog,'uFog');uLight=gl.getUniformLocation(prog,'uBrightness');uFestivalTint=gl.getUniformLocation(prog,'uFestivalTint');uFestivalGlow=gl.getUniformLocation(prog,'uFestivalGlow');uOpacity=gl.getUniformLocation(prog,'uOpacity');worldBuffer=gl.createBuffer();dynamicBuffer=gl.createBuffer();rocketBuffer=gl.createBuffer();gl.uniform1f(uOpacity,1);const world=buildStatic();gl.bindBuffer(gl.ARRAY_BUFFER,worldBuffer);gl.bufferData(gl.ARRAY_BUFFER,world,gl.STATIC_DRAW);worldVerts=world.length/9;gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);gl.clearColor(.70,.87,.90,1);if(FESTIVAL){try{festivalRenderer=FESTIVAL.createRenderer(gl);worldFestivalRenderer=FESTIVAL.createWorldRenderer(gl)}catch(error){console.warn('Night festival graphics unavailable:',error);festivalRenderer=null}}if(SKY){try{skyRenderer=SKY.createRenderer(gl)}catch(error){console.warn('Sky gradient unavailable:',error);skyRenderer=null}}}
 function rebuildWorld(){if(!worldBuffer&&!ctx2d)return;const mesh=buildStatic();if(gl){gl.bindBuffer(gl.ARRAY_BUFFER,worldBuffer);gl.bufferData(gl.ARRAY_BUFFER,mesh,gl.STATIC_DRAW);worldVerts=mesh.length/9}else softwareWorld=mesh;}
@@ -595,7 +597,11 @@ function restoreRocketCamera(){
  }
  rocketPriorView=null;rocketViewOrigin=null;rocketCameraMode='pad';
 }
-function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.walkIn&&!indoor.room){const w=indoor.walkIn,k=clamp((now-w.start)/390,0,1);state.x=w.x+(w.toX-w.x)*k;state.z=w.z+(w.toZ-w.z)*k;playerFacing=Math.atan2(w.toX-w.x,w.toZ-w.z)}const dt=Math.min(.07,(now-previous)/1000||0);previous=now;tick+=dt;
+let lastQualityRevision=-1;
+function render(now){if(!gameReady)return;renderQuality?.observe(now);
+ // Apply adaptive DPR only when its quality tier actually changes.
+ // Avoid reallocating the drawing buffer every frame on mobile Safari.
+ if(gl&&renderQuality&&!document.hidden){const q=renderQuality.current();if(q.revision!==lastQualityRevision){lastQualityRevision=q.revision;resize();}}if(indoor.walkIn&&!indoor.room){const w=indoor.walkIn,k=clamp((now-w.start)/390,0,1);state.x=w.x+(w.toX-w.x)*k;state.z=w.z+(w.toZ-w.z)*k;playerFacing=Math.atan2(w.toX-w.x,w.toZ-w.z)}const dt=Math.min(.07,(now-previous)/1000||0);previous=now;tick+=dt;
  if(KART.active())KART.step(dt);
  if(!document.hidden&&(lastClockSampleRaf<0||now-lastClockSampleRaf>=900)){lastClockSampleRaf=now;syncRealClock();}
  if(!indoor.room)updateMoko(now);
