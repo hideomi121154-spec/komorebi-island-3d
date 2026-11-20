@@ -4,7 +4,7 @@
 'use strict';
 function createRenderer(gl){
  const vert="attribute vec2 aClip;varying vec2 vUV;void main(){vUV=aClip*.5+vec2(.5);gl_Position=vec4(aClip,0.999,1.0);}";
- const frag="precision mediump float;varying vec2 vUV;uniform vec3 uTop;uniform vec3 uHorizon;void main(){float h=1.0-vUV.y;float t=smoothstep(0.10,0.90,h);vec3 c=mix(uTop,uHorizon,t);gl_FragColor=vec4(c,1.0);}";
+ const frag="precision mediump float;varying vec2 vUV;uniform vec3 uTop;uniform vec3 uHorizon;void main(){float h=1.0-vUV.y;float t=smoothstep(0.06,0.94,h);vec3 c=mix(uTop,uHorizon,t);float haze=exp(-pow((vUV.y-0.24)*5.5,2.0));c=mix(c,uHorizon,0.16*haze);gl_FragColor=vec4(clamp(c,0.0,1.0),1.0);}";
  function shader(type,source){
   const sh=gl.createShader(type);
   gl.shaderSource(sh,source);gl.compileShader(sh);
