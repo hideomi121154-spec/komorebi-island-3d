@@ -597,7 +597,11 @@ function restoreRocketCamera(){
  }
  rocketPriorView=null;rocketViewOrigin=null;rocketCameraMode='pad';
 }
-function render(now){if(!gameReady)return;renderQuality?.observe(now);if(indoor.walkIn&&!indoor.room){const w=indoor.walkIn,k=clamp((now-w.start)/390,0,1);state.x=w.x+(w.toX-w.x)*k;state.z=w.z+(w.toZ-w.z)*k;playerFacing=Math.atan2(w.toX-w.x,w.toZ-w.z)}const dt=Math.min(.07,(now-previous)/1000||0);previous=now;tick+=dt;
+let lastQualityRevision=-1;
+function render(now){if(!gameReady)return;renderQuality?.observe(now);
+ // Apply adaptive DPR only when its quality tier actually changes.
+ // Avoid reallocating the drawing buffer every frame on mobile Safari.
+ if(gl&&renderQuality&&!document.hidden){const q=renderQuality.current();if(q.revision!==lastQualityRevision){lastQualityRevision=q.revision;resize();}}if(indoor.walkIn&&!indoor.room){const w=indoor.walkIn,k=clamp((now-w.start)/390,0,1);state.x=w.x+(w.toX-w.x)*k;state.z=w.z+(w.toZ-w.z)*k;playerFacing=Math.atan2(w.toX-w.x,w.toZ-w.z)}const dt=Math.min(.07,(now-previous)/1000||0);previous=now;tick+=dt;
  if(KART.active())KART.step(dt);
  if(!document.hidden&&(lastClockSampleRaf<0||now-lastClockSampleRaf>=900)){lastClockSampleRaf=now;syncRealClock();}
  if(!indoor.room)updateMoko(now);
