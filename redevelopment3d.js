@@ -20,6 +20,9 @@ function paintedRoad(b){
  b.box(9.4,.025,-3.42,5.25,.095,.85,'#b6bab2');
  b.box(12.4,.025,-3.36,1.3,.095,1.2,'#b6bab2');
  for(let i=0;i<5;i++)b.box(7.7+i*.95,.082,-3.42,.42,.012,.08,'#f5eccf');
+ // Subtle asphalt edge and periodic joints: geometry rather than image textures.
+ for(const z of[-3.88,-2.96])b.box(9.4,.077,z,5.20,.012,.035,'#969f99');
+ for(let i=0;i<5;i++)b.box(7.25+i*1.06,.077,-3.42,.016,.012,.79,'#a7aaa4');
 }
 function boxBeam(b,ax,ay,az,bx,by,bz,w,col){
  // A diagonal beam with two crossed flat faces keeps WebGL1 and software renderer compatible.
@@ -58,6 +61,9 @@ function fence(b,done){
 function floorFrame(b,x,z,level,finished,top){
  const y=level*1.28,concrete='#e3e2d8',frame='#b8bdbb';
  b.box(x,y,z,3.25,.20,3.12,concrete);
+ // Slightly inset slab bands create material depth without costly textures.
+ b.box(x,y+.106,z+1.565,3.13,.028,.018,'#c4c9c5');
+ b.box(x,y+.106,z-1.565,3.13,.028,.018,'#d5d7d0');
  for(const dx of[-1.44,1.44])for(const dz of[-1.35,1.35])
   b.box(x+dx,y+.60,z+dz,.19,1.10,.19,frame);
  if(finished){
@@ -65,6 +71,10 @@ function floorFrame(b,x,z,level,finished,top){
   for(const dx of[-1.03,0,1.03]){
    b.box(x+dx,y+.58,z+1.58,.80,.85,.08,'#f7f2e6');
    b.box(x+dx,y+.61,z+1.64,.62,.66,.09,'#92cbd0');
+   // Narrow frame and off-centre glass highlight read as glazing at mobile scale.
+   b.box(x+dx-.30,y+.61,z+1.695,.025,.66,.012,'#e2eeeb');
+   b.box(x+dx+.30,y+.61,z+1.695,.025,.66,.012,'#e2eeeb');
+   b.box(x+dx-.15,y+.77,z+1.699,.055,.29,.012,'#b7e0e4');
    b.box(x+dx,y+.37,z+1.74,.86,.08,.11,'#d9e6e3');
    b.box(x+dx,y+.24,z+1.79,.86,.23,.05,'#a5c5c6');
   }
