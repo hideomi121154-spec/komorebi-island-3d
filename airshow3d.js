@@ -52,12 +52,12 @@ function phase(now){
  return {active:true,elapsed,progress:u,look,lead:position(0,u),variant:showVariant,
   aircraftVisible:elapsed<FLY_MS,smokeVisible:elapsed<FLY_MS+TAIL_MS};
 }
-function start(now,minutes,{preview=false}={}){
+function start(now,minutes,{preview=false,rainbow=false}={}){
  if(!preview&&!isDay(minutes))return false;
  if(phase(now).active)return false;
  if(!Number.isFinite(now))return false;
  launchedAt=now;showNumber++;
- showVariant=showNumber%7===0?'rainbow':'normal';
+ showVariant=rainbow||Math.random()<.125?'rainbow':'normal';
  return true;
 }
 function cancel(){launchedAt=-1;}
