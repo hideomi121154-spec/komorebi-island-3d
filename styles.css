@@ -340,3 +340,23 @@
 #app.battling .battle-message{transition:border-color .2s}
 #app.battling.vfx-impact .battle-message{border-color:#fbdc8b;box-shadow:0 0 16px #ffdd8f99}
 @media(prefers-reduced-motion:reduce){#app.battling.vfx-impact .battle-message{box-shadow:none}}
+
+/* Six-jet flypast — a compact daytime action that never covers the existing
+ * right-side navigation or the game D-pad on portrait iPhones. */
+.airshow-entry{
+ position:absolute;z-index:5;top:calc(env(safe-area-inset-top) + 266px);left:15px;
+ background:linear-gradient(145deg,#effaffef,#a9d7ebf2);
+ border:1.5px solid #ffffffee;color:#255f81;border-radius:22px;
+ box-shadow:0 4px 13px #28557555;padding:10px 14px;font-size:13px;font-weight:900;
+ white-space:nowrap;touch-action:manipulation;
+}
+.airshow-entry.active{background:linear-gradient(145deg,#fdf8df,#b9e6de);color:#446a5b}
+#airshowBtn[hidden],#airshowHud[hidden],#app.indoors #airshowBtn,#app.battling #airshowBtn{display:none!important}
+.airshow-hud{
+ position:absolute;z-index:6;top:calc(env(safe-area-inset-top) + 189px);left:50%;
+ transform:translateX(-50%);max-width:65vw;width:max-content;pointer-events:none;
+ padding:10px 14px;border:2px solid #e9f6fa;background:#f4fdffe8;
+ color:#2d6481;font-size:12px;font-weight:900;text-align:center;border-radius:18px;
+ box-shadow:0 4px 16px #24465b35;
+}
+@media(max-height:700px){.airshow-entry{top:calc(env(safe-area-inset-top) + 235px);padding:7px 10px}.airshow-hud{top:calc(env(safe-area-inset-top) + 145px)}}
