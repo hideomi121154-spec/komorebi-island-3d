@@ -47,9 +47,18 @@ function phase(now){
   return{active:false,progress:1,elapsed:TOTAL_MS,lead:null,look:0,variant:showVariant};
  }
  const u=clamp(elapsed/FLY_MS);
+ // The rear wingmen trail well behind the leader. Aim at the CENTER of all
+ // six planes so the whole V formation fits on a narrow iPhone display.
+ const leader=position(0,u);
+ const six=Array.from({length:6},(_,i)=>position(i,u));
+ const cameraTarget={
+  x:six.reduce((sum,p)=>sum+p.x,0)/6,
+  y:six.reduce((sum,p)=>sum+p.y,0)/6,
+  z:six.reduce((sum,p)=>sum+p.z,0)/6
+ };
  // Only the line of sight moves; the visitor never teleports.
  const look=ease(elapsed/2100)*(1-ease((elapsed-(FLY_MS-500))/3600));
- return {active:true,elapsed,progress:u,look,lead:position(0,u),variant:showVariant,
+ return {active:true,elapsed,progress:u,look,lead:leader,cameraTarget,variant:showVariant,
   aircraftVisible:elapsed<FLY_MS,smokeVisible:elapsed<FLY_MS+TAIL_MS};
 }
 function start(now,minutes,{preview=false,rainbow=false,previewElapsed=0}={}){
