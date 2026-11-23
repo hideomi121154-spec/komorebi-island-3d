@@ -674,7 +674,7 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);
  // iPhone GPUs would otherwise leave aircraft outside the camera frame.
  if(airshowGoal>0)airshowLookAmount=airshowGoal;
  else airshowLookAmount=Math.max(0,airshowLookAmount-dt*2.4);
- if(airshowStatus?.lead)airshowTarget={...airshowStatus.lead};
+ if(airshowStatus?.lead)airshowTarget={...(airshowStatus.cameraTarget||airshowStatus.lead)};
  if(canTrackAirshow&&airshowLookAmount>.001){
   const w=airshowLookAmount;
   center[0]+=w*(airshowTarget.x-center[0])*.96;
