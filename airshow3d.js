@@ -99,29 +99,70 @@ function jet(b,index,p,scale=1,elapsed=0){
  }
  b.clearTransform();
 }
-function smoke(b,age,index,variant,reducedMotion=false){
- if(age<200||age>FLY_MS+TAIL_MS)return;
- const current=Math.min(FLY_MS,age),count=reducedMotion?25:42,spacing=145;
- // Soft layered smoke: billboard-like crossed quads, rendered in a dedicated
- // alpha-blended pass rather than opaque 3D geometry.
- for(let j=count;j>=0;j--){
-  const born=current-j*spacing;
-  if(born<0)continue;
-  const p=position(index,born/FLY_MS),seed=index*19.7+j*7.13;
-  const spread=.12+j*.032;
-  const x=p.x-Math.sin(p.yaw)*2.5+Math.sin(seed*1.7)*spread;
-  const y=p.y-.2+Math.cos(seed*2.3)*spread*.65+j*.016;
-  const z=p.z-Math.cos(p.yaw)*2.5+Math.cos(seed*1.3)*spread;
-  const r=.32+j*.048,c=RAINBOW[index];
-  // Crossed planes provide cloud-like overlap from different camera angles.
-  b.quad([x-r,y-r*.65,z],[x+r,y-r*.65,z],[x+r,y+r*.65,z],[x-r,y+r*.65,z],c);
-  b.quad([x,y-r*.65,z-r],[x,y-r*.65,z+r],[x,y+r*.65,z+r],[x,y+r*.65,z-r],c);
+// Six aircraft tow strings of national flags instead of smoke.
+// Lightweight, double-sided geometry with a wind ripple; no texture downloads.
+const FLAGS=[
+ {name:'Japan',type:'japan',colors:['#ffffff','#bc002d']},
+ {name:'France',type:'vertical',colors:['#0055a4','#ffffff','#ef4135']},
+ {name:'Germany',type:'horizontal',colors:['#151515','#dd0000','#ffce00']},
+ {name:'Italy',type:'vertical',colors:['#009246','#ffffff','#ce2b37']},
+ {name:'Ukraine',type:'horizontal',colors:['#0057b7','#ffd700']},
+ {name:'Poland',type:'horizontal',colors:['#ffffff','#dc143c']},
+ {name:'Netherlands',type:'horizontal',colors:['#ae1c28','#ffffff','#21468b']},
+ {name:'Ireland',type:'vertical',colors:['#169b62','#ffffff','#ff883e']},
+ {name:'Belgium',type:'vertical',colors:['#111111','#f2c500','#ef3340']},
+ {name:'Austria',type:'horizontal',colors:['#ed2939','#ffffff','#ed2939']},
+ {name:'Nigeria',type:'vertical',colors:['#008753','#ffffff','#008753']},
+ {name:'Romania',type:'vertical',colors:['#002b7f','#fcd116','#ce1126']}
+];
+function flagQuad(b,a,c,d,e,col){
+ b.quad(a,c,d,e,col);
+ b.quad(e,d,c,a,col);
+}
+function flagPanel(b,center,tangent,flag,age,seed){
+ const length=2.2,height=1.35,sections=3;
+ const wave=(u,v)=>Math.sin(age*.004+seed+u*7+v*2)*(.11+.13*u);
+ const point=(u,v)=>{
+  const x=center.x+tangent.x*(u-.5)*length;
+  const z=center.z+tangent.z*(u-.5)*length;
+  return [x+(-tangent.z)*wave(u,v),center.y+(v-.5)*height,z+tangent.x*wave(u,v)];
+ };
+ const vertical=flag.type==='vertical',n=flag.colors.length;
+ for(let k=0;k<n;k++){
+  const u0=vertical?k/n:0,u1=vertical?(k+1)/n:1;
+  const v0=vertical?0:1-(k+1)/n,v1=vertical?1:1-k/n;
+  for(let j=0;j<sections;j++){
+   const l=u0+(u1-u0)*j/sections,r=u0+(u1-u0)*(j+1)/sections;
+   flagQuad(b,point(l,v0),point(r,v0),point(r,v1),point(l,v1),flag.colors[k]);
+  }
+ }
+ if(flag.type==='japan'){
+  // Faceted sun disc on both sides of the white field.
+  const centerPt=point(.5,.5),rad=.28;
+  for(let k=0;k<12;k++){
+   const p=(theta)=>point(.5+Math.cos(theta)*rad/length,.5+Math.sin(theta)*rad/height);
+   const q=p(k*Math.PI/6),r=p((k+1)*Math.PI/6);
+   b.tri(centerPt,q,r,'#bc002d');b.tri(centerPt,r,q,'#bc002d');
+  }
  }
 }
-function drawSmoke(b,now,{reducedMotion=false}={}){
+function drawFlags(b,now,{reducedMotion=false}={}){
  const p=phase(now);
- if(!p.active||!p.smokeVisible)return;
- for(let i=0;i<6;i++)smoke(b,p.elapsed,i,p.variant,reducedMotion);
+ if(!p.active||!p.aircraftVisible)return;
+ const count=reducedMotion?5:9;
+ for(let i=0;i<6;i++){
+  for(let j=0;j<count;j++){
+   const delay=650+j*480,born=p.elapsed-delay;
+   if(born<0)continue;
+   const pos=position(i,clamp(born/FLY_MS));
+   const ahead=position(i,clamp((born+30)/FLY_MS));
+   const dx=ahead.x-pos.x,dz=ahead.z-pos.z,len=Math.hypot(dx,dz)||1;
+   const tangent={x:dx/len,z:dz/len};
+   const flag=FLAGS[(i*2+j)%FLAGS.length];
+   const center={x:pos.x,y:pos.y-1.3+Math.sin(now*.003+j*.8+i)*.16,z:pos.z};
+   flagPanel(b,center,tangent,flag,now,i*3+j);
+  }
+ }
 }
 function draw(b,now,{reducedMotion=false}={}){
  const p=phase(now);
@@ -135,7 +176,7 @@ function draw(b,now,{reducedMotion=false}={}){
 }
 function active(now){return phase(now).active;}
 window.KomorebiAirshow={TOTAL_MS,FLY_MS,TAIL_MS,COUNT:6,isDay,start,cancel,phase,active,
- position,basePath,headingAt,draw,drawSmoke,variant:()=>showVariant,
+ position,basePath,headingAt,draw,drawFlags,variant:()=>showVariant,
  // Test support only; release input is never stored in the island save.
  reset:()=>{launchedAt=null;showNumber=0;showVariant='normal';}};
 })();
