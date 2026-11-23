@@ -3,7 +3,7 @@
  * no official squadron marks or copyrighted aircraft textures. */
 (() => {
 'use strict';
-const TOTAL_MS=19000,FLY_MS=14500,TAIL_MS=3900;
+const TOTAL_MS=26000,FLY_MS=21500,TAIL_MS=3900;
 const DEG=Math.PI/180,BLUE='#346eab',DARK_BLUE='#24558b';
 const OFFSETS=[
  [0,0,0],[-3.5,0,-4.8],[3.5,0,-4.8],
@@ -11,18 +11,22 @@ const OFFSETS=[
 ];
 const WHITE=['#f8fcfc','#e3f4f6','#d7eaf1','#c6ddeb'];
 const BLUE_SMOKE=['#b8ddec','#c7e7ed','#dbf0f2','#edf7f7'];
-const RAINBOW=['#f1a9b8','#f6d8a4','#b8d6f2','#b1e3d1','#ead0f4','#ffebc6'];
+const RAINBOW=['#ff4054','#ff9a26','#ffe34a','#36d77c','#32a5ff','#bd64f5'];
 let launchedAt=null,showNumber=0,showVariant='normal';
 const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
 const ease=t=>{const v=clamp(t);return v*v*(3-2*v);};
 function isDay(minutes){return Number.isFinite(minutes)&&minutes>=7*60&&minutes<18*60+30;}
 function basePath(u){
  const t=clamp(u);
- return {x:-85+170*t,z:-42+53*t+4*Math.sin(t*Math.PI),y:40+7*Math.sin(Math.PI*t)+3*t};
+ if(t<.45){const q=t/.45;return {x:-85+170*q,z:-42+53*q,y:40+7*Math.sin(Math.PI*q)};}
+ if(t<.83){const a=(t-.45)/.38*Math.PI*2;return {x:85+24*Math.sin(a),z:11+24*(1-Math.cos(a)),y:43+4*Math.sin(a)};}
+ const q=(t-.83)/.17;return {x:85+110*q,z:11+36*q,y:43+8*q};
 }
 function headingAt(u){
  const t=clamp(u);
- return Math.atan2(170,53+4*Math.PI*Math.cos(t*Math.PI));
+ if(t<.45)return Math.atan2(170,53);
+ if(t<.83){const a=(t-.45)/.38*Math.PI*2;return Math.atan2(Math.cos(a),Math.sin(a));}
+ return Math.atan2(110,36);
 }
 function offsets(index,u){
  const base=OFFSETS[index];
@@ -66,39 +70,36 @@ function start(now,minutes,{preview=false,rainbow=false,previewElapsed=0}={}){
  if(phase(now).active)return false;
  if(!Number.isFinite(now))return false;
  launchedAt=now-(preview?clamp(previewElapsed,0,FLY_MS-1000):0);showNumber++;
- showVariant=rainbow||Math.random()<.125?'rainbow':'normal';
+ showVariant='rainbow';
  return true;
 }
 function cancel(){launchedAt=null;}
 function jet(b,index,p,scale=1){
- const s=scale;
+ const s=scale,c=RAINBOW[index],cream='#fff5da';
  b.setTransform(p.x,p.y,p.z,p.yaw);
- // Distinctive original white and blue stunt plane, with a streamlined nose,
- // slender fuselage, delta wings, tail and twin exhausts.
- b.box(0,0,0,.64*s,.37*s,3.85*s,'#f3f7f7');
- b.box(0,.085*s,-.08*s,.68*s,.12*s,2.65*s,BLUE);
- b.tri([-.31*s,0,1.43*s],[.31*s,0,1.43*s],[0,.02*s,2.42*s],'#eefafc');
- b.tri([-.31*s,.07*s,1.43*s],[0,.23*s,2.25*s],[.31*s,.07*s,1.43*s],'#eefafc');
- b.tri([-.29*s,.03*s,.84*s],[-2.37*s,-.065*s,-.64*s],[-.26*s,.02*s,-.35*s],'#f4fbfb');
- b.tri([.29*s,.03*s,.84*s],[2.37*s,-.065*s,-.64*s],[.26*s,.02*s,-.35*s],'#f4fbfb');
- b.tri([-.42*s,.06*s,.54*s],[-2.20*s,.03*s,-.53*s],[-.40*s,.075*s,-.12*s],BLUE);
- b.tri([.42*s,.06*s,.54*s],[2.20*s,.03*s,-.53*s],[.40*s,.075*s,-.12*s],BLUE);
- b.tri([-.23*s,.12*s,-1.22*s],[-1.18*s,.13*s,-2.01*s],[-.20*s,.11*s,-1.90*s],'#e1eff5');
- b.tri([.23*s,.12*s,-1.22*s],[1.18*s,.13*s,-2.01*s],[.20*s,.11*s,-1.90*s],'#e1eff5');
- // Thin vertical fin with a custom navy insignia stripe, not the real unit emblem.
- b.tri([0,.12*s,-1.27*s],[0,1.12*s,-1.96*s],[0,.15*s,-2.07*s],DARK_BLUE);
- b.tri([-.02*s,.28*s,-1.45*s],[-.02*s,.87*s,-1.87*s],[-.02*s,.24*s,-1.96*s],'#eaf6f8');
- b.sphere(0,.35*s,.47*s,.24*s,.22*s,.58*s,'#466d87',4,7);
+ // Original 1930s-inspired single-propeller floatplane; each aircraft has its own paint.
+ b.box(0,0,0,.9*s,.55*s,3.65*s,c);
+ b.box(0,.27*s,.15*s,.72*s,.13*s,2.5*s,cream);
+ b.tri([-.36*s,.04*s,1.25*s],[.36*s,.04*s,1.25*s],[0,0,2.23*s],c);
  for(const side of[-1,1]){
-  b.box(side*.22*s,-.18*s,-1.76*s,.21*s,.16*s,.44*s,'#b7c5d0');
-  b.box(side*.22*s,-.18*s,-1.98*s,.12*s,.10*s,.035*s,'#577d98');
+  b.tri([side*.3*s,.17*s,.8*s],[side*2.55*s,.13*s,-.35*s],[side*.3*s,.17*s,-.55*s],c);
+  b.tri([side*.32*s,.22*s,.6*s],[side*2.35*s,.18*s,-.32*s],[side*.32*s,.22*s,-.36*s],cream);
+  b.tri([side*.2*s,.12*s,-1.2*s],[side*1.2*s,.12*s,-1.98*s],[side*.2*s,.12*s,-1.9*s],c);
+  b.box(side*.86*s,-.72*s,.05*s,.33*s,.28*s,2.35*s,c);
+  b.box(side*.86*s,-.54*s,.05*s,.08*s,.5*s,.08*s,'#b6c2c7');
  }
+ b.tri([0,.2*s,-1.28*s],[0,1.13*s,-2.03*s],[0,.2*s,-2.1*s],c);
+ b.sphere(0,.43*s,.35*s,.33*s,.25*s,.48*s,'#456d86',5,8);
+ b.sphere(0,0,1.95*s,.34*s,.34*s,.42*s,'#d4dce0',6,8);
+ // Pale spinning propeller disc, visible from multiple viewing angles.
+ b.box(0,0,2.35*s,.1*s,1.55*s,.08*s,'#d6eaf0');
+ b.box(0,0,2.36*s,1.1*s,.1*s,.08*s,'#eaf7fb');
  b.clearTransform();
 }
 function smoke(b,age,index,variant){
  if(age<300||age>FLY_MS+TAIL_MS)return;
  const current=Math.min(FLY_MS,age);
- const pieces=16,step=195;
+ const pieces=22,step=220;
  // Two aerodynamic trails per aircraft, drawn as only four quads per segment.
  for(const side of[-1,1]){
   for(let j=1;j<=pieces;j++){
@@ -115,7 +116,7 @@ function smoke(b,age,index,variant){
    let color=variant==='rainbow'?
     RAINBOW[index]:side===1?WHITE[Math.min(3,Math.floor(j/5))]:BLUE_SMOKE[Math.min(3,Math.floor(j/5))];
    // Soften the far end of each ribbon into the daytime sky.
-   if(age>FLY_MS)color=WHITE[Math.min(3,Math.floor(j/5))];
+   if(age>FLY_MS&&variant!=='rainbow')color=WHITE[Math.min(3,Math.floor(j/5))];
    b.quad([a.x-w0,a.y,a.z],[a.x+w0,a.y,a.z],
     [c.x+w1,c.y,c.z],[c.x-w1,c.y,c.z],color);
    b.quad([a.x,a.y-w0*.67,a.z],[a.x,a.y+w0*.67,a.z],
@@ -128,7 +129,7 @@ function draw(b,now,{reducedMotion=false}={}){
  if(!p.active||!p.smokeVisible)return;
  // Older trails first, aircraft on top. Reduced motion draws fewer segments.
  for(let i=0;i<6;i++){
-  if(!reducedMotion||i<3)smoke(b,p.elapsed,i,p.variant);
+  smoke(b,p.elapsed,i,p.variant);
  }
  if(p.aircraftVisible){
   const scale=1.24;
