@@ -719,6 +719,26 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);
  const d=buildDynamic(now,false);
  gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,d,gl.DYNAMIC_DRAW);
  bindGeometry(dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,d.length/9);
+ // Draw rainbow smoke AFTER opaque world geometry with alpha blending.
+ // The old opaque sphere trails looked like colored blocks on iPhone.
+ if(!roomActive&&AIRSHOW?.active(now)&&AIRSHOW.drawSmoke){
+  const smokeMesh=new MeshBuilder();
+  AIRSHOW.drawSmoke(smokeMesh,now,{reducedMotion});
+  const smokeData=smokeMesh.toFloat();
+  if(smokeData.length){
+   gl.bindBuffer(gl.ARRAY_BUFFER,rocketBuffer);
+   gl.bufferData(gl.ARRAY_BUFFER,smokeData,gl.DYNAMIC_DRAW);
+   bindGeometry(rocketBuffer);
+   gl.enable(gl.BLEND);
+   gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+   gl.depthMask(false);
+   gl.uniform1f(uOpacity,.27);
+   gl.drawArrays(gl.TRIANGLES,0,smokeData.length/9);
+   gl.depthMask(true);
+   gl.disable(gl.BLEND);
+   gl.uniform1f(uOpacity,1);
+  }
+ }
  // Separate transparent rocket pass; smoke, village and launch tower stay opaque.
  const shipOpacity=SPACE.phase(now).opacity;
  if(shipOpacity>0){
