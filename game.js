@@ -669,7 +669,11 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);
  // Smoothly TRACK THE SKY with the gaze only. Never teleport the character.
  const canTrackAirshow=airshowAllowed&&!spectator&&!kartCamera&&!battleCamera;
  const airshowGoal=canTrackAirshow?(airshowStatus?.look||0):0;
- airshowLookAmount+=(airshowGoal-airshowLookAmount)*Math.min(1,dt*3.3);
+ // The flight phase already has a 2.1-second smoothstep ease-in and
+ // 3.6-second ease-out. Do not add a second frame-rate-dependent lag: slow
+ // iPhone GPUs would otherwise leave aircraft outside the camera frame.
+ if(airshowGoal>0)airshowLookAmount=airshowGoal;
+ else airshowLookAmount=Math.max(0,airshowLookAmount-dt*2.4);
  if(airshowStatus?.lead)airshowTarget={...airshowStatus.lead};
  if(canTrackAirshow&&airshowLookAmount>.001){
   const w=airshowLookAmount;
