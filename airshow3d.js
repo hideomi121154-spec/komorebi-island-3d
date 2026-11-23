@@ -101,37 +101,33 @@ function jet(b,index,p,scale=1,elapsed=0){
 }
 function smoke(b,age,index,variant,reducedMotion=false){
  if(age<200||age>FLY_MS+TAIL_MS)return;
- const current=Math.min(FLY_MS,age);
- // Small overlapping puffs replace opaque polygon ribbons. Deterministic jitter
- // avoids per-frame random flicker and keeps the mobile draw budget bounded.
- const count=reducedMotion?18:34,spacing=150;
+ const current=Math.min(FLY_MS,age),count=reducedMotion?25:42,spacing=145;
+ // Soft layered smoke: billboard-like crossed quads, rendered in a dedicated
+ // alpha-blended pass rather than opaque 3D geometry.
  for(let j=count;j>=0;j--){
   const born=current-j*spacing;
   if(born<0)continue;
-  const t=born/FLY_MS,p=position(index,t);
-  const seed=index*19.7+j*7.13;
-  const drift=j*.016;
-  const x=p.x-Math.sin(p.yaw)*1.9+Math.sin(seed*1.7)*drift;
-  const y=p.y-.15+Math.cos(seed*2.3)*drift*.8+j*.013;
-  const z=p.z-Math.cos(p.yaw)*1.9+Math.cos(seed*1.3)*drift;
-  const radius=.18+j*.023;
-  // MeshBuilder has no alpha channel. Never surround smoke with opaque
-  // grey/white shells: they hide the colored core in the real renderer.
-  // Overlapping color-tinted puffs are deliberately lightweight on iOS.
-  const c=RAINBOW[index];
-  b.sphere(x,y,z,radius*1.25,radius*.95,radius*1.25,c,4,7);
-  const wiggle=radius*.36;
-  b.sphere(x+Math.sin(seed)*wiggle,y+Math.cos(seed)*wiggle,z,
-   radius*.65,radius*.64,radius*.65,c,3,6);
+  const p=position(index,born/FLY_MS),seed=index*19.7+j*7.13;
+  const spread=.12+j*.032;
+  const x=p.x-Math.sin(p.yaw)*2.5+Math.sin(seed*1.7)*spread;
+  const y=p.y-.2+Math.cos(seed*2.3)*spread*.65+j*.016;
+  const z=p.z-Math.cos(p.yaw)*2.5+Math.cos(seed*1.3)*spread;
+  const r=.32+j*.048,c=RAINBOW[index];
+  // Crossed planes provide cloud-like overlap from different camera angles.
+  b.quad([x-r,y-r*.65,z],[x+r,y-r*.65,z],[x+r,y+r*.65,z],[x-r,y+r*.65,z],c);
+  b.quad([x,y-r*.65,z-r],[x,y-r*.65,z+r],[x,y+r*.65,z+r],[x,y+r*.65,z-r],c);
  }
+}
+function drawSmoke(b,now,{reducedMotion=false}={}){
+ const p=phase(now);
+ if(!p.active||!p.smokeVisible)return;
+ for(let i=0;i<6;i++)smoke(b,p.elapsed,i,p.variant,reducedMotion);
 }
 function draw(b,now,{reducedMotion=false}={}){
  const p=phase(now);
  if(!p.active||!p.smokeVisible)return;
  // Older trails first, aircraft on top. Reduced motion draws fewer segments.
- for(let i=0;i<6;i++){
-  smoke(b,p.elapsed,i,p.variant,reducedMotion);
- }
+
  if(p.aircraftVisible){
   const scale=2.0;
   for(let i=0;i<6;i++)jet(b,i,position(i,p.progress),scale,p.elapsed);
@@ -139,7 +135,7 @@ function draw(b,now,{reducedMotion=false}={}){
 }
 function active(now){return phase(now).active;}
 window.KomorebiAirshow={TOTAL_MS,FLY_MS,TAIL_MS,COUNT:6,isDay,start,cancel,phase,active,
- position,basePath,headingAt,draw,variant:()=>showVariant,
+ position,basePath,headingAt,draw,drawSmoke,variant:()=>showVariant,
  // Test support only; release input is never stored in the island save.
  reset:()=>{launchedAt=null;showNumber=0;showVariant='normal';}};
 })();
