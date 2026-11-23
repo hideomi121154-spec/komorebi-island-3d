@@ -15,11 +15,13 @@ on:
       - 'sealine3d.js'
       - 'world-expansion-v23.js'
       - 'nightfestival.js'
+      - 'airshow3d.js'
       - 'render-quality.js'
   pull_request:
     paths:
       - '.github/workflows/visual-preview.yml'
       - 'nightfestival.js'
+      - 'airshow3d.js'
       - 'game.js'
       - 'index.html'
   workflow_dispatch:
@@ -81,6 +83,15 @@ jobs:
           location.replace('/index.html?demo=fireworks');
           </script></body></html>
           EOF
+          cat > preview-seed-airshow.html <<'EOF'
+          <!doctype html><html><head><meta charset="utf-8"></head><body><script>
+          localStorage.setItem('komorebi_island_3d_v01',JSON.stringify({
+            version:1,day:4,coins:97,x:0,z:3,angle:0,welcomeSeen:true,
+            inventory:{berry:2,wood:1,seed:2},redevelopmentProgress:38
+          }));
+          location.replace('/index.html?demo=airshow');
+          </script></body></html>
+          EOF
           cat > preview-seed-battle.html <<'EOF'
           <!doctype html><html><head><meta charset="utf-8"></head><body><script>
           localStorage.setItem('komorebi_island_3d_v01',JSON.stringify({
@@ -138,6 +149,12 @@ jobs:
           file "$RUNNER_TEMP/night-fireworks.png"
           "$CHROME" --headless --no-sandbox --disable-dev-shm-usage \
             --enable-webgl --enable-unsafe-swiftshader --use-angle=swiftshader \
+            --hide-scrollbars --window-size=414,896 --virtual-time-budget=7600 \
+            "--screenshot=$RUNNER_TEMP/daytime-six-jet-airshow.png" \
+            http://127.0.0.1:8765/preview-seed-airshow.html
+          test -s "$RUNNER_TEMP/daytime-six-jet-airshow.png"
+          "$CHROME" --headless --no-sandbox --disable-dev-shm-usage \
+            --enable-webgl --enable-unsafe-swiftshader --use-angle=swiftshader \
             --hide-scrollbars --window-size=414,896 --virtual-time-budget=7300 \
             "--screenshot=$RUNNER_TEMP/island-battle.png" \
             http://127.0.0.1:8765/preview-seed-battle.html
@@ -153,5 +170,6 @@ jobs:
             ${{ runner.temp }}/sea-line-panorama.png
             ${{ runner.temp }}/sea-train-ride.png
             ${{ runner.temp }}/night-fireworks.png
+            ${{ runner.temp }}/daytime-six-jet-airshow.png
             ${{ runner.temp }}/island-battle.png
           retention-days: 3
