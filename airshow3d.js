@@ -104,7 +104,7 @@ function smoke(b,age,index,variant,reducedMotion=false){
  const current=Math.min(FLY_MS,age);
  // Small overlapping puffs replace opaque polygon ribbons. Deterministic jitter
  // avoids per-frame random flicker and keeps the mobile draw budget bounded.
- const count=reducedMotion?28:52,spacing=110;
+ const count=reducedMotion?18:34,spacing=150;
  for(let j=count;j>=0;j--){
   const born=current-j*spacing;
   if(born<0)continue;
@@ -115,11 +115,14 @@ function smoke(b,age,index,variant,reducedMotion=false){
   const y=p.y-.15+Math.cos(seed*2.3)*drift*.8+j*.013;
   const z=p.z-Math.cos(p.yaw)*1.9+Math.cos(seed*1.3)*drift;
   const radius=.18+j*.023;
-  // Pale feathered edge puffs around the denser colored center.
+  // MeshBuilder has no alpha channel. Never surround smoke with opaque
+  // grey/white shells: they hide the colored core in the real renderer.
+  // Overlapping color-tinted puffs are deliberately lightweight on iOS.
   const c=RAINBOW[index];
-  b.sphere(x,y,z,radius*1.65,radius*.88,radius*1.65,
-   j>count*.65?'#d5e9f1':'#c8e5ee',3,5);
-  b.sphere(x,y,z,radius,radius*.68,radius,c,3,5);
+  b.sphere(x,y,z,radius*1.25,radius*.95,radius*1.25,c,4,7);
+  const wiggle=radius*.36;
+  b.sphere(x+Math.sin(seed)*wiggle,y+Math.cos(seed)*wiggle,z,
+   radius*.65,radius*.64,radius*.65,c,3,6);
  }
 }
 function draw(b,now,{reducedMotion=false}={}){
