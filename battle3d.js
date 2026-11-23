@@ -213,14 +213,25 @@ function ribbon(b,ax,ay,az,bx,by,bz,w,col){
 }
 function combatPose(s,now){
  const seq=s?.cinematic;
- if(!seq)return {heroX:0,heroY:0,foeX:0,foeY:0,t:1,id:null};
+ const idle=Math.sin(now*.0017),breath=Math.sin(now*.0031);
+ const base={heroX:.035*idle,heroY:.026*breath,foeX:-.028*idle,foeY:.023*Math.sin(now*.0027+1.2),heroTilt:0,foeTilt:0,t:1,id:null};
+ if(!seq)return base;
  const t=clamp((now-seq.at)/seq.duration,0,1),id=seq.id;
- const attack= !['item','rest','friend'].includes(id);
- const lunge=attack&&t>.16&&t<.54?Math.sin(Math.PI*clamp((t-.16)/.38)):0;
- const hit=attack&&t>.51&&t<.72?Math.sin(Math.PI*clamp((t-.51)/.21)):0;
- const reply=attack&&t>.74&&t<.94?Math.sin(Math.PI*clamp((t-.74)/.20)):0;
- return {id,t,heroX:.45*lunge-.13*reply*Math.sin(t*150),heroY:.46*lunge+.23*reply,
-  foeX:.23*hit*Math.sin(t*150)-.26*reply,foeY:.23*hit+.40*reply};
+ const ease=v=>{v=clamp(v);return v*v*(3-2*v);};
+ const pulse=(a,b)=>Math.sin(Math.PI*clamp((t-a)/(b-a),0,1))*(t>a&&t<b?1:0);
+ const support=['item','rest','friend'].includes(id);
+ const charge=pulse(.025,.24),lunge=pulse(.20,.52),impact=pulse(.51,.74),counter=pulse(.75,.94);
+ const quick=id==='quick',burst=id==='burst',thunder=id==='thunder';
+ const attackDistance=quick?1.05:burst?.38:thunder?.53:.45;
+ const recoil=Math.sin((t-.51)*190)*Math.exp(-Math.max(0,t-.51)*15)*impact;
+ if(support)return {...base,id,t,heroY:base.heroY+.14*pulse(.15,.7),heroX:base.heroX-.10*pulse(.12,.38),heroTilt:.06*pulse(.18,.64)};
+ return {...base,id,t,
+  heroX:base.heroX-.20*charge+attackDistance*lunge-.12*counter,
+  heroY:base.heroY-.12*charge+(quick?.48:.29)*lunge+.18*counter,
+  foeX:base.foeX+.32*impact+.12*recoil-.31*counter,
+  foeY:base.foeY+.18*impact+.35*counter,
+  heroTilt:-.14*charge+.20*lunge-.12*counter,
+  foeTilt:.24*impact+.08*recoil-.17*counter};
 }
 function drawSpell3D(b,now,s){
  const seq=s?.cinematic;if(!seq)return;
@@ -300,11 +311,12 @@ function drawDynamic(b,now,session){
 function camera(session,now=0){
  // Fixed portrait stage, subtle reactive shake on impact (not a full-screen strobe).
  const fx=session?.cinematic,t=fx?clamp((now-fx.at)/fx.duration,0,1):1;
- const hit=t>.51&&t<.66?.13*Math.sin(t*160):0;
- const counter=t>.85&&t<.91?.07*Math.sin(t*100):0;
+ const support=['item','rest','friend'].includes(fx?.id);
+ const hit=!support&&t>.51&&t<.70?.085*Math.sin(t*145)*Math.sin(Math.PI*(t-.51)/.19):0;
+ const counter=!support&&t>.85&&t<.91?.04*Math.sin(t*100):0;
  return {eye:[marker.x+.12+hit+counter,8.0,marker.z+13.4],
   center:[marker.x+hit*.7,-2.0,marker.z+.20],
-  fov:t>.48&&t<.70?44:46};
+  fov:!support&&t>.22&&t<.51?42:!support&&t>.51&&t<.70?44:46};
 }
 window.KomorebiBattle={marker,moves,create:define,move,switchFriend,item,flee,drawStatic,drawBattleScene,drawDynamic,camera,damage};
 })();
