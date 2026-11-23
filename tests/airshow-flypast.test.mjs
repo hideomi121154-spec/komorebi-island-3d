@@ -78,10 +78,14 @@ test('show camera focus fades in and out without moving world player coordinates
  assert.ok(middle.look>.98);
  assert.ok(end.look<.03);
  assert.ok(middle.lead.y>38);
+ assert.ok(middle.cameraTarget.x<middle.lead.x,'camera is aimed behind the leader at formation center');
+ assert.ok(middle.cameraTarget.y>38);
+ assert.ok(middle.cameraTarget.z<middle.lead.z);
  const game=file('game.js'),html=file('index.html'),styles=file('styles.css');
  assert.match(game,/AIRSHOW\.draw\(b,now,\{reducedMotion\}\)/);
  assert.match(game,/if\(airshowGoal>0\)airshowLookAmount=airshowGoal/);
  assert.match(game,/center\[1\]\+=w\*\(airshowTarget\.y-center\[1\]\)/);
+ assert.match(game,/airshowStatus\.cameraTarget\|\|airshowStatus\.lead/);
  assert.match(game,/getAirshow:/);
  assert.match(game,/airshowButton\.hidden=!daylightAllowed/);
  assert.match(game,/AIRSHOW\?\.cancel\(\)/);
