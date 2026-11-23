@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#e1f6e6">
   <meta name="description" content="こもれび島 3D — 島で歩く、集める、育てる。オリジナルの小さな生活ゲーム。">
   <title>こもれび島 3D | 小さな島の暮らし</title>
-  <link rel="stylesheet" href="styles.css?v=20261118-b4">
+  <link rel="stylesheet" href="styles.css?v=20261123-airshow1">
 </head>
 <body>
 <div id="app">
@@ -26,6 +26,8 @@
   <div id="statusBar"><span id="missionShort">🍎 果物を3個集めよう</span><span id="saveStatus">● セーブ済</span></div>
   <div id="islandNamePill" class="island-name-pill">🌿 こもれび島</div>
   <button type="button" id="battleBtn" class="island-battle-entry" aria-label="島のオリジナルモンスターバトルを始める">⚔️ バトル</button>
+  <button type="button" id="airshowBtn" class="airshow-entry" aria-label="6機編隊の航空ショーを開始する" title="昼の6機編隊航空ショー" hidden>✈️ 航空ショー</button>
+  <div id="airshowHud" class="airshow-hud" role="status" aria-live="off" hidden>✈️ 6機編隊が島の上空を通過中！</div>
   <div class="edge-buttons"><button id="rotateLeft" aria-label="カメラを左回転">↶</button><button id="rotateRight" aria-label="カメラを右回転">↷</button><button id="islandMapBtn" aria-label="拡張された島の地図を開く" title="島マップ">🗺</button><button id="redevelopmentViewBtn" class="active" aria-label="島の再開発を見渡す・通常カメラに戻す" title="再開発を見渡す">🏗️</button><button id="seaLineBtn" aria-label="こもれびシーラインの路線図・駅へ移動" title="海上列車と商業島">🚆</button><button id="spaceportBtn" aria-label="こもれび宇宙港のロケット発射台へ" title="ロケット発射台">🚀</button><button id="industryBtn" aria-label="自動車工場と完成車輸出港へ" title="自動車産業地区">🏭</button><button id="kartBtn" aria-label="こもれびサーキットでカートレース" title="カートレース場">🏎️</button><a class="dimension-link" id="dimensionGateBtn" href="./dimension-hub.html" aria-label="3Dと2Dの異世界ひろばへ" title="3Dと2Dの世界・交流ひろば">🌈</a></div>
   <button id="redevelopmentHud" class="redevelopment-status" aria-label="島の再開発 32%・詳細を開く" type="button"><span class="redevelopment-top"><strong id="redevelopmentLabel">🏗️ 島の再開発中 · 基礎・低層階を建設中</strong><strong id="redevelopmentPercent">32%</strong></span><span class="redevelopment-track"><span id="redevelopmentFill" class="redevelopment-fill" style="width:32%"></span></span></button>
   <div id="spaceHud" class="space-launch-hud" role="status" aria-live="polite" hidden></div>
@@ -106,11 +108,12 @@
 <script src="industry3d.js?v=20261113-v31" defer></script>
 <script src="kart3d.js?v=20261113-v38" defer></script>
 <script src="nightfestival.js?v=20261120-hd2" defer></script>
+<script src="airshow3d.js?v=20261123-a1" defer></script>
 <script src="render-quality.js?v=20261120-adaptive1" defer></script>
 <script src="camera-gestures.js?v=20261113-v32" defer></script>
 <script src="battle3d.js?v=20261118-b4" defer></script>
 <script src="battle-effects.js?v=20261118-b4" defer></script>
 <script src="island-life3d.js?v=20261119-life2" defer></script>
-<script src="game.js?v=20261120-adaptive1" defer></script>
+<script src="game.js?v=20261123-airshow1" defer></script>
 </body>
 </html>

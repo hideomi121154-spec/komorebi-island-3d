@@ -1,0 +1,33 @@
+name: Aviation flypast feature checks
+on:
+  pull_request:
+    paths:
+      - 'airshow3d.js'
+      - 'game.js'
+      - 'index.html'
+      - 'styles.css'
+      - 'tests/airshow-flypast.test.mjs'
+      - '.github/workflows/airshow-check.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'airshow3d.js'
+      - 'tests/airshow-flypast.test.mjs'
+      - '.github/workflows/airshow-check.yml'
+permissions:
+  contents: read
+jobs:
+  flypast-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Parse flight and island game JavaScript
+        run: |
+          node --check airshow3d.js
+          node --check game.js
+      - name: Test six-aircraft flight and smoke geometry
+        run: node --test tests/airshow-flypast.test.mjs

@@ -7,6 +7,7 @@ const canvas = $('gameCanvas');
  const DAYLIGHT=window.KomorebiTime;
  if(!DAYLIGHT)throw Error('daynight.js is required');
  const FESTIVAL=window.KomorebiNightFestival||null;
+ const AIRSHOW=window.KomorebiAirshow||null;
  const SKY=window.KomorebiSky||null;
  const QUALITY=window.KomorebiRenderQuality||null;
  const CAMERA_GESTURES=window.KomorebiCameraGestures||null;
@@ -476,12 +477,13 @@ function buildDynamic(now,includeRocket=true){const b=new MeshBuilder();if(battl
   if(includeRocket)SPACE.drawDynamic(b,now);
   else SPACE.drawAtmosphere(b,now);
   INDUSTRY.drawDynamic(b,now);
+  if(AIRSHOW&&!indoor.room&&!KART.active()&&!battleSession?.active)AIRSHOW.draw(b,now,{reducedMotion});
   KART.drawDynamic(b,now);
   BATTLE.drawDynamic(b,now,battleSession);
  return b.toFloat()}
 function buildRocketDynamic(now){const b=new MeshBuilder();SPACE.drawRocket(b,now);return b.toFloat()}
 let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0,viewFov=48;
-let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,uOpacity=null,festivalRenderer=null,worldFestivalRenderer=null,skyRenderer=null,worldBuffer=null,dynamicBuffer=null,rocketBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine'),cameraZoom=1,cameraPitch=0,cameraYaw=0,festivalShow=false,festivalStartedAt=0,lastRareBurstKey=null,fireworksAudio=null,rocketCameraActive=false,rocketCameraMode='pad',rocketViewOrigin=null,rocketPriorView=null,industrialOverview=false;
+let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,uOpacity=null,festivalRenderer=null,worldFestivalRenderer=null,skyRenderer=null,worldBuffer=null,dynamicBuffer=null,rocketBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine'),cameraZoom=1,cameraPitch=0,cameraYaw=0,festivalShow=false,festivalStartedAt=0,lastRareBurstKey=null,fireworksAudio=null,airshowLookAmount=0,airshowTarget={x:0,y:38,z:-15},airshowAutoDay=null,rocketCameraActive=false,rocketCameraMode='pad',rocketViewOrigin=null,rocketPriorView=null,industrialOverview=false;
 const vShader=`attribute vec3 aPos;attribute vec3 aNormal;attribute vec3 aColor;uniform mat4 uProjection;uniform mat4 uView;varying vec3 vColor;varying float vDepth;void main(){vec4 p=uView*vec4(aPos,1.0);gl_Position=uProjection*p;vec3 n=normalize(aNormal);vec3 sunDir=normalize(vec3(0.5,0.92,0.45));float sun=max(0.0,dot(n,sunDir));float skyFill=0.5+0.5*n.y;float ambient=mix(0.64,0.81,skyFill);float diffuse=0.31*sun;float bounce=0.045*max(0.0,-n.y);vColor=aColor*(ambient+diffuse+bounce);vDepth=length(p.xyz);}`;
 const fShader=`precision mediump float;varying vec3 vColor;varying float vDepth;uniform vec3 uFog;uniform float uBrightness;uniform vec3 uFestivalTint;uniform float uFestivalGlow;uniform float uOpacity;void main(){float distanceFog=smoothstep(42.0,145.0,vDepth);float fogAmount=distanceFog*0.22;vec3 c=mix(vColor,uFog,fogAmount);vec3 night=mix(c,c*vec3(0.22,0.34,0.58),clamp(uBrightness,0.0,1.0));gl_FragColor=vec4(clamp(night+uFestivalTint*uFestivalGlow,0.0,1.0),uOpacity);}`;
 function makeShader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error('Shader error: '+gl.getShaderInfoLog(s));return s}
@@ -609,6 +611,38 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);
   if(railRide.active)updateSeaRide(now);
  const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&!railRide.active&&!rocketCameraActive&&!KART.active()&&!battleSession?.active&&(sx||sy)){if(!indoor.room){leaveOverviewForMovement();cameraPan.x=0;cameraPan.z=0;}const move=screenMoveVector(sx,sy,indoor.room?0:viewHeading());let dx=move.x*speed*dt,dz=move.z*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);if(SEA.isCommercial(x,z))return SEA.walkable(x,z);if(!EXPANSION.canWalk(x,z)||REDEVELOPMENT.within(x,z))return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
  const fishingActive=fishing.stage!=='idle',roomActive=!!indoor.room;
+ const airshowStatus=AIRSHOW?.phase(now);
+ const airshowDemo=typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='airshow';
+ const daylightAllowed=AIRSHOW?.isDay(state.timeMinutes)||airshowDemo;
+ const airshowAllowed=!roomActive&&!battleSession?.active&&!KART.active()&&!rocketCameraActive&&!railRide.active&&fishing.stage==='idle';
+ const airshowButton=$('airshowBtn'),airshowHud=$('airshowHud');
+ if(airshowDemo)document.documentElement.dataset.airshowPhase=String(Math.round(airshowStatus?.elapsed||0));
+ if(airshowButton){
+  airshowButton.hidden=!daylightAllowed||!airshowAllowed;
+  airshowButton.classList.toggle('active',!!airshowStatus?.active);
+  airshowButton.textContent=airshowStatus?.active?'✕ 飛行ショー終了':'✈️ 航空ショー';
+ }
+ if(airshowHud){
+  airshowHud.hidden=!airshowStatus?.active||roomActive;
+  if(!airshowHud.hidden)airshowHud.textContent=airshowStatus.variant==='rainbow'
+   ?'🌈 レア！ 虹のスモークで6機編隊！'
+   :airshowStatus.progress>.74?'✈️ 6機が扇状に広がって帰還中！':'✈️ 6機編隊が島の上空を通過中！';
+ }
+ // A single optional flyover on rare eligible days, once per JST calendar
+ // day even across reloads. Do not touch the island's main save snapshot.
+ if(AIRSHOW&&!document.hidden&&!paused&&!airshowStatus?.active&&airshowAllowed
+   &&state.timeMinutes>=10*60+30&&state.timeMinutes<=15*60
+   &&airshowAutoDay!==state.realDateKey){
+  airshowAutoDay=state.realDateKey;
+  const key='komorebi_airshow_auto_day_v1',today=String(state.realDateKey||'');
+  try{
+   if(today&&localStorage.getItem(key)!==today){
+    localStorage.setItem(key,today);
+    if((Math.imul(state.day+101,1640531527)>>>0)%7===0&&AIRSHOW.start(now,state.timeMinutes))
+     showToast('✈️ 海から6機編隊の航空ショーがやってきた！');
+   }
+  }catch{}
+ }
   const travelPoint=railRide.active?SEA.pointAt(railRide.from==='home'?railRide.progress:1-railRide.progress):null;
   const festivalOrigin=state.currentIsland==='commerce'?[52,-4]:[11,-5];
   const focusX=cameraPan.x+(industrialOverview?45:launchView?SPACE.pad.x:festivalShow&&!roomActive?festivalOrigin[0]:travelPoint?travelPoint.x:fishingActive?(state.x-7)*.5:(seaLineOverview?31.5:overviewMode&&!roomActive?(state.currentIsland==='commerce'?53.2:1.0):state.x)), focusZ=cameraPan.z+(industrialOverview?29.5:launchView?SPACE.pad.z:festivalShow&&!roomActive?festivalOrigin[1]:travelPoint?travelPoint.z:fishingActive?(state.z+6)*.5:(seaLineOverview?-2.1:overviewMode&&!roomActive?(state.currentIsland==='commerce'?-4.5:-1.8):state.z));
@@ -632,9 +666,24 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);
   const kartCamera=KART.camera();const battleCamera=battleSession?.active?BATTLE.camera(battleSession,now):null;
   const eye=battleCamera?battleCamera.eye:kartCamera?kartCamera.eye:roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):spectator?spectator.eye:travelPoint?[camFocus.x-8.5,12.5,camFocus.z+18.5]:[camFocus.x+Math.sin(scenicAngle)*distance*Math.cos(pitch),baseHeight+distance*Math.sin(pitch),camFocus.z+Math.cos(scenicAngle)*distance*Math.cos(pitch)];
  const center=battleCamera?battleCamera.center:kartCamera?kartCamera.center:roomActive?[0,.95,-.35]:spectator?spectator.center:[camFocus.x,clamp(-cameraPitch,0,1.25)*28,camFocus.z];
+ // Smoothly TRACK THE SKY with the gaze only. Never teleport the character.
+ const canTrackAirshow=airshowAllowed&&!spectator&&!kartCamera&&!battleCamera;
+ const airshowGoal=canTrackAirshow?(airshowStatus?.look||0):0;
+ // The flight phase already has a 2.1-second smoothstep ease-in and
+ // 3.6-second ease-out. Do not add a second frame-rate-dependent lag: slow
+ // iPhone GPUs would otherwise leave aircraft outside the camera frame.
+ if(airshowGoal>0)airshowLookAmount=airshowGoal;
+ else airshowLookAmount=Math.max(0,airshowLookAmount-dt*2.4);
+ if(airshowStatus?.lead)airshowTarget={...(airshowStatus.cameraTarget||airshowStatus.lead)};
+ if(canTrackAirshow&&airshowLookAmount>.001){
+  const w=airshowLookAmount;
+  center[0]+=w*(airshowTarget.x-center[0])*.96;
+  center[1]+=w*(airshowTarget.y-center[1])*.96;
+  center[2]+=w*(airshowTarget.z-center[2])*.96;
+ }
  viewFov=battleCamera?battleCamera.fov:kartCamera?kartCamera.fov:roomActive?52:(spectator?spectator.fov:industrialOverview?68:travelPoint?56:seaLineOverview?70:overviewMode?54:48);
   updateSpeechPosition(eye,center,aspect,viewFov*Math.PI/180);
- const lighting=DAYLIGHT.paletteAt(battleSession?.active?13*60+45:KART.active()?15*60:festivalShow&&!roomActive?22*60+30:state.timeMinutes);
+ const lighting=DAYLIGHT.paletteAt(battleSession?.active?13*60+45:KART.active()?15*60:festivalShow&&!roomActive?22*60+30:airshowDemo?12*60:state.timeMinutes);
   const fireworksIntensity=festivalShow?1:lighting.stars;
   const festivalClock=festivalShow?Math.max(0,now-festivalStartedAt)+1800:now;
   if(festivalShow&&!roomActive&&!reducedMotion&&FESTIVAL?.spectacleEventsAt){
@@ -754,6 +803,20 @@ function updateSeaRide(now){
  nearest=null;setContext();save();updateHud();
  showToast(railRide.to==='commerce'?'🛍️ 商業島に到着！ お店を探検しよう':'🌿 こもれび島に帰ってきたよ！');
 }
+function startAirshow(){
+ if(!AIRSHOW||indoor.room||paused||railRide.active||rocketCameraActive||KART.active()
+   ||battleSession?.active||fishing.stage!=='idle'){
+  showToast('✈️ 島の外で、別のイベントがないときに見られるよ');return false;
+ }
+ if(AIRSHOW.active(performance.now())){
+  AIRSHOW.cancel();showToast('✈️ 航空ショーを終了したよ');return true;
+ }
+ if(!AIRSHOW.start(performance.now(),state.timeMinutes)){
+  showToast('☀️ 航空ショーは朝7時〜夕方6時30分の昼間限定だよ');return false;
+ }
+ showToast('✈️ 海の向こうから6機編隊が近づいてくるよ！');
+ return true;
+}
 function saveNow(){
  if(paused)return;
  syncRealClock();
@@ -798,6 +861,7 @@ function beginRocketLaunch(){return launchRocketWithView('pad')}
 function launchRocketWithView(requestedView='pad'){
  if(!window.KomorebiSpaceport||indoor.room||railRide.active)return false;
  if(!SPACE.startLaunch(performance.now())){showToast('🚀 打ち上げ進行中！');return false;}
+ AIRSHOW?.cancel();
  const fromHere=requestedView==='here'&&dist(state.x,state.z,SPACE.pad.x,SPACE.pad.z)>15;
  rocketCameraMode=fromHere?'remote':'pad';
  rocketViewOrigin=fromHere?{x:state.x,z:state.z}:null;
@@ -896,6 +960,7 @@ function startIslandBattle(){
  battleBefore={x:state.x,z:state.z,island:state.currentIsland,angle:state.angle,
    overviewMode,seaLineOverview,industrialOverview,festivalShow,
    cameraPitch,cameraYaw,cameraZoom,panX:cameraPan.x,panZ:cameraPan.z};
+ AIRSHOW?.cancel();
  battleSession=BATTLE.create();
  // Do not modify saved world coordinates: the battle is a temporary camera scene.
  paused=true;overviewMode=false;seaLineOverview=false;industrialOverview=false;festivalShow=false;
@@ -1238,6 +1303,7 @@ function importSave(){
 }
 function exportSave(){const data=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const url=URL.createObjectURL(data),a=document.createElement('a');a.href=url;a.download='komorebi-save-day'+state.day+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);showToast('セーブデータを書き出したよ')}
 function bindControls(){KART.bindControls(stopKartRace);
+ $('airshowBtn')?.addEventListener('click',startAirshow);
  $('battleBtn')?.addEventListener('click',()=>{if(!battleSession?.active)startIslandBattle();else finishIslandBattle()});
  $('battleBackBtn')?.addEventListener('click',()=>{$('battleMoves').dataset.open='no';updateBattleHud()});
  $('battleAttackBtn')?.addEventListener('click',()=>{if(!battleSession?.active||battleSession.phase==='end')return;const el=$('battleMoves');el.dataset.open=el.dataset.open==='yes'?'no':'yes';updateBattleHud()});
@@ -1288,7 +1354,11 @@ function bindControls(){KART.bindControls(stopKartRace);
  $('fishBack').addEventListener('click',stopFishing);$('roomDialogClose').addEventListener('click',closeRoomDialogue);
  $('startBtn').addEventListener('click',()=>{$('welcomeOverlay').hidden=true;paused=false;state.welcomeSeen=true;save();showToast('🌿 島を探検しよう！')});document.addEventListener('visibilitychange',()=>{if(document.hidden){if(fishing.stage!=='idle')stopFishing();if(watering.active)finishWatering();save()}else{syncRealClock();save()}});window.addEventListener('pageshow',()=>syncRealClock());window.addEventListener('pagehide',save);
 }
-function start(){try{initializeGL();bindControls();syncRealClock();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='train')beginSeaJourney();if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='kart')startKartRace();if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='battle')startIslandBattle();if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='battlefx'){startIslandBattle();battleAction('thunder');}if(typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='fireworks'){festivalShow=true;festivalStartedAt=0;cameraPitch=-.60;cameraZoom=.78;overviewMode=false;seaLineOverview=false;$('festivalViewBtn').textContent='🎆 花火を終了'}requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),getIslandBounds:()=>({grass:EXPANSION.grass,sand:EXPANSION.sand}),getRedevelopment:()=>({progress:state.redevelopmentProgress,stage:REDEVELOPMENT.stage(state.redevelopmentProgress),overview:overviewMode}),getSeaLine:()=>({island:state.currentIsland,rides:state.seaLineRides,riding:railRide.active,progress:railRide.progress,from:railRide.from,to:railRide.to,panorama:seaLineOverview}),boardTrain:beginSeaJourney,updateTrain:updateSeaRide,moveTo:(x,z)=>{state.x=x;state.z=z;nearest=findNearby();setContext()},interact,saveNow,openPanel,price,vertices:worldVerts,getFestival:()=>({active:festivalShow,pitch:cameraPitch,zoom:cameraZoom}),getCameraMovement:(x,y)=>screenMoveVector(x,y,indoor.room?0:viewHeading()),getCameraHeading:()=>viewHeading(),exitOverviewForMovement:leaveOverviewForMovement,getSpaceport:()=>({bounds:SPACE.bounds,pad:SPACE.pad,phase:SPACE.phase(performance.now()),camera:rocketCameraActive,view:rocketCameraMode,origin:rocketViewOrigin&&{...rocketViewOrigin}}),getDistantRocketPose:(lift,aspect=.5,origin)=>distantRocketSpectatorPose(lift,aspect,origin),getLaunchAudio:()=>({available:!!LAUNCH_AUDIO,enabled:LAUNCH_AUDIO?.enabled?.()??false}),getKart:()=>KART.getState(),startKartRace,stopKartRace,getBattle:()=>battleSession?JSON.parse(JSON.stringify(battleSession)):null,startIslandBattle,finishIslandBattle,battleAction,getIndustry:()=>({factory:INDUSTRY.factory,ship:INDUSTRY.ship,overview:industrialOverview,metrics:INDUSTRY.metrics(performance.now())}),getRenderQuality:()=>renderQuality?.current?.(),getTouchCamera:()=>({yaw:cameraYaw,pitch:cameraPitch,zoom:cameraZoom,pan:{...cameraPan},active:gestures?.isActive?.()||false}),getRocketSpectatorPose:(lift,aspect=.5)=>rocketSpectatorPose(lift,aspect),launchRocket:beginRocketLaunch,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getMokoPose:()=>({...mokoPose}),updateMoko,getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,dateKey:state.realDateKey,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),syncClock:syncRealClock,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
+function start(){try{initializeGL();bindControls();syncRealClock();updateHud();setContext();$('poster').classList.add('hidden');$('loadingBanner').hidden=true;gameReady=true;if(!state.welcomeSeen){$('welcomeOverlay').hidden=false;paused=true}if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='train')beginSeaJourney();if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='kart')startKartRace();if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='battle')startIslandBattle();if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='battlefx'){startIslandBattle();battleAction('thunder');}if(typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='fireworks'){festivalShow=true;festivalStartedAt=0;cameraPitch=-.60;cameraZoom=.78;overviewMode=false;seaLineOverview=false;$('festivalViewBtn').textContent='🎆 花火を終了'}
+ if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='airshow'){
+  AIRSHOW?.start(performance.now(),12*60,{preview:true,previewElapsed:5200});
+ }
+ requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),getIslandBounds:()=>({grass:EXPANSION.grass,sand:EXPANSION.sand}),getRedevelopment:()=>({progress:state.redevelopmentProgress,stage:REDEVELOPMENT.stage(state.redevelopmentProgress),overview:overviewMode}),getSeaLine:()=>({island:state.currentIsland,rides:state.seaLineRides,riding:railRide.active,progress:railRide.progress,from:railRide.from,to:railRide.to,panorama:seaLineOverview}),boardTrain:beginSeaJourney,updateTrain:updateSeaRide,moveTo:(x,z)=>{state.x=x;state.z=z;nearest=findNearby();setContext()},interact,saveNow,openPanel,price,vertices:worldVerts,getFestival:()=>({active:festivalShow,pitch:cameraPitch,zoom:cameraZoom}),getAirshow:()=>AIRSHOW?.phase(performance.now()),startAirshow,getCameraMovement:(x,y)=>screenMoveVector(x,y,indoor.room?0:viewHeading()),getCameraHeading:()=>viewHeading(),exitOverviewForMovement:leaveOverviewForMovement,getSpaceport:()=>({bounds:SPACE.bounds,pad:SPACE.pad,phase:SPACE.phase(performance.now()),camera:rocketCameraActive,view:rocketCameraMode,origin:rocketViewOrigin&&{...rocketViewOrigin}}),getDistantRocketPose:(lift,aspect=.5,origin)=>distantRocketSpectatorPose(lift,aspect,origin),getLaunchAudio:()=>({available:!!LAUNCH_AUDIO,enabled:LAUNCH_AUDIO?.enabled?.()??false}),getKart:()=>KART.getState(),startKartRace,stopKartRace,getBattle:()=>battleSession?JSON.parse(JSON.stringify(battleSession)):null,startIslandBattle,finishIslandBattle,battleAction,getIndustry:()=>({factory:INDUSTRY.factory,ship:INDUSTRY.ship,overview:industrialOverview,metrics:INDUSTRY.metrics(performance.now())}),getRenderQuality:()=>renderQuality?.current?.(),getTouchCamera:()=>({yaw:cameraYaw,pitch:cameraPitch,zoom:cameraZoom,pan:{...cameraPan},active:gestures?.isActive?.()||false}),getRocketSpectatorPose:(lift,aspect=.5)=>rocketSpectatorPose(lift,aspect),launchRocket:beginRocketLaunch,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getMokoPose:()=>({...mokoPose}),updateMoko,getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,dateKey:state.realDateKey,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),syncClock:syncRealClock,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 
