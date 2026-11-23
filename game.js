@@ -7,6 +7,7 @@ const canvas = $('gameCanvas');
  const DAYLIGHT=window.KomorebiTime;
  if(!DAYLIGHT)throw Error('daynight.js is required');
  const FESTIVAL=window.KomorebiNightFestival||null;
+ const AIRSHOW=window.KomorebiAirshow||null;
  const SKY=window.KomorebiSky||null;
  const QUALITY=window.KomorebiRenderQuality||null;
  const CAMERA_GESTURES=window.KomorebiCameraGestures||null;
@@ -476,12 +477,13 @@ function buildDynamic(now,includeRocket=true){const b=new MeshBuilder();if(battl
   if(includeRocket)SPACE.drawDynamic(b,now);
   else SPACE.drawAtmosphere(b,now);
   INDUSTRY.drawDynamic(b,now);
+  if(AIRSHOW&&!indoor.room&&!KART.active()&&!battleSession?.active)AIRSHOW.draw(b,now,{reducedMotion});
   KART.drawDynamic(b,now);
   BATTLE.drawDynamic(b,now,battleSession);
  return b.toFloat()}
 function buildRocketDynamic(now){const b=new MeshBuilder();SPACE.drawRocket(b,now);return b.toFloat()}
 let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0,viewFov=48;
-let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,uOpacity=null,festivalRenderer=null,worldFestivalRenderer=null,skyRenderer=null,worldBuffer=null,dynamicBuffer=null,rocketBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine'),cameraZoom=1,cameraPitch=0,cameraYaw=0,festivalShow=false,festivalStartedAt=0,lastRareBurstKey=null,fireworksAudio=null,rocketCameraActive=false,rocketCameraMode='pad',rocketViewOrigin=null,rocketPriorView=null,industrialOverview=false;
+let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,uOpacity=null,festivalRenderer=null,worldFestivalRenderer=null,skyRenderer=null,worldBuffer=null,dynamicBuffer=null,rocketBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine'),cameraZoom=1,cameraPitch=0,cameraYaw=0,festivalShow=false,festivalStartedAt=0,lastRareBurstKey=null,fireworksAudio=null,airshowLookAmount=0,airshowTarget={x:0,y:38,z:-15},airshowAutoDay=null,rocketCameraActive=false,rocketCameraMode='pad',rocketViewOrigin=null,rocketPriorView=null,industrialOverview=false;
 const vShader=`attribute vec3 aPos;attribute vec3 aNormal;attribute vec3 aColor;uniform mat4 uProjection;uniform mat4 uView;varying vec3 vColor;varying float vDepth;void main(){vec4 p=uView*vec4(aPos,1.0);gl_Position=uProjection*p;vec3 n=normalize(aNormal);vec3 sunDir=normalize(vec3(0.5,0.92,0.45));float sun=max(0.0,dot(n,sunDir));float skyFill=0.5+0.5*n.y;float ambient=mix(0.64,0.81,skyFill);float diffuse=0.31*sun;float bounce=0.045*max(0.0,-n.y);vColor=aColor*(ambient+diffuse+bounce);vDepth=length(p.xyz);}`;
 const fShader=`precision mediump float;varying vec3 vColor;varying float vDepth;uniform vec3 uFog;uniform float uBrightness;uniform vec3 uFestivalTint;uniform float uFestivalGlow;uniform float uOpacity;void main(){float distanceFog=smoothstep(42.0,145.0,vDepth);float fogAmount=distanceFog*0.22;vec3 c=mix(vColor,uFog,fogAmount);vec3 night=mix(c,c*vec3(0.22,0.34,0.58),clamp(uBrightness,0.0,1.0));gl_FragColor=vec4(clamp(night+uFestivalTint*uFestivalGlow,0.0,1.0),uOpacity);}`;
 function makeShader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error('Shader error: '+gl.getShaderInfoLog(s));return s}
@@ -609,6 +611,37 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);
   if(railRide.active)updateSeaRide(now);
  const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&!railRide.active&&!rocketCameraActive&&!KART.active()&&!battleSession?.active&&(sx||sy)){if(!indoor.room){leaveOverviewForMovement();cameraPan.x=0;cameraPan.z=0;}const move=screenMoveVector(sx,sy,indoor.room?0:viewHeading());let dx=move.x*speed*dt,dz=move.z*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);if(SEA.isCommercial(x,z))return SEA.walkable(x,z);if(!EXPANSION.canWalk(x,z)||REDEVELOPMENT.within(x,z))return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
  const fishingActive=fishing.stage!=='idle',roomActive=!!indoor.room;
+ const airshowStatus=AIRSHOW?.phase(now);
+ const airshowDemo=typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='airshow';
+ const daylightAllowed=AIRSHOW?.isDay(state.timeMinutes)||airshowDemo;
+ const airshowAllowed=!roomActive&&!battleSession?.active&&!KART.active()&&!rocketCameraActive&&!railRide.active&&fishing.stage==='idle';
+ const airshowButton=$('airshowBtn'),airshowHud=$('airshowHud');
+ if(airshowButton){
+  airshowButton.hidden=!daylightAllowed||!airshowAllowed;
+  airshowButton.classList.toggle('active',!!airshowStatus?.active);
+  airshowButton.textContent=airshowStatus?.active?'✕ 飛行ショー終了':'✈️ 航空ショー';
+ }
+ if(airshowHud){
+  airshowHud.hidden=!airshowStatus?.active||roomActive;
+  if(!airshowHud.hidden)airshowHud.textContent=airshowStatus.variant==='rainbow'
+   ?'🌈 レア！ 虹のスモークで6機編隊！'
+   :airshowStatus.progress>.74?'✈️ 6機が扇状に広がって帰還中！':'✈️ 6機編隊が島の上空を通過中！';
+ }
+ // A single optional flyover on rare eligible days, once per JST calendar
+ // day even across reloads. Do not touch the island's main save snapshot.
+ if(AIRSHOW&&!document.hidden&&!paused&&!airshowStatus?.active&&airshowAllowed
+   &&state.timeMinutes>=10*60+30&&state.timeMinutes<=15*60
+   &&airshowAutoDay!==state.realDateKey){
+  airshowAutoDay=state.realDateKey;
+  const key='komorebi_airshow_auto_day_v1',today=String(state.realDateKey||'');
+  try{
+   if(today&&localStorage.getItem(key)!==today){
+    localStorage.setItem(key,today);
+    if((Math.imul(state.day+101,1640531527)>>>0)%7===0&&AIRSHOW.start(now,state.timeMinutes))
+     showToast('✈️ 海から6機編隊の航空ショーがやってきた！');
+   }
+  }catch{}
+ }
   const travelPoint=railRide.active?SEA.pointAt(railRide.from==='home'?railRide.progress:1-railRide.progress):null;
   const festivalOrigin=state.currentIsland==='commerce'?[52,-4]:[11,-5];
   const focusX=cameraPan.x+(industrialOverview?45:launchView?SPACE.pad.x:festivalShow&&!roomActive?festivalOrigin[0]:travelPoint?travelPoint.x:fishingActive?(state.x-7)*.5:(seaLineOverview?31.5:overviewMode&&!roomActive?(state.currentIsland==='commerce'?53.2:1.0):state.x)), focusZ=cameraPan.z+(industrialOverview?29.5:launchView?SPACE.pad.z:festivalShow&&!roomActive?festivalOrigin[1]:travelPoint?travelPoint.z:fishingActive?(state.z+6)*.5:(seaLineOverview?-2.1:overviewMode&&!roomActive?(state.currentIsland==='commerce'?-4.5:-1.8):state.z));
@@ -632,9 +665,20 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);
   const kartCamera=KART.camera();const battleCamera=battleSession?.active?BATTLE.camera(battleSession,now):null;
   const eye=battleCamera?battleCamera.eye:kartCamera?kartCamera.eye:roomActive?(aspect<.70?[0,12.3,20.7]:[0,8.2,13.6]):spectator?spectator.eye:travelPoint?[camFocus.x-8.5,12.5,camFocus.z+18.5]:[camFocus.x+Math.sin(scenicAngle)*distance*Math.cos(pitch),baseHeight+distance*Math.sin(pitch),camFocus.z+Math.cos(scenicAngle)*distance*Math.cos(pitch)];
  const center=battleCamera?battleCamera.center:kartCamera?kartCamera.center:roomActive?[0,.95,-.35]:spectator?spectator.center:[camFocus.x,clamp(-cameraPitch,0,1.25)*28,camFocus.z];
+ // Smoothly TRACK THE SKY with the gaze only. Never teleport the character.
+ const canTrackAirshow=airshowAllowed&&!spectator&&!kartCamera&&!battleCamera;
+ const airshowGoal=canTrackAirshow?(airshowStatus?.look||0):0;
+ airshowLookAmount+=(airshowGoal-airshowLookAmount)*Math.min(1,dt*3.3);
+ if(airshowStatus?.lead)airshowTarget={...airshowStatus.lead};
+ if(canTrackAirshow&&airshowLookAmount>.001){
+  const w=airshowLookAmount;
+  center[0]+=w*(airshowTarget.x-center[0])*.96;
+  center[1]+=w*(airshowTarget.y-center[1])*.96;
+  center[2]+=w*(airshowTarget.z-center[2])*.96;
+ }
  viewFov=battleCamera?battleCamera.fov:kartCamera?kartCamera.fov:roomActive?52:(spectator?spectator.fov:industrialOverview?68:travelPoint?56:seaLineOverview?70:overviewMode?54:48);
   updateSpeechPosition(eye,center,aspect,viewFov*Math.PI/180);
- const lighting=DAYLIGHT.paletteAt(battleSession?.active?13*60+45:KART.active()?15*60:festivalShow&&!roomActive?22*60+30:state.timeMinutes);
+ const lighting=DAYLIGHT.paletteAt(battleSession?.active?13*60+45:KART.active()?15*60:festivalShow&&!roomActive?22*60+30:airshowDemo?12*60:state.timeMinutes);
   const fireworksIntensity=festivalShow?1:lighting.stars;
   const festivalClock=festivalShow?Math.max(0,now-festivalStartedAt)+1800:now;
   if(festivalShow&&!roomActive&&!reducedMotion&&FESTIVAL?.spectacleEventsAt){
