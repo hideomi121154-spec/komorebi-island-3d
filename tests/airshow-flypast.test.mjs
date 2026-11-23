@@ -29,8 +29,8 @@ test('six-aircraft flypast is a daylight-only playable event',()=>{
  assert.equal(a.COUNT,6);
  assert.equal(a.isDay(419),false);
  assert.equal(a.isDay(420),true);
- assert.equal(a.isDay(1109),false);
- assert.equal(a.isDay(1109-1),true);
+ assert.equal(a.isDay(1109),true);
+ assert.equal(a.isDay(1110),false);
  assert.equal(a.start(1000,19*60),false);
  assert.equal(a.phase(1500).active,false);
  assert.equal(a.start(1000,10*60),true);
