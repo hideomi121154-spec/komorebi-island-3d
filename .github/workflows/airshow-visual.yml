@@ -1,0 +1,68 @@
+name: Six jet flypast visual gate
+on:
+  pull_request:
+    paths:
+      - 'airshow3d.js'
+      - 'game.js'
+      - 'index.html'
+      - 'styles.css'
+      - '.github/workflows/airshow-visual.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'airshow3d.js'
+      - 'game.js'
+      - '.github/workflows/airshow-visual.yml'
+permissions:
+  contents: read
+jobs:
+  webgl-phone:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start local site and seed existing island save
+        shell: bash
+        run: |
+          cat > airshow-preview-seed.html <<'EOF'
+          <!doctype html><html><head><meta charset="utf-8"></head><body><script>
+          localStorage.setItem('komorebi_island_3d_v01',JSON.stringify({
+            version:1,day:9,coins:97,welcomeSeen:true,x:0,z:3,angle:0,
+            inventory:{berry:1,wood:2,seed:2},redevelopmentProgress:38
+          }));
+          location.replace('/index.html?demo=airshow');
+          </script></body></html>
+          EOF
+          python3 -m http.server 8775 --bind 127.0.0.1 >/tmp/komorebi-airshow.log 2>&1 &
+          sleep 2
+      - name: Verify running flypast and photograph 3D scene on phone viewport
+        shell: bash
+        run: |
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$CHROME"
+          "$CHROME" --headless --no-sandbox --disable-dev-shm-usage \
+            --enable-webgl --enable-unsafe-swiftshader --use-angle=swiftshader \
+            --window-size=414,896 --virtual-time-budget=3600 --dump-dom \
+            http://127.0.0.1:8775/airshow-preview-seed.html > "$RUNNER_TEMP/airshow-dom.html" 2>/tmp/airshow-browser.log
+          grep -E -q 'data-airshow-phase="[4-9][0-9]{3,}"' "$RUNNER_TEMP/airshow-dom.html" || {
+            echo 'Airshow did not enter a playable active flight phase'
+            grep 'data-airshow-phase' "$RUNNER_TEMP/airshow-dom.html" | head -3
+            tail -30 /tmp/airshow-browser.log
+            exit 1
+          }
+          "$CHROME" --headless --no-sandbox --disable-dev-shm-usage \
+            --enable-webgl --enable-unsafe-swiftshader --use-angle=swiftshader \
+            --hide-scrollbars --window-size=414,896 --virtual-time-budget=4600 \
+            "--screenshot=$RUNNER_TEMP/six-jet-flypast.png" \
+            http://127.0.0.1:8775/airshow-preview-seed.html
+          test -s "$RUNNER_TEMP/six-jet-flypast.png"
+          file "$RUNNER_TEMP/six-jet-flypast.png"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: six-jet-flypast-phone-preview
+          path: |
+            ${{ runner.temp }}/six-jet-flypast.png
+            ${{ runner.temp }}/airshow-dom.html
+          if-no-files-found: ignore
+          retention-days: 5
