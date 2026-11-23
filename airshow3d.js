@@ -12,7 +12,7 @@ const OFFSETS=[
 const WHITE=['#f8fcfc','#e3f4f6','#d7eaf1','#c6ddeb'];
 const BLUE_SMOKE=['#b8ddec','#c7e7ed','#dbf0f2','#edf7f7'];
 const RAINBOW=['#f1a9b8','#f6d8a4','#b8d6f2','#b1e3d1','#ead0f4','#ffebc6'];
-let launchedAt=-1,showNumber=0,showVariant='normal';
+let launchedAt=null,showNumber=0,showVariant='normal';
 const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
 const ease=t=>{const v=clamp(t);return v*v*(3-2*v);};
 function isDay(minutes){return Number.isFinite(minutes)&&minutes>=7*60&&minutes<18*60+30;}
@@ -40,10 +40,10 @@ function position(index,u){
   y:p.y+o.y,yaw};
 }
 function phase(now){
- if(launchedAt<0)return{active:false,progress:0,elapsed:0,lead:null,look:0,variant:showVariant};
+ if(launchedAt===null)return{active:false,progress:0,elapsed:0,lead:null,look:0,variant:showVariant};
  const elapsed=Math.max(0,Number(now)-launchedAt);
  if(!Number.isFinite(elapsed)||elapsed>=TOTAL_MS){
-  launchedAt=-1;
+  launchedAt=null;
   return{active:false,progress:1,elapsed:TOTAL_MS,lead:null,look:0,variant:showVariant};
  }
  const u=clamp(elapsed/FLY_MS);
@@ -52,15 +52,15 @@ function phase(now){
  return {active:true,elapsed,progress:u,look,lead:position(0,u),variant:showVariant,
   aircraftVisible:elapsed<FLY_MS,smokeVisible:elapsed<FLY_MS+TAIL_MS};
 }
-function start(now,minutes,{preview=false,rainbow=false}={}){
+function start(now,minutes,{preview=false,rainbow=false,previewElapsed=0}={}){
  if(!preview&&!isDay(minutes))return false;
  if(phase(now).active)return false;
  if(!Number.isFinite(now))return false;
- launchedAt=now;showNumber++;
+ launchedAt=now-(preview?clamp(previewElapsed,0,FLY_MS-1000):0);showNumber++;
  showVariant=rainbow||Math.random()<.125?'rainbow':'normal';
  return true;
 }
-function cancel(){launchedAt=-1;}
+function cancel(){launchedAt=null;}
 function jet(b,index,p,scale=1){
  const s=scale;
  b.setTransform(p.x,p.y,p.z,p.yaw);
@@ -130,5 +130,5 @@ function active(now){return phase(now).active;}
 window.KomorebiAirshow={TOTAL_MS,FLY_MS,TAIL_MS,COUNT:6,isDay,start,cancel,phase,active,
  position,basePath,headingAt,draw,variant:()=>showVariant,
  // Test support only; release input is never stored in the island save.
- reset:()=>{launchedAt=-1;showNumber=0;showVariant='normal';}};
+ reset:()=>{launchedAt=null;showNumber=0;showVariant='normal';}};
 })();
