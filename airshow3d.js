@@ -74,7 +74,7 @@ function start(now,minutes,{preview=false,rainbow=false,previewElapsed=0}={}){
  return true;
 }
 function cancel(){launchedAt=null;}
-function jet(b,index,p,scale=1){
+function jet(b,index,p,scale=1,elapsed=0){
  const s=scale,c=RAINBOW[index],cream='#fff5da';
  b.setTransform(p.x,p.y,p.z,p.yaw);
  // Original 1930s-inspired single-propeller floatplane; each aircraft has its own paint.
@@ -92,36 +92,34 @@ function jet(b,index,p,scale=1){
  b.sphere(0,.43*s,.35*s,.33*s,.25*s,.48*s,'#456d86',5,8);
  b.sphere(0,0,1.95*s,.34*s,.34*s,.42*s,'#d4dce0',6,8);
  // Pale spinning propeller disc, visible from multiple viewing angles.
- b.box(0,0,2.35*s,.1*s,1.55*s,.08*s,'#d6eaf0');
- b.box(0,0,2.36*s,1.1*s,.1*s,.08*s,'#eaf7fb');
+ const a=elapsed*.036+index*.8;
+ for(let blade=0;blade<2;blade++){
+  const theta=a+blade*Math.PI,dx=Math.cos(theta)*.86*s,dy=Math.sin(theta)*.86*s;
+  b.tri([0,0,2.37*s],[dx,dy,2.37*s],[dx*.83-dy*.12,dy*.83+dx*.12,2.37*s],'#e0f3f8');
+ }
  b.clearTransform();
 }
-function smoke(b,age,index,variant){
- if(age<300||age>FLY_MS+TAIL_MS)return;
+function smoke(b,age,index,variant,reducedMotion=false){
+ if(age<200||age>FLY_MS+TAIL_MS)return;
  const current=Math.min(FLY_MS,age);
- const pieces=22,step=220;
- // Two aerodynamic trails per aircraft, drawn as only four quads per segment.
- for(const side of[-1,1]){
-  for(let j=1;j<=pieces;j++){
-   const newer=current-(j-1)*step,older=current-j*step;
-   if(older<0||newer>FLY_MS+300)continue;
-   const from=position(index,older/FLY_MS),to=position(index,newer/FLY_MS);
-   const trail=(p)=>({
-    x:p.x+Math.cos(p.yaw)*side*.20-Math.sin(p.yaw)*1.95,
-    y:p.y-.17,
-    z:p.z-Math.sin(p.yaw)*side*.20-Math.cos(p.yaw)*1.95
-   });
-   const a=trail(from),c=trail(to);
-   const w0=.15+j*.045,w1=.15+(j-1)*.045;
-   let color=variant==='rainbow'?
-    RAINBOW[index]:side===1?WHITE[Math.min(3,Math.floor(j/5))]:BLUE_SMOKE[Math.min(3,Math.floor(j/5))];
-   // Soften the far end of each ribbon into the daytime sky.
-   if(age>FLY_MS&&variant!=='rainbow')color=WHITE[Math.min(3,Math.floor(j/5))];
-   b.quad([a.x-w0,a.y,a.z],[a.x+w0,a.y,a.z],
-    [c.x+w1,c.y,c.z],[c.x-w1,c.y,c.z],color);
-   b.quad([a.x,a.y-w0*.67,a.z],[a.x,a.y+w0*.67,a.z],
-    [c.x,c.y+w1*.67,c.z],[c.x,c.y-w1*.67,c.z],color);
-  }
+ // Small overlapping puffs replace opaque polygon ribbons. Deterministic jitter
+ // avoids per-frame random flicker and keeps the mobile draw budget bounded.
+ const count=reducedMotion?28:52,spacing=110;
+ for(let j=count;j>=0;j--){
+  const born=current-j*spacing;
+  if(born<0)continue;
+  const t=born/FLY_MS,p=position(index,t);
+  const seed=index*19.7+j*7.13;
+  const drift=j*.016;
+  const x=p.x-Math.sin(p.yaw)*1.9+Math.sin(seed*1.7)*drift;
+  const y=p.y-.15+Math.cos(seed*2.3)*drift*.8+j*.013;
+  const z=p.z-Math.cos(p.yaw)*1.9+Math.cos(seed*1.3)*drift;
+  const radius=.18+j*.023;
+  // Pale feathered edge puffs around the denser colored center.
+  const c=RAINBOW[index];
+  b.sphere(x,y,z,radius*1.65,radius*.88,radius*1.65,
+   j>count*.65?'#d5e9f1':'#c8e5ee',3,5);
+  b.sphere(x,y,z,radius,radius*.68,radius,c,3,5);
  }
 }
 function draw(b,now,{reducedMotion=false}={}){
@@ -129,11 +127,11 @@ function draw(b,now,{reducedMotion=false}={}){
  if(!p.active||!p.smokeVisible)return;
  // Older trails first, aircraft on top. Reduced motion draws fewer segments.
  for(let i=0;i<6;i++){
-  smoke(b,p.elapsed,i,p.variant);
+  smoke(b,p.elapsed,i,p.variant,reducedMotion);
  }
  if(p.aircraftVisible){
-  const scale=1.24;
-  for(let i=0;i<6;i++)jet(b,i,position(i,p.progress),scale);
+  const scale=2.0;
+  for(let i=0;i<6;i++)jet(b,i,position(i,p.progress),scale,p.elapsed);
  }
 }
 function active(now){return phase(now).active;}
