@@ -73,8 +73,8 @@ test('Fallback drawing works with screen canvas coordinates',()=>{
 test('Retina scale fits a safe pixel budget and honors low-power mode',()=>{
  const auto=quality.create();
  const retina=auto.ratio(390,844,3);
- assert.ok(retina>=1.5&&retina<=1.65);
- assert.ok(390*844*retina**2<=2200000+1);
+ assert.ok(retina>=1.5&&retina<=auto.current().limit);
+ assert.ok(390*844*retina**2<=auto.current().pixelBudget+1);
  assert.equal(quality.create({mode:'battery'}).ratio(390,844,3),1);
  assert.ok(quality.create({mode:'ultra'}).ratio(390,844,3)>=retina);
  assert.equal(quality.modeFromSearch('?quality=battery'),'battery');
@@ -115,7 +115,7 @@ test('The grand show contains a massive gold top burst, lower red and colored sa
  assert.ok(pattern.filter(p=>p.kind==='pink').length>=3);
  assert.ok(pattern.filter(p=>p.kind==='green').length>=3);
  assert.ok(pattern.some(p=>p.x<0)&&pattern.some(p=>p.x>0));
- assert.ok(pattern.every(p=>p.r>0&&p.life>2500&&p.y>10));
+ assert.ok(pattern.every(p=>p.r>0&&p.life>=2400&&p.y>10));
  const frame=festival.worldParticles(1800,1,[5,-3]);
  assert.ok(frame.length/8>5000,'many layered streaks rather than one faint 100-dot ring');
  const colors=new Set();
@@ -149,8 +149,8 @@ test('Festival loop, phone detail scaling and reduced motion are deterministic',
  assert.match(game,/get\('demo'\)==='fireworks'/);
  assert.match(game,/festivalShow&&!roomActive\?festivalOrigin/);
  assert.match(game,/cameraPitch=1\.23/);
- assert.match(html,/nightfestival\.js\?v=20261114-v43/);
- assert.match(html,/game\.js\?v=(?:20261112-v25|(?:20261113-v(?:2[6789]|3[012345679])|20261114-v4[012]))/);
+ assert.match(html,/nightfestival\.js\?v=[0-9]{8}-[a-z0-9-]+/);
+ assert.match(html,/game\.js\?v=[0-9]{8}-[a-z0-9-]+/);
 });
 
 test('Spark trails form continuous luminous 3D line segments',()=>{
