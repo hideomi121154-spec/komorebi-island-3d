@@ -227,8 +227,10 @@ function drawStatic(b){
  buildStation(b,B.x,B.z,true);
  buildMall(b);buildCafe(b);buildHotel(b);buildOffice(b);buildMarket(b);wheel(b);drawPromenade(b);townDetails(b);
 }
+const trainClock=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Tokyo',hour:'2-digit',hourCycle:'h23'});
+let trainClockMinute=-1,trainHour=12;
 function train(b,t){
- const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Tokyo',hour:'2-digit',hourCycle:'h23'}).format(new Date()));const glass=hour>=18||hour<6?'#ffe4a0':'#8ec6d5';
+ const minute=Math.floor(Date.now()/60000);if(minute!==trainClockMinute){trainClockMinute=minute;trainHour=Number(trainClock.format(new Date()));}const hour=trainHour;const glass=hour>=18||hour<6?'#ffe4a0':'#8ec6d5';
  const p=pointAt(t),yaw=Math.atan2(-dz,dx);
  // A two-car aqua-and-cream commuter train; local x axis points along the viaduct.
  b.setTransform(p.x,1.85,p.z,yaw);
