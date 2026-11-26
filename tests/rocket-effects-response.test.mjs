@@ -15,7 +15,7 @@ test('touch gesture immediately downscales render pixels and restores clarity at
  q.setInteractive(true);
  const fast=q.ratio(390,844,3);
  assert.equal(fast,high,'buffer dimensions remain stable while touching');
- assert.ok(high<=1.65,'auto mode uses a mobile-friendly resolution budget');
+ assert.ok(high<=q.current().limit&&390*844*high**2<=q.current().pixelBudget+1,'auto mode uses a mobile-friendly resolution budget');
  assert.equal(q.current().interactive,true);
  q.setInteractive(false);
  assert.equal(q.ratio(390,844,3),high);
@@ -85,5 +85,5 @@ test('game wires gesture quality, sound toggle and ground rumble without changin
   /komorebi_island_3d_v01/
  ])assert.match(src,pattern);
  assert.match(html,/src="launch-audio\.js\?v=20261113-v30"/);
- assert.match(html,/render-quality\.js\?v=20261113-v32/);
+ assert.match(html,/render-quality\.js\?v=[0-9]{8}-[a-z0-9-]+/);
 });

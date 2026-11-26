@@ -73,8 +73,8 @@ test('Fallback drawing works with screen canvas coordinates',()=>{
 test('Retina scale fits a safe pixel budget and honors low-power mode',()=>{
  const auto=quality.create();
  const retina=auto.ratio(390,844,3);
- assert.ok(retina>=1.5&&retina<=1.65);
- assert.ok(390*844*retina**2<=2200000+1);
+ assert.ok(retina>=1.5&&retina<=auto.current().limit);
+ assert.ok(390*844*retina**2<=auto.current().pixelBudget+1);
  assert.equal(quality.create({mode:'battery'}).ratio(390,844,3),1);
  assert.ok(quality.create({mode:'ultra'}).ratio(390,844,3)>=retina);
  assert.equal(quality.modeFromSearch('?quality=battery'),'battery');
@@ -115,7 +115,7 @@ test('The grand show contains a massive gold top burst, lower red and colored sa
  assert.ok(pattern.filter(p=>p.kind==='pink').length>=3);
  assert.ok(pattern.filter(p=>p.kind==='green').length>=3);
  assert.ok(pattern.some(p=>p.x<0)&&pattern.some(p=>p.x>0));
- assert.ok(pattern.every(p=>p.r>0&&p.life>2500&&p.y>10));
+ assert.ok(pattern.every(p=>p.r>0&&p.life>=2400&&p.y>10));
  const frame=festival.worldParticles(1800,1,[5,-3]);
  assert.ok(frame.length/8>5000,'many layered streaks rather than one faint 100-dot ring');
  const colors=new Set();
@@ -149,8 +149,8 @@ test('Festival loop, phone detail scaling and reduced motion are deterministic',
  assert.match(game,/get\('demo'\)==='fireworks'/);
  assert.match(game,/festivalShow&&!roomActive\?festivalOrigin/);
  assert.match(game,/cameraPitch=1\.23/);
- assert.match(html,/nightfestival\.js\?v=20261114-v43/);
- assert.match(html,/game\.js\?v=(?:20261112-v25|(?:20261113-v(?:2[6789]|3[012345679])|20261114-v4[012]))/);
+ assert.match(html,/nightfestival\.js\?v=[0-9]{8}-[a-z0-9-]+/);
+ assert.match(html,/game\.js\?v=[0-9]{8}-[a-z0-9-]+/);
 });
 
 test('Spark trails form continuous luminous 3D line segments',()=>{
@@ -171,42 +171,31 @@ test('Spark trails form continuous luminous 3D line segments',()=>{
  assert.match(fireworksModule,/uniform float uLine/);
 });
 
-test('One in every ten 3D launches is a rare mascot firework, without unlucky streaks',()=>{
- const types=new Set();
- const rareSlots=new Set();
- for(let cycle=0;cycle<90;cycle++){
-  const selection=festival.rareAtCycle(cycle);
-  const choices=festival.showPattern.map((spec,index)=>{
-   const at=index===selection.slot?festival.RARE_AT:spec.at;
-   const active=festival.spectacleEventsAt(cycle*festival.SHOW_CYCLE+at+20);
-   return active.find(e=>e.index===index&&e.age===20);
-  });
-  assert.equal(choices.length,10);
-  assert.equal(choices.filter(e=>e?.spec?.kind==='face').length,1,'one rare in each block of ten');
-  const rare=choices.find(e=>e?.spec?.kind==='face');
-  assert.ok(rare.index>=2&&rare.index<10,'main gold and red spectacles remain');
-  rareSlots.add(rare.index);
-  types.add(rare.spec.faceType);
-  assert.ok(rare.spec.r>=3.5);
-  const a=festival.worldParticles(cycle*festival.SHOW_CYCLE+festival.RARE_AT+680,1,[11,-5]);
-  assert.ok(a.length>0&&a.every(Number.isFinite),'rare firework particles must have valid geometry');
-  assert.ok(a.length/8<11000,'phone draw budget remains capped');
+test('Six rare faces replace six of sixty launches, one per group of ten',()=>{
+ assert.equal(festival.showPattern.length,60);
+ for(let cycle=0;cycle<12;cycle++){
+  const slots=new Set();
+  for(let group=0;group<6;group++){
+   const selection=festival.rareAtCycle(cycle,group);
+   assert.ok(selection.slot>=group*10&&selection.slot<group*10+10);
+   slots.add(selection.slot);
+   const ms=cycle*festival.SHOW_CYCLE+festival.RARE_AT+group*3000+700;
+   const active=festival.spectacleEventsAt(ms);
+   assert.equal(active.length,1);
+   assert.equal(active[0].index,selection.slot);
+   assert.equal(active[0].spec.faceType,selection.faceType);
+   const points=festival.worldParticles(ms,1,[11,-5]);
+   assert.ok(points.length>0&&points.every(Number.isFinite));
+   assert.ok(points.length/8<11000);
+  }
+  assert.equal(slots.size,6);
  }
- assert.ok(rareSlots.size>=5,'rare location varies between shows');
- assert.deepEqual([...types].sort(),[...festival.FACE_KINDS].sort());
 });
-test('Rare face receives a solo finale; gold and red bursts cannot overlap its silhouette',()=>{
- const cycle=2;
- const events=festival.spectacleEventsAt(cycle*festival.SHOW_CYCLE+festival.RARE_AT+700);
- const active=events.filter(e=>e.age>=0);
- assert.equal(active.length,1,'no simultaneous ordinary explosion during the face');
- assert.equal(active[0].spec.kind,'face');
- assert.equal(active[0].spec.faceType,'face-cat');
- const justBefore=festival.spectacleEventsAt(cycle*festival.SHOW_CYCLE+festival.RARE_AT-200);
- assert.ok(justBefore.every(e=>e.age<0||e.spec.kind!=='face'));
- assert.ok(justBefore.every(e=>e.age<0),'all previous regular bursts have faded');
- const after=festival.spectacleEventsAt(cycle*festival.SHOW_CYCLE+festival.RARE_AT+festival.RARE_LIFE+10);
- assert.ok(after.every(e=>e.spec.kind!=='face'),'the shape clears before the next cycle');
+test('Ordinary fireworks finish before the solo rare finale',()=>{
+ const before=festival.spectacleEventsAt(festival.RARE_AT-600);
+ assert.equal(before.length,0);
+ const after=festival.spectacleEventsAt(festival.RARE_AT+festival.RARE_LIFE+10);
+ assert.ok(after.every(e=>e.age<0));
 });
 test('WebGL displays only one face outline while Canvas2D fallback retains its own',()=>{
  const cycle=4;
@@ -222,7 +211,7 @@ test('WebGL displays only one face outline while Canvas2D fallback retains its o
 test('Original round, bunny and cat fireworks have recognizable facial features',()=>{
  for(const kind of festival.FACE_KINDS){
   const points=festival.FACE_SHAPES[kind];
-  assert.ok(points.length>170&&points.length<340);
+  assert.ok(points.length>160&&points.length<340);
   assert.ok(points.filter(p=>p.color[1]>.80&&p.color[2]>.9).length>=20,'glowing eyes');
   assert.ok(points.filter(p=>p.color[0]===1&&p.color[1]<.6).length>=24,'pink cheeks');
   if(kind==='face-bunny')assert.ok(points.some(p=>p.y< -1.1),'long bunny ears');

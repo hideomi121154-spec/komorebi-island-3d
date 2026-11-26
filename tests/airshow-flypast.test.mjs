@@ -55,18 +55,18 @@ test('V formation of six jets moves across sea, islands and harbor then fans out
  assert.ok(Math.hypot(spread[3].x-spread[4].x,spread[3].z-spread[4].z)>
  Math.hypot(early[3].x-early[4].x,early[3].z-early[4].z),'late formation must visibly fan out');
 });
-test('six jets and smoke are actual 3D triangles with a small mobile polygon budget',()=>{
+test('six jets and national flags are actual 3D triangles with a small mobile polygon budget',()=>{
  const a=boot();a.start(5000,720);
  const {mesh,calls}=spy();
- a.draw(mesh,10000);
+ a.draw(mesh,10000);a.drawFlags(mesh,10000);
  const jets=calls.filter(c=>c[0]==='setTransform');
- const smoke=calls.filter(c=>c[0]==='quad');
+ const flags=calls.filter(c=>c[0]==='quad');
  assert.equal(jets.length,6,'all six original stunt jets are present');
- assert.ok(smoke.length>100,'white and pale-blue smoke is a visible ribbon');
+ assert.ok(flags.length>100,'national flags have visible colored panels');
  assert.ok(calls.length<1600,'limit repeated meshes for mobile');
  assertFiniteMesh(calls);
- const lite=spy();a.draw(lite.mesh,10000,{reducedMotion:true});
- assert.ok(lite.calls.length<calls.length,'reduced motion draws fewer smoke trails');
+ const lite=spy();a.draw(lite.mesh,10000,{reducedMotion:true});a.drawFlags(lite.mesh,10000,{reducedMotion:true});
+ assert.ok(lite.calls.length<calls.length,'reduced motion draws fewer flag panels');
  const none=spy();a.draw(none.mesh,5000+a.TOTAL_MS+100);
  assert.equal(none.calls.length,0,'no stray planes after the event ends');
 });
@@ -95,13 +95,13 @@ test('show camera focus fades in and out without moving world player coordinates
  assert.match(styles,/#airshowBtn\[hidden\]/);
  assert.match(game,/komorebi_island_3d_v01/);
 });
-test('rare original rainbow smoke remains a surprise, never a branded Blue Impulse asset',()=>{
+test('national flags remain visible in the rare flight variant',()=>{
  const a=boot(()=>.01);
  assert.equal(a.start(100,720),true);
  assert.equal(a.variant(),'rainbow');
  const {mesh,calls}=spy();
- a.draw(mesh,100+7200);
+ a.draw(mesh,100+7200);a.drawFlags(mesh,100+7200);
  assertFiniteMesh(calls);
- assert.ok(calls.some(c=>c[0]==='quad'&&/f1a9b8|f6d8a4|b8d6f2/i.test(c.at(-1))));
+ assert.ok(new Set(calls.filter(c=>c[0]==='quad').map(c=>c.at(-1))).size>=5,'multiple national flag colors');
  assert.doesNotMatch(file('airshow3d.js'),/Blue Impulse|ブルーインパルス|JASDF|航空自衛隊/);
 });

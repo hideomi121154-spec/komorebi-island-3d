@@ -135,8 +135,8 @@ function createRenderer(gl){
  * seeded explosions avoid network textures and heavy audio/video downloads.
  */
 // Let the nine ordinary bursts finish before the featured rare face appears.
-const SHOW_CYCLE=10200;
-const RARE_AT=6950,RARE_LIFE=2550;
+const SHOW_CYCLE=33000;
+const RARE_AT=14000,RARE_LIFE=2550;
 const showPattern=[
  {at:140,x:0,y:26,z:-3,r:5.7,color:[1,.72,.31],rays:248,life:5450,kind:'gold'},
  {at:500,x:1,y:17,z:2,r:4.1,color:[1,.23,.32],rays:185,life:4520,kind:'red'},
@@ -181,16 +181,31 @@ for(let i=0;i<30;i++){
   rays:size>5?170:size>3?105:52,life:size>5?4500:size>3?3300:2400,
   kind:i%4===0?'gold':i%4===1?'pink':i%4===2?'green':'red'});
 }
+const FACE_KINDS=['face-round','face-bunny','face-cat'];
+const FACE_SHAPES=Object.fromEntries(FACE_KINDS.map(kind=>{
+ const points=[],white=[1,.95,.88],pink=[1,.36,.62],eye=[.65,.92,1];
+ function ellipse(cx,cy,rx,ry,n,color){for(let i=0;i<n;i++){const a=TWO_PI*i/n;points.push({x:cx+rx*Math.cos(a),y:cy+ry*Math.sin(a),color,size:4});}}
+ ellipse(0,.12,.73,.65,96,white);
+ if(kind==='face-bunny'){ellipse(-.35,-.79,.17,.55,32,white);ellipse(.35,-.79,.17,.55,32,white);}
+ if(kind==='face-cat'){for(const side of [-1,1])for(let i=0;i<32;i++){const t=i/31;points.push({x:side*(.25+.43*t),y:-.43-.58*(1-Math.abs(t*2-1)),color:white,size:4});}}
+ for(const side of [-1,1]){ellipse(side*.25,-.02,.065,.09,14,eye);ellipse(side*.43,.24,.11,.065,14,pink);}
+ ellipse(0,.29,.12,.055,18,white);
+ return [kind,points];
+}));
+function rareAtCycle(cycle,group=0){const slot=group*10+(group===0?2+Math.floor(random(cycle*131+group*97+19)*8):Math.floor(random(cycle*131+group*97+19)*10));return {slot,faceType:FACE_KINDS[(cycle+group)%3]};}
+function renderFaceTexture(c,kind){c.clearRect(0,0,768,768);c.save();c.globalCompositeOperation='lighter';for(const p of FACE_SHAPES[kind]){const rgb=p.color.map(v=>Math.round(v*255)).join(',');c.fillStyle='rgb('+rgb+')';c.shadowColor=c.fillStyle;c.shadowBlur=10;c.beginPath();c.arc(384+p.x*250,384+p.y*250,3.8,0,TWO_PI);c.fill();}c.restore();}
 const showPalette={gold:[1,.72,.31],red:[1,.23,.32],pink:[1,.30,.72],green:[.38,1,.63]};
 // Exactly one surprise in each group of ten launches, at a seeded random
 // position. This avoids dry spells without inflating the stated 10% frequency.
 function spectacleEventsAt(ms){
  const t=Math.max(0,ms),cycle=Math.floor(t/SHOW_CYCLE),phase=t%SHOW_CYCLE;
- return showPattern.flatMap((spec,index)=>{
+ const selections=Array.from({length:6},(_,g)=>rareAtCycle(cycle,g));
+ return showPattern.flatMap((original,index)=>{
+  const group=selections.findIndex(v=>v.slot===index);
+  const spec=group<0?original:{...original,at:RARE_AT+group*3000,x:0,z:-3,y:26,r:5.5,life:RARE_LIFE,kind:'face',faceType:selections[group].faceType,color:[1,.8,.7]};
   const age=phase-spec.at;
-  const wrappedAge=age< -580?age+SHOW_CYCLE:age;
-  if(wrappedAge< -580||wrappedAge>=spec.life)return [];
-  return [{spec,age:wrappedAge,index,cycle}];
+  if(age< -580||age>=spec.life)return [];
+  return [{spec,age,index,cycle}];
  });
 }
 function burstLighting(ms,intensity){
@@ -246,6 +261,12 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,
   // A complete spherical shell projected through the camera. Radial trails,
   // gravity, changing radii, colored sparks and twinkling tips create
   // gold willow, crimson chrysanthemum and smaller flower bursts.
+  if(spec.kind==='face'){
+   const t=clamp(age/spec.life),grow=.32+.86*Math.pow(Math.min(1,t*2.1),.60),radius=spec.r*1.48*grow,fade=Math.pow(1-t,.58)*intensity;
+   if(includeFaceOutline)for(const p of FACE_SHAPES[spec.faceType])add(centerX+p.x*radius*.65,spec.y-p.y*radius*.65-1.6*t*t,centerZ,5,p.color,fade);
+   for(let j=0;j<48*density;j++){const a=TWO_PI*j/48;add(centerX+Math.cos(a)*radius*.78,spec.y+Math.sin(a)*radius*.78,centerZ,3,[1,.8,.5],fade*.32);}
+   continue;
+  }
   const t=clamp(age/spec.life);
   const fade=Math.pow(1-t,spec.kind==='willow'?.48:spec.kind==='gold'?.72:.95)*intensity;
   const expand=spec.r*Math.pow(Math.min(1,t*1.70),.57)*(1+.09*t);
@@ -303,7 +324,7 @@ function worldParticles(ms,intensity,origin=[5,-3],reducedMotion=false,detail=1,
 function createBurstBillboards(gl){
  if(typeof document==='undefined'||!document.createElement)return null;
  const canvas=document.createElement('canvas');
- canvas.width=canvas.height=768;
+ canvas.width=canvas.height=512;
  const c=canvas.getContext('2d');
  if(!c)return null;
  const schemes={
@@ -323,7 +344,9 @@ function createBurstBillboards(gl){
  const pos=gl.getAttribLocation(textureProgram,'aPos'),uv=gl.getAttribLocation(textureProgram,'aUv');
  const viewLoc=gl.getUniformLocation(textureProgram,'uView'),projLoc=gl.getUniformLocation(textureProgram,'uProj');
  const textureLoc=gl.getUniformLocation(textureProgram,'uTexture'),opacityLoc=gl.getUniformLocation(textureProgram,'uOpacity');
- for(const kind of Object.keys(schemes)){
+ for(const kind of [...Object.keys(schemes),...FACE_KINDS]){
+  canvas.width=canvas.height=kind.startsWith('face-')?768:512;
+  if(kind.startsWith('face-'))renderFaceTexture(c,kind);else{
   const scheme=schemes[kind];
   c.clearRect(0,0,512,512);
   c.save();c.translate(256,256);c.globalCompositeOperation='lighter';c.lineCap='round';
@@ -368,7 +391,7 @@ function createBurstBillboards(gl){
    c.fillStyle='rgba('+scheme.hot+','+(.15+random(seed*17+j*7)*.55)+')';
    c.beginPath();c.arc(x,y,.36+random(j*67)*.68,0,TWO_PI);c.fill();
   }
-  c.restore();
+  c.restore();}
   const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,canvas);
@@ -488,5 +511,5 @@ function drawCanvas(ctx,width,height,ms,intensity,reducedMotion=false){
    fireworks[i+3]*.44,[fireworks[i+4],fireworks[i+5],fireworks[i+6]],fireworks[i+7]);
  ctx.restore();
 }
-window.KomorebiNightFestival={CYCLE,ROCKET_MS,BURST_MS,stars,eventsAt,fireworkAt,makeParticles,burstLighting,createRenderer,drawCanvas,worldParticles,createWorldRenderer,SHOW_CYCLE,RARE_AT,RARE_LIFE,showPattern,spectacleEventsAt};
+window.KomorebiNightFestival={CYCLE,ROCKET_MS,BURST_MS,stars,eventsAt,fireworkAt,makeParticles,burstLighting,createRenderer,drawCanvas,worldParticles,createWorldRenderer,SHOW_CYCLE,RARE_AT,RARE_LIFE,showPattern,spectacleEventsAt,rareAtCycle,FACE_KINDS,FACE_SHAPES};
 })();

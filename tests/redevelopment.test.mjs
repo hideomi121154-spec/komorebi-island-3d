@@ -105,7 +105,7 @@ test('construction asset update leaves saved progression and script integration 
  const game=readFileSync(new URL('../game.js',import.meta.url),'utf8');
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  assert.match(game,/REDEVELOPMENT\.drawDynamic\(b,now,state\.redevelopmentProgress\)/);
- assert.match(html,/src="redevelopment3d\.js\?v=20261112-v22"/);
+ assert.match(html,/src="redevelopment3d\.js\?v=[0-9]{8}-[a-z0-9-]+"/);
  assert.equal(build.advance(34,1),36,'daily +2% progression continues');
  assert.equal(build.advance(34,0),34,'animations never grant fake progress');
 });
