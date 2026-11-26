@@ -64,10 +64,16 @@ function makeDriverKart(color,index){
  const root=new THREE.Group(),shell=new THREE.Group();root.add(shell);
  const suit=material(index===0?'#ed6e56':['#6a9ee0','#9d91d8','#79c6a0','#e1b068','#d888aa','#8fc8d4','#98b77d'][index%7]);
  const helmet=material(index===0?'#ffe18a':['#bce2f3','#e0c6ed','#b9ebcf','#f9dda6','#f3b9d1','#c6e8e5','#e6edb4'][index%7]);
- const paint=MAT(color,.38,.24);
+ const paint=new THREE.MeshPhysicalMaterial({color,roughness:.3,metalness:.22,clearcoat:.8,clearcoatRoughness:.2});
  const frame=mesh(shell,CAR_BODY,paint,0,.47,0);frame.receiveShadow=true;frame.castShadow=true;
  const hood=mesh(shell,new THREE.CapsuleGeometry(.59,.55,8,16),paint,0,.59,.70);hood.rotation.x=Math.PI/2;hood.scale.set(1,.55,.8);
  rect(shell,1.55,.18,.31,CHROME,0,.38,-1.03);
+ for(const x of [-.55,.55]){
+  rect(shell,.26,.12,.37,RUBBER,x,.35,-1.26);
+  const exhaust=mesh(shell,new THREE.CylinderGeometry(.095,.12,.38,12),CHROME,x,.42,-1.24);exhaust.rotation.x=Math.PI/2;
+  rect(shell,.10,.035,.85,CHROME,x,.68,.18);
+ }
+ rect(shell,.56,.045,.68,WHITE,0,.68,.48);
  rect(shell,1.47,.12,.21,'#fff5e4',0,.39,1.12);
  // Sculpted fenders, front lights, side panels, exhaust and sporty seat.
  for(const x of[-.73,.73]){
@@ -139,6 +145,9 @@ function overheadGantry(scene,kart,p,text,bg,accent,w=11.5){
  const back=mesh(root,new THREE.PlaneGeometry(w,h),m,0,center,-.18,false);
  back.rotation.y=Math.PI;
  rect(root,w+.1,.22,.32,accent,0,center+h/2+.11,0);
+ const trim=new THREE.MeshStandardMaterial({color:accent,emissive:accent,emissiveIntensity:.45});
+ rect(root,w+.1,.10,.22,trim,0,center-h/2-.06,.22);
+ for(const side of [-1,1])for(let j=0;j<4;j++)rect(root,.48,.48,.08,(j+(side===1?1:0))%2?'#f8f2de':'#26364b',side*(w/2-.32),center-.72+j*.48,.24);
  return root;
 }
 function createStand(scene,kart,venue,index,cheers){
@@ -157,6 +166,10 @@ function createStand(scene,kart,venue,index,cheers){
   }
  }
  rect(root,9.0,.23,25,'#ffe9b7',0,3.63,0);
+ const fascia=new THREE.MeshStandardMaterial({color:theme.accent,emissive:theme.accent,emissiveIntensity:.35});
+ rect(root,.16,.28,25,fascia,-side*4.48,3.53,0);
+ for(let j=0;j<6;j++){rect(root,.15,.8,.15,'#849ca5',-side*4.25,1.05,-10+j*4); }
+ rect(root,.12,.12,22,CHROME,-side*4.25,1.48,0);
  for(const z of[-11,0,11])rect(root,.17,3.1,.18,'#aac6bd',0,2.05,z);
  // Banner and occasional animated flags, not 144 independent animations.
  const p2=kart.at(kart.length*venue.fraction);
@@ -262,6 +275,37 @@ function createNightWorld(scene,kart){
  return {update};
 }
 
+
+function createResortLandmarks(scene){
+ const group=new THREE.Group();scene.add(group);
+ const ivory=MAT('#fff0d5',.48,.08),red=MAT('#ce5454',.5,.12),steel=MAT('#47647c',.32,.45);
+ const gold=new THREE.MeshStandardMaterial({color:'#ffd58b',emissive:'#ffb24b',emissiveIntensity:.1});
+ const neon=new THREE.MeshStandardMaterial({color:'#9ceaff',emissive:'#46cfff',emissiveIntensity:.1});
+ const pink=new THREE.MeshStandardMaterial({color:'#ff9ad8',emissive:'#ff49a5',emissiveIntensity:.1});
+ const lighthouse=new THREE.Group();lighthouse.position.set(-17,0,-8);group.add(lighthouse);
+ for(let i=0;i<7;i++)mesh(lighthouse,new THREE.CylinderGeometry(1.8-i*.12,1.92-i*.12,1.7,24),i%2?red:ivory,0,.85+i*1.7,0);
+ mesh(lighthouse,new THREE.CylinderGeometry(2,2,.35,24),steel,0,12.1,0);
+ mesh(lighthouse,new THREE.CylinderGeometry(1.25,1.25,1.7,20),gold,0,13.1,0);
+ mesh(lighthouse,new THREE.ConeGeometry(1.85,1.4,24),red,0,14.6,0);
+ const wheelBase=new THREE.Group();wheelBase.position.set(48,0,5);group.add(wheelBase);
+ for(const x of [-4,4]){const support=rect(wheelBase,.65,12,.65,steel,x,5.8,0);support.rotation.z=x>0?.38:-.38;}
+ const wheel=new THREE.Group();wheel.position.y=11;wheelBase.add(wheel);
+ for(const z of [-.65,.65])mesh(wheel,new THREE.TorusGeometry(8,.16,8,64),neon,0,0,z);
+ const cabins=[];
+ for(let i=0;i<12;i++){
+  const a=i*Math.PI/6;const spoke=rect(wheel,.12,8,.12,steel,Math.sin(a)*4,Math.cos(a)*4,0);spoke.rotation.z=-a;
+  const cabin=new THREE.Group();cabin.position.set(Math.sin(a)*8,Math.cos(a)*8,0);wheel.add(cabin);
+  rect(cabin,1.45,1.1,1.35,i%2?pink:gold,0,-.65,0);
+  rect(cabin,1.22,.48,1.37,steel,0,-.48,0);cabins.push(cabin);
+ }
+ const pavilion=new THREE.Group();pavilion.position.set(30,0,29);group.add(pavilion);
+ rect(pavilion,13,.4,8,ivory,0,.2,0);
+ for(const x of [-5.7,0,5.7])for(const z of [-3.3,3.3])rect(pavilion,.42,4,.42,ivory,x,2,z);
+ rect(pavilion,13.5,.35,8.5,steel,0,4.2,0);
+ for(let i=0;i<9;i++)rect(pavilion,.8,.16,.18,i%2?pink:gold,-5.2+i*1.3,4.05,4.25);
+ return {update(now,darkness){wheel.rotation.z=now*.00012;for(const c of cabins)c.rotation.z=-wheel.rotation.z;for(const m of [gold,neon,pink])m.emissiveIntensity=.1+darkness*2.1;}};
+}
+
 export async function createRaceView(kart,canvas){
  if(!kart||!canvas)throw Error('レース情報または描画先がありません');
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance',stencil:false,depth:true});
@@ -344,6 +388,7 @@ export async function createRaceView(kart,canvas){
  }
  const kartModels=PALETTE.map((color,i)=>makeDriverKart(color,i));
  for(const k of kartModels)scene.add(k.root);
+ const landmarks=createResortLandmarks(scene);
  const nightWorld=createNightWorld(scene,kart);
  const surfaceEffects=createSurfaceEffects(scene,kart,renderer);
  const daySky=new THREE.Color('#83cceb'),nightSky=new THREE.Color('#08152e'),dayFog=new THREE.Color('#b9e7f1'),nightFog=new THREE.Color('#15233e');
@@ -389,6 +434,7 @@ export async function createRaceView(kart,canvas){
   const focus=spectatorCamera==='drive'?state.player:contenders.reduce((a,b)=>a.distance>b.distance?a:b);
   const darkness=nightWorld.update(now,dt,focus,quality);
   surfaceEffects.update(now,darkness,quality);
+  landmarks.update(now,darkness);
   scene.background.copy(daySky).lerp(nightSky,darkness);
   scene.fog.color.copy(dayFog).lerp(nightFog,darkness);
   sun.intensity=3*(1-darkness)+.35*darkness;
