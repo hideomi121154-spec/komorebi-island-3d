@@ -43,7 +43,7 @@ function trackStrip(kart,offsetIn,offsetOut,mat,samples=480,vertexColors=false){
  }
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(data,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(norm,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
  if(vertexColors)g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
- g.setIndex(idx);g.computeVertexNormals();
+ g.setIndex(idx);
  const result=new THREE.Mesh(g,mat);result.receiveShadow=true;result.frustumCulled=false;return result;
 }
 function makeIsland(scene,x,z,rx,rz,tint){
@@ -198,7 +198,7 @@ function surfaceTexture(water=false){
 }
 function createSurfaceEffects(scene,kart,renderer){
  const asphalt=surfaceTexture(),wave=surfaceTexture(true);
- ROAD.map=asphalt;ROAD.bumpMap=asphalt;ROAD.bumpScale=.045;ROAD.roughness=.76;ROAD.needsUpdate=true;
+ asphalt.wrapS=asphalt.wrapT=THREE.RepeatWrapping;ROAD.side=THREE.DoubleSide;ROAD.map=asphalt;ROAD.bumpMap=asphalt;ROAD.bumpScale=.045;ROAD.roughness=.76;ROAD.needsUpdate=true;
  wave.repeat.set(45,36);SEA.bumpMap=wave;SEA.bumpScale=.13;SEA.roughness=.32;SEA.needsUpdate=true;
  const pmrem=new THREE.PMREMGenerator(renderer);
  const envScene=new THREE.Scene();envScene.background=new THREE.Color('#7086a4');
@@ -217,7 +217,7 @@ function createSurfaceEffects(scene,kart,renderer){
  const halos=[];const dummy=new THREE.Object3D();
  for(let i=0;i<64;i++){
   const p=kart.at(kart.length*Math.floor(i/2)/32),side=i%2?1:-1,nx=Math.cos(p.yaw)*side,nz=-Math.sin(p.yaw)*side;
-  dummy.position.set(p.x+nx*(kart.WIDTH-1.4),.095,p.z+nz*(kart.WIDTH-1.4));dummy.rotation.set(0,p.yaw,0);dummy.scale.set(3.2,7,1);dummy.scale.set(3.2,1,7);dummy.updateMatrix();roadGlows.setMatrixAt(i,dummy.matrix);
+  dummy.position.set(p.x+nx*(kart.WIDTH-1.4),.095,p.z+nz*(kart.WIDTH-1.4));dummy.rotation.set(0,p.yaw,0);dummy.scale.set(3.2,1,7);dummy.updateMatrix();roadGlows.setMatrixAt(i,dummy.matrix);
   dummy.position.set(p.x+nx*(kart.WIDTH+4),-1.275,p.z+nz*(kart.WIDTH+4));dummy.scale.set(3.8,1,12);dummy.updateMatrix();seaGlows.setMatrixAt(i,dummy.matrix);
   const halo=new THREE.Sprite(haloMat);halo.position.set(p.x+nx*(kart.WIDTH+1.5),3.7,p.z+nz*(kart.WIDTH+1.5));halo.scale.set(2.4,2.4,1);scene.add(halo);halos.push(halo);
  }
@@ -263,9 +263,9 @@ function createNightWorld(scene,kart){
  function update(now,dt,focus,quality){
   const sec=Math.floor(Date.now()/1000);
   if(sec!==last){last=sec;const p=clock.formatToParts(new Date());const get=k=>Number(p.find(x=>x.type===k)?.value||0);const h=get('hour')+get('minute')/60;night=h>=18||h<5;const target=h>=18.5||h<4.5?1:h>=17.5?Math.min(1,h-17.5):h<5.5?Math.max(0,5.5-h):0;blend=target;initialized=true;}
-  group.visible=blend>.15;
+  group.visible=true;bulbs.visible=blend>.15;
   sky.visible=blend>.55;moon.visible=sky.visible;
-  lights.forEach((l,i)=>{const p=kart.at(focus.distance+(i-1)*13);l.position.set(p.x+Math.cos(p.yaw)*(kart.WIDTH+1),3.7,p.z-Math.sin(p.yaw)*(kart.WIDTH+1));l.intensity=65*blend;l.visible=quality!=='performance';});
+  lights.forEach((l,i)=>{const p=kart.at(focus.distance+(i-1)*13);l.position.set(p.x+Math.cos(p.yaw)*(kart.WIDTH+1),3.7,p.z-Math.sin(p.yaw)*(kart.WIDTH+1));l.intensity=65*blend;l.visible=blend>.15&&quality!=='performance';});
   fireworks.visible=night&&!reduced;
   if(fireworks.visible){
    const n=quality==='performance'?120:count;fg.setDrawRange(0,n);
@@ -320,7 +320,7 @@ function createRaceMotionFX(scene){
  return {update(actors,models,dt,quality){
   dt=Math.min(.05,Math.max(0,dt));carry+=dt;
   if(!reduced&&carry>.045){carry=0;actors.forEach((p,i)=>{
-   const k=models[i];if(Math.abs(k.turn)<.45&&Math.abs(p.drift||0)<.25)return;if((p.speed||0)<4)return;
+   const k=models[i];if(!k)return;if(Math.abs(k.turn)<.45&&Math.abs(p.drift||0)<.25)return;if((p.speed||0)<4)return;
    if(quality==='performance'&&i>0)return;
    for(const side of [-1,1]){const q=particles[cursor++%max];q.life=.55+Math.random()*.35;q.spark=Math.random()<.24;q.x=p.x+Math.cos(p.yaw)*side*.8-Math.sin(p.yaw)*.8;q.z=p.z-Math.sin(p.yaw)*side*.8-Math.cos(p.yaw)*.8;q.y=.22;q.vx=-Math.sin(p.yaw)*1.8+side*.3;q.vz=-Math.cos(p.yaw)*1.8;q.vy=q.spark?1.5:.45;}
   });}
@@ -435,7 +435,7 @@ export async function createRaceView(kart,canvas){
   if(!state?.player)return;
   const actors=[state.player,...state.opponents];
   actors.forEach((p,i)=>{
-   const k=kartModels[i],s=k.root;
+   const k=kartModels[i];if(!k)return;const s=k.root;
    s.visible=true;s.position.set(p.x,Math.sin(now*.003+i)*.009,p.z);
    s.rotation.y=p.yaw;
    const lifted=i===0&&state.jumpTimer>0?Math.sin(Math.PI*(1-state.jumpTimer))*1.14:0;
