@@ -135,8 +135,8 @@ function createRenderer(gl){
  * seeded explosions avoid network textures and heavy audio/video downloads.
  */
 // Let the nine ordinary bursts finish before the featured rare face appears.
-const SHOW_CYCLE=31000;
-const RARE_AT=12000,RARE_LIFE=2550;
+const SHOW_CYCLE=33000;
+const RARE_AT=14000,RARE_LIFE=2550;
 const showPattern=[
  {at:140,x:0,y:26,z:-3,r:5.7,color:[1,.72,.31],rays:248,life:5450,kind:'gold'},
  {at:500,x:1,y:17,z:2,r:4.1,color:[1,.23,.32],rays:185,life:4520,kind:'red'},
@@ -190,7 +190,7 @@ const FACE_SHAPES=Object.fromEntries(FACE_KINDS.map(kind=>{
  if(kind==='face-cat'){for(const side of [-1,1])for(let i=0;i<32;i++){const t=i/31;points.push({x:side*(.25+.43*t),y:-.43-.58*(1-Math.abs(t*2-1)),color:white,size:4});}}
  for(const side of [-1,1]){ellipse(side*.25,-.02,.065,.09,14,eye);ellipse(side*.43,.24,.11,.065,14,pink);}
  ellipse(0,.29,.12,.055,18,white);
- return points;
+ return [kind,points];
 }));
 function rareAtCycle(cycle,group=0){const slot=group*10+(group===0?2+Math.floor(random(cycle*131+group*97+19)*8):Math.floor(random(cycle*131+group*97+19)*10));return {slot,faceType:FACE_KINDS[(cycle+group)%3]};}
 function renderFaceTexture(c,kind){c.clearRect(0,0,768,768);c.save();c.globalCompositeOperation='lighter';for(const p of FACE_SHAPES[kind]){const rgb=p.color.map(v=>Math.round(v*255)).join(',');c.fillStyle='rgb('+rgb+')';c.shadowColor=c.fillStyle;c.shadowBlur=10;c.beginPath();c.arc(384+p.x*250,384+p.y*250,3.8,0,TWO_PI);c.fill();}c.restore();}
