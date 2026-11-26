@@ -206,7 +206,7 @@ function createNightWorld(scene,kart){
   fireworks.visible=night&&!reduced;
   if(fireworks.visible){
    const n=quality==='performance'?120:count;fg.setDrawRange(0,n);
-   for(let i=0;i<n;i++){const burst=Math.floor(i/60),j=i%60,t=((now*.001+burst*1.7)%6.8),a=j*2.399963, y=1-2*(j+.5)/60,rr=Math.sqrt(1-y*y),age=Math.max(0,t-1.15),r=age*7.5;const x=focus.x+Math.cos(burst*1.9)*48,z=focus.z+Math.sin(burst*1.9)*48;const fade=t<1.15?(j===0?1:0):Math.max(0,1-age/4.5);positions.set(t<1.15?[x,5+t*23,z]:[x+Math.cos(a)*rr*r,32+y*r-age*age*1.1,z+Math.sin(a)*rr*r],i*3);const c=palette[burst];colors.set([c.r*fade,c.g*fade,c.b*fade],i*3);}
+   for(let i=0;i<n;i++){const burst=Math.floor(i/60),j=i%60,t=((now*.001+burst*1.7)%6.8),a=j*2.399963, y=1-2*(j+.5)/60,rr=Math.sqrt(1-y*y),age=Math.max(0,t-1.15),r=age*7.5;const x=24+Math.cos(burst*1.9)*65,z=12+Math.sin(burst*1.9)*65;const fade=t<1.15?(j===0?1:0):Math.max(0,1-age/4.5);positions.set(t<1.15?[x,5+t*23,z]:[x+Math.cos(a)*rr*r,32+y*r-age*age*1.1,z+Math.sin(a)*rr*r],i*3);const c=palette[burst];colors.set([c.r*fade,c.g*fade,c.b*fade],i*3);}
    fg.attributes.position.needsUpdate=true;fg.attributes.color.needsUpdate=true;
   }
   return initialized?blend:0;
