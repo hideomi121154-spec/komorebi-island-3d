@@ -169,6 +169,54 @@ function createStand(scene,kart,venue,index,cheers){
  }
 }
 
+
+function surfaceTexture(water=false){
+ const size=256, data=new Uint8Array(size*size*4);
+ let seed=92317;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+  const i=(y*size+x)*4;
+  const v=water?128+30*Math.sin(x/size*Math.PI*16+2*Math.sin(y/size*Math.PI*4))+12*Math.sin(y/size*Math.PI*20):105+random()*65;
+  data[i]=data[i+1]=data[i+2]=Math.round(v);data[i+3]=255;
+ }
+ const t=new THREE.DataTexture(data,size,size,THREE.RGBAFormat);
+ t.wrapS=t.wrapT=THREE.RepeatWrapping;t.magFilter=THREE.LinearFilter;t.minFilter=THREE.LinearMipmapLinearFilter;t.generateMipmaps=true;t.needsUpdate=true;return t;
+}
+function createSurfaceEffects(scene,kart,renderer){
+ const asphalt=surfaceTexture(),wave=surfaceTexture(true);
+ ROAD.map=asphalt;ROAD.bumpMap=asphalt;ROAD.bumpScale=.045;ROAD.roughness=.76;ROAD.needsUpdate=true;
+ wave.repeat.set(45,36);SEA.bumpMap=wave;SEA.bumpScale=.13;SEA.roughness=.32;SEA.needsUpdate=true;
+ const pmrem=new THREE.PMREMGenerator(renderer);
+ const envScene=new THREE.Scene();envScene.background=new THREE.Color('#7086a4');
+ const panelMat=new THREE.MeshBasicMaterial({color:new THREE.Color(2.5,1.9,1.2),side:THREE.DoubleSide});
+ for(let i=0;i<4;i++){const p=new THREE.Mesh(new THREE.PlaneGeometry(5,3),panelMat);p.position.set(Math.cos(i*Math.PI/2)*8,5,Math.sin(i*Math.PI/2)*8);p.lookAt(0,0,0);envScene.add(p);}
+ const env=pmrem.fromScene(envScene,.06);scene.environment=env.texture;scene.environmentIntensity=.35;
+ envScene.children.forEach(p=>p.geometry.dispose());panelMat.dispose();pmrem.dispose();
+ const canvas=document.createElement('canvas');canvas.width=64;canvas.height=128;
+ const ctx=canvas.getContext('2d');const gradient=ctx.createRadialGradient(32,64,0,32,64,32);gradient.addColorStop(0,'rgba(255,219,151,0.9)');gradient.addColorStop(.25,'rgba(255,190,90,0.35)');gradient.addColorStop(1,'rgba(255,160,50,0)');ctx.save();ctx.translate(0,0);ctx.fillStyle=gradient;ctx.fillRect(0,0,64,128);ctx.restore();
+ const glow=new THREE.CanvasTexture(canvas);glow.colorSpace=THREE.SRGBColorSpace;
+ const roadMat=new THREE.MeshBasicMaterial({map:glow,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,polygonOffset:true,polygonOffsetFactor:-1});
+ const seaMat=roadMat.clone();
+ const geo=new THREE.PlaneGeometry(1,1);geo.rotateX(-Math.PI/2);
+ const roadGlows=new THREE.InstancedMesh(geo,roadMat,64),seaGlows=new THREE.InstancedMesh(geo,seaMat,64);
+ const haloMat=new THREE.SpriteMaterial({map:glow,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending});
+ const halos=[];const dummy=new THREE.Object3D();
+ for(let i=0;i<64;i++){
+  const p=kart.at(kart.length*Math.floor(i/2)/32),side=i%2?1:-1,nx=Math.cos(p.yaw)*side,nz=-Math.sin(p.yaw)*side;
+  dummy.position.set(p.x+nx*(kart.WIDTH-1.4),.095,p.z+nz*(kart.WIDTH-1.4));dummy.rotation.set(0,p.yaw,0);dummy.scale.set(3.2,7,1);dummy.scale.set(3.2,1,7);dummy.updateMatrix();roadGlows.setMatrixAt(i,dummy.matrix);
+  dummy.position.set(p.x+nx*(kart.WIDTH+4),-1.275,p.z+nz*(kart.WIDTH+4));dummy.scale.set(3.8,1,12);dummy.updateMatrix();seaGlows.setMatrixAt(i,dummy.matrix);
+  const halo=new THREE.Sprite(haloMat);halo.position.set(p.x+nx*(kart.WIDTH+1.5),3.7,p.z+nz*(kart.WIDTH+1.5));halo.scale.set(2.4,2.4,1);scene.add(halo);halos.push(halo);
+ }
+ scene.add(roadGlows,seaGlows);
+ return {update(now,darkness,quality){
+  wave.offset.set(now*.000013,now*.000009);
+  ROAD.roughness=.76-.24*darkness;
+  scene.environmentIntensity=.35+.25*darkness;
+  roadMat.opacity=.55*darkness;seaMat.opacity=.40*darkness;haloMat.opacity=.75*darkness;
+  roadGlows.visible=seaGlows.visible=darkness>.05;
+  halos.forEach(h=>h.visible=darkness>.05&&quality!=='performance');
+ },dispose(){env.dispose();asphalt.dispose();wave.dispose();glow.dispose();geo.dispose();roadMat.dispose();seaMat.dispose();haloMat.dispose();}};
+}
+
 function createNightWorld(scene,kart){
  const group=new THREE.Group();scene.add(group);
  const glow=new THREE.MeshBasicMaterial({color:0xffdb91});
@@ -297,6 +345,7 @@ export async function createRaceView(kart,canvas){
  const kartModels=PALETTE.map((color,i)=>makeDriverKart(color,i));
  for(const k of kartModels)scene.add(k.root);
  const nightWorld=createNightWorld(scene,kart);
+ const surfaceEffects=createSurfaceEffects(scene,kart,renderer);
  const daySky=new THREE.Color('#83cceb'),nightSky=new THREE.Color('#08152e'),dayFog=new THREE.Color('#b9e7f1'),nightFog=new THREE.Color('#15233e');
  const target=new THREE.Vector3(),look=new THREE.Vector3();
  let quality='auto',active=true,prev=0,spectatorCamera='drive';
@@ -339,6 +388,7 @@ export async function createRaceView(kart,canvas){
   const contenders=[state.player,...state.opponents];
   const focus=spectatorCamera==='drive'?state.player:contenders.reduce((a,b)=>a.distance>b.distance?a:b);
   const darkness=nightWorld.update(now,dt,focus,quality);
+  surfaceEffects.update(now,darkness,quality);
   scene.background.copy(daySky).lerp(nightSky,darkness);
   scene.fog.color.copy(dayFog).lerp(nightFog,darkness);
   sun.intensity=3*(1-darkness)+.35*darkness;
@@ -363,6 +413,6 @@ export async function createRaceView(kart,canvas){
   sun.position.set(focus.x-35,66,focus.z+35);sun.target.position.set(focus.x,0,focus.z);sun.target.updateMatrixWorld();
  }
  function render(){if(active)renderer.render(scene,camera);}
- function dispose(){active=false;renderer.dispose();window.removeEventListener('resize',resize);}
+ function dispose(){active=false;surfaceEffects.dispose();renderer.dispose();window.removeEventListener('resize',resize);}
  return {update,render,resize,setQuality,dispose,camera,scene,renderer,setSpectatorCamera:mode=>{spectatorCamera=['drive','leader','overhead'].includes(mode)?mode:'drive';},getQuality:()=>quality};
 }
