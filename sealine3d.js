@@ -228,6 +228,7 @@ function drawStatic(b){
  buildMall(b);buildCafe(b);buildHotel(b);buildOffice(b);buildMarket(b);wheel(b);drawPromenade(b);townDetails(b);
 }
 function train(b,t){
+ const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Tokyo',hour:'2-digit',hourCycle:'h23'}).format(new Date()));const glass=hour>=18||hour<6?'#ffe4a0':'#8ec6d5';
  const p=pointAt(t),yaw=Math.atan2(-dz,dx);
  // A two-car aqua-and-cream commuter train; local x axis points along the viaduct.
  b.setTransform(p.x,1.85,p.z,yaw);
@@ -236,8 +237,8 @@ function train(b,t){
   b.box(offset,.46,0,2.31,.20,1.08,'#94b8c6');
   b.box(offset,-.30,.01,2.38,.21,1.13,'#8db9a5');
   for(const xx of[-.74,0,.74]){
-   b.box(offset+xx,.10,.567,.53,.42,.052,'#8ec6d5');
-   b.box(offset+xx,.10,-.567,.53,.42,.052,'#8ec6d5');
+   b.box(offset+xx,.10,.567,.53,.42,.052,glass);
+   b.box(offset+xx,.10,-.567,.53,.42,.052,glass);
   }
   b.box(offset,.0,.607,2.15,.08,.04,'#edc56d');
   for(const xx of[-.73,.73])for(const z of[-.40,.40])b.sphere(offset+xx,-.58,z,.17,.15,.15,'#7e8281',4,6);
