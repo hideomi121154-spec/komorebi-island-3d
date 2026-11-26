@@ -481,6 +481,31 @@ function buildDynamic(now,includeRocket=true){const b=new MeshBuilder();if(battl
   KART.drawDynamic(b,now);
   BATTLE.drawDynamic(b,now,battleSession);
  return b.toFloat()}
+
+// Dedicated emissive geometry pass: cached static lights, no per-frame city mesh rebuild.
+let cityNightBuffer=null,cityNightCount=0;
+function buildCityNightLights(){
+ const b=new MeshBuilder();
+ for(const x of [-6,6]){const w=x===6?4.4:3.7,d=x===6?3.45:3.4;for(const off of [-w*.33,w*.33])b.box(x+off,1.20,-5+d/2+.19,.44,.43,.025,'#ffe0a0');}
+ for(let i=0;i<6;i++)b.box(52.3-2.2+i*.88,1.28,-4.7+2.44,.49,1.50,.025,'#ffe3a9');
+ b.box(52.3,4.10,-4.7+2.68,2.1,.39,.025,'#ffce80');
+ b.box(59,1.02,-.8+1.48,1.83,1.13,.025,'#ffd69b');
+ for(let row=0;row<4;row++)for(let i=0;i<3;i++){if((row+i)%4===0)continue;b.box(51.6+(i-1)*1.05,1.38+row*1.89,-10.2+1.92,.39,.46,.025,'#ffe4ad');}
+ for(let row=0;row<6;row++)for(let i=0;i<4;i++){if((row+i)%3===0)continue;b.box(58.3-1.08+i*.72,1.35+row*1.85,-8.2+1.71,.61,1.31,.025,'#bce8ff');}
+ for(const [x,z] of [[46.4,-.3],[50,-.5],[56.2,1.6],[60.3,-3.7]])b.sphere(x,2.49,z,.19,.20,.19,'#ffe6a5',5,6);
+ const A=SEA.A,B=SEA.B;if(A&&B)for(let i=1;i<16;i++){const t=i/16,x=A.x+(B.x-A.x)*t,z=A.z+(B.z-A.z)*t;b.sphere(x,2.05,z,.10,.10,.10,'#ffd58b',4,5);}
+ return b.toFloat();
+}
+function drawCityNightLights(now,shade){
+ if(shade<.35||indoor.room||battleSession?.active)return;
+ if(!cityNightBuffer){const data=buildCityNightLights();cityNightBuffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,cityNightBuffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);cityNightCount=data.length/9;}
+ gl.uniform1f(uLight,0);gl.uniform1f(uFestivalGlow,0);
+ gl.uniform1f(uOpacity,Math.min(1,(shade-.35)*3));
+ gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+ bindGeometry(cityNightBuffer);gl.drawArrays(gl.TRIANGLES,0,cityNightCount);
+ gl.depthMask(true);gl.disable(gl.BLEND);gl.uniform1f(uOpacity,1);gl.uniform1f(uLight,shade);
+}
+
 function buildRocketDynamic(now){const b=new MeshBuilder();SPACE.drawRocket(b,now);return b.toFloat()}
 let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0,viewFov=48;
 let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,uOpacity=null,festivalRenderer=null,worldFestivalRenderer=null,skyRenderer=null,worldBuffer=null,dynamicBuffer=null,rocketBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine'),cameraZoom=1,cameraPitch=0,cameraYaw=0,festivalShow=false,festivalStartedAt=0,lastRareBurstKey=null,fireworksAudio=null,airshowLookAmount=0,airshowTarget={x:0,y:38,z:-15},airshowAutoDay=null,rocketCameraActive=false,rocketCameraMode='pad',rocketViewOrigin=null,rocketPriorView=null,industrialOverview=false;
@@ -683,7 +708,7 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);
  }
  viewFov=battleCamera?battleCamera.fov:kartCamera?kartCamera.fov:roomActive?52:(spectator?spectator.fov:industrialOverview?68:travelPoint?56:seaLineOverview?70:overviewMode?54:48);
   updateSpeechPosition(eye,center,aspect,viewFov*Math.PI/180);
- const lighting=DAYLIGHT.paletteAt(battleSession?.active?13*60+45:KART.active()?15*60:festivalShow&&!roomActive?22*60+30:airshowDemo?12*60:state.timeMinutes);
+ const lighting=DAYLIGHT.paletteAt(battleSession?.active?13*60+45:festivalShow&&!roomActive?22*60+30:airshowDemo?12*60:state.timeMinutes);
   const fireworksIntensity=festivalShow?1:lighting.stars;
   const festivalClock=festivalShow?Math.max(0,now-festivalStartedAt)+1800:now;
   if(festivalShow&&!roomActive&&!reducedMotion&&FESTIVAL?.spectacleEventsAt){
@@ -719,6 +744,7 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);
  const d=buildDynamic(now,false);
  gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,d,gl.DYNAMIC_DRAW);
  bindGeometry(dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,d.length/9);
+ drawCityNightLights(now,indoorShade);
  // Separate transparent rocket pass; smoke, village and launch tower stay opaque.
  const shipOpacity=SPACE.phase(now).opacity;
  if(shipOpacity>0){
