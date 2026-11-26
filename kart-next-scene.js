@@ -72,7 +72,8 @@ function makeDriverKart(color,index){
  // Sculpted fenders, front lights, side panels, exhaust and sporty seat.
  for(const x of[-.73,.73]){
   const f=mesh(shell,new THREE.SphereGeometry(.46,16,12),paint,x,.53,.68);f.scale.set(.52,.50,1);
-  ball(shell,.14,'#fff5d4',x*.80,.57,1.20);
+  ball(shell,.14,new THREE.MeshStandardMaterial({color:'#fff5d4',emissive:'#ffdb91',emissiveIntensity:.8}),x*.80,.57,1.20);
+  rect(shell,.24,.14,.08,new THREE.MeshStandardMaterial({color:'#ff5960',emissive:'#ff202a',emissiveIntensity:.7}),x*.8,.52,-1.19);
   rect(shell,.17,.19,.68,'#f6e5cb',x*.73,.58,-.35);
   rect(shell,.19,.14,.45,'#c9d0d6',x*.65,.33,-1.25);
  }
@@ -167,6 +168,52 @@ function createStand(scene,kart,venue,index,cheers){
   cheers.push({flag,index:index*3+k});
  }
 }
+
+function createNightWorld(scene,kart){
+ const group=new THREE.Group();scene.add(group);
+ const glow=new THREE.MeshBasicMaterial({color:0xffdb91});
+ const pole=MAT('#526578',.5,.4);
+ const lamps=new THREE.InstancedMesh(box(.25,3.6,.25),pole,64);
+ const bulbs=new THREE.InstancedMesh(sphere(.28,10),glow,64);
+ const dummy=new THREE.Object3D();
+ for(let i=0;i<64;i++){
+  const p=kart.at(kart.length*Math.floor(i/2)/32),side=i%2?1:-1;
+  const x=p.x+Math.cos(p.yaw)*side*(kart.WIDTH+1.5),z=p.z-Math.sin(p.yaw)*side*(kart.WIDTH+1.5);
+  dummy.position.set(x,1.8,z);dummy.updateMatrix();lamps.setMatrixAt(i,dummy.matrix);
+  dummy.position.y=3.7;dummy.updateMatrix();bulbs.setMatrixAt(i,dummy.matrix);
+ }
+ group.add(lamps,bulbs);
+ const stars=new Float32Array(600*3);
+ for(let i=0;i<600;i++){const a=i*2.399963,b=.15+((i*73)%599)/599*1.35;stars.set([Math.cos(a)*Math.cos(b)*180,Math.sin(b)*180,Math.sin(a)*Math.cos(b)*180],i*3);}
+ const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.BufferAttribute(stars,3));
+ const sky=new THREE.Points(sg,new THREE.PointsMaterial({color:0xdceaff,size:.36,sizeAttenuation:true,fog:false}));group.add(sky);
+ const moon=mesh(group,sphere(5,24),new THREE.MeshBasicMaterial({color:0xffedc6,fog:false}),-85,100,-105);
+ const lights=Array.from({length:4},()=>{const l=new THREE.PointLight(0xffce86,65,24,2);group.add(l);return l;});
+ const count=240,positions=new Float32Array(count*3),colors=new Float32Array(count*3);
+ const fg=new THREE.BufferGeometry();fg.setAttribute('position',new THREE.BufferAttribute(positions,3));fg.setAttribute('color',new THREE.BufferAttribute(colors,3));
+ const fm=new THREE.PointsMaterial({size:.48,vertexColors:true,transparent:true,opacity:.9,depthWrite:false,blending:THREE.AdditiveBlending,fog:false});
+ const fireworks=new THREE.Points(fg,fm);fireworks.frustumCulled=false;group.add(fireworks);
+ const palette=[0xffc45a,0xff658c,0x66aaff,0xd99aff].map(c=>new THREE.Color(c));
+ const clock=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+ let last=-1,night=false,blend=0,initialized=false;
+ const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ function update(now,dt,focus,quality){
+  const sec=Math.floor(Date.now()/1000);
+  if(sec!==last){last=sec;const p=clock.formatToParts(new Date());const get=k=>Number(p.find(x=>x.type===k)?.value||0);const h=get('hour')+get('minute')/60;night=h>=18||h<5;const target=h>=18.5||h<4.5?1:h>=17.5?Math.min(1,h-17.5):h<5.5?Math.max(0,5.5-h):0;blend=target;initialized=true;}
+  group.visible=blend>.15;
+  sky.visible=blend>.55;moon.visible=sky.visible;
+  lights.forEach((l,i)=>{const p=kart.at(focus.distance+(i-1)*13);l.position.set(p.x+Math.cos(p.yaw)*(kart.WIDTH+1),3.7,p.z-Math.sin(p.yaw)*(kart.WIDTH+1));l.intensity=65*blend;l.visible=quality!=='performance';});
+  fireworks.visible=night&&!reduced;
+  if(fireworks.visible){
+   const n=quality==='performance'?120:count;fg.setDrawRange(0,n);
+   for(let i=0;i<n;i++){const burst=Math.floor(i/60),j=i%60,t=((now*.001+burst*1.7)%6.8),a=j*2.399963, y=1-2*(j+.5)/60,rr=Math.sqrt(1-y*y),age=Math.max(0,t-1.15),r=age*7.5;const x=focus.x+Math.cos(burst*1.9)*48,z=focus.z+Math.sin(burst*1.9)*48;const fade=t<1.15?(j===0?1:0):Math.max(0,1-age/4.5);positions.set(t<1.15?[x,5+t*23,z]:[x+Math.cos(a)*rr*r,32+y*r-age*age*1.1,z+Math.sin(a)*rr*r],i*3);const c=palette[burst];colors.set([c.r*fade,c.g*fade,c.b*fade],i*3);}
+   fg.attributes.position.needsUpdate=true;fg.attributes.color.needsUpdate=true;
+  }
+  return initialized?blend:0;
+ }
+ return {update};
+}
+
 export async function createRaceView(kart,canvas){
  if(!kart||!canvas)throw Error('レース情報または描画先がありません');
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance',stencil:false,depth:true});
@@ -249,6 +296,8 @@ export async function createRaceView(kart,canvas){
  }
  const kartModels=PALETTE.map((color,i)=>makeDriverKart(color,i));
  for(const k of kartModels)scene.add(k.root);
+ const nightWorld=createNightWorld(scene,kart);
+ const daySky=new THREE.Color('#83cceb'),nightSky=new THREE.Color('#08152e'),dayFog=new THREE.Color('#b9e7f1'),nightFog=new THREE.Color('#15233e');
  const target=new THREE.Vector3(),look=new THREE.Vector3();
  let quality='auto',active=true,prev=0,spectatorCamera='drive';
  function resize(){
@@ -289,6 +338,13 @@ export async function createRaceView(kart,canvas){
   clouds.forEach(c=>{c.group.position.x+=dt*(.15+(c.index%5)*.06);if(c.group.position.x>170)c.group.position.x=-123;});
   const contenders=[state.player,...state.opponents];
   const focus=spectatorCamera==='drive'?state.player:contenders.reduce((a,b)=>a.distance>b.distance?a:b);
+  const darkness=nightWorld.update(now,dt,focus,quality);
+  scene.background.copy(daySky).lerp(nightSky,darkness);
+  scene.fog.color.copy(dayFog).lerp(nightFog,darkness);
+  sun.intensity=3*(1-darkness)+.35*darkness;
+  hemisphere.intensity=2.15*(1-darkness)+.55*darkness;
+  ambient.intensity=.35*(1-darkness)+.22*darkness;
+  waterOverlay.material.opacity=.12*(1-darkness)+.025*darkness;
   const speed=Math.max(0,focus.speed||0);
   // Broadcast camera tracks the actual leading racer rather than the viewer.
   const behind=kart.at(focus.distance-(spectatorCamera==='drive'?9.5:16));
