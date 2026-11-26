@@ -499,7 +499,7 @@ function buildCityNightLights(){
 function drawCityNightLights(now,shade){
  if(shade<.35||indoor.room||battleSession?.active)return;
  if(!cityNightBuffer){const data=buildCityNightLights();cityNightBuffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,cityNightBuffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);cityNightCount=data.length/9;}
- gl.uniform1f(uLight,0);gl.uniform1f(uFestivalGlow,0);
+ gl.uniform1f(uLight,0);
  gl.uniform1f(uOpacity,Math.min(1,(shade-.35)*3));
  gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
  bindGeometry(cityNightBuffer);gl.drawArrays(gl.TRIANGLES,0,cityNightCount);
