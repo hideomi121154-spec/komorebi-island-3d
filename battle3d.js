@@ -296,6 +296,17 @@ function drawSpell3D(b,now,s){
  }
 }
 
+// Use the same idle animation offsets as the visible creatures.
+function obstacles(now=0){
+ const {x,z}=marker,p=combatPose(null,now);
+ return {
+  circles:[{x:x-1.88+p.heroX,z:z+.55,r:1.08},{x:x+1.85+p.foeX,z:z+.27,r:1.08},
+   {x:x+3.6,z:z-1.3,r:.58},
+   ...[[x-5.15,z+2.6],[x+5.25,z+2.5],[x-5.2,z-2.7]].map(([x,z])=>({x,z,r:.23}))],
+  boxes:[{x,z:z-3.1,w:2.55,d:.25},
+   {x:x-4.38,z:z-.95,w:.58,d:2.5},{x:x+4.35,z:z-.95,w:.58,d:2.5}]
+ };
+}
 function drawDynamic(b,now,session){
  // Characters can be seen sparring when the player walks by;
  // turns and damage only begin when the battle overlay is activated.
@@ -318,5 +329,5 @@ function camera(session,now=0){
   center:[marker.x+hit*.7,-2.0,marker.z+.20],
   fov:!support&&t>.22&&t<.51?42:!support&&t>.51&&t<.70?44:46};
 }
-window.KomorebiBattle={marker,moves,create:define,move,switchFriend,item,flee,drawStatic,drawBattleScene,drawDynamic,camera,damage};
+window.KomorebiBattle={marker,obstacles,moves,create:define,move,switchFriend,item,flee,drawStatic,drawBattleScene,drawDynamic,camera,damage};
 })();
