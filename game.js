@@ -624,6 +624,59 @@ function restoreRocketCamera(){
  }
  rocketPriorView=null;rocketViewOrigin=null;rocketCameraMode='pad';
 }
+// Body-sized collision, shared by normal walking and old-save recovery.
+const PLAYER_RADIUS=.68;
+function walkingObstacles(now){
+ const circles=[{x:1.9,z:.9,r:.72},{x:mokoPose.x,z:mokoPose.z,r:.72},
+  {x:-2.4,z:1.7,r:.62},{x:0,z:-2.45,r:.8},
+  ...[[-10,-4],[-9,-7],[-1,7],[2,-6],[10,5],[4,9]].map(([x,z])=>({x,z,r:.42}))];
+ const boxes=[{x:-6,z:-5,w:3.7,d:3.4},{x:6,z:-5,w:4.4,d:3.45},
+  {x:-3.55,z:-4.2,w:.67,d:.45},
+  ...resourceSpots.map(p=>({x:p.x,z:p.z,w:p.type==='fruit'?1.12:1.45,d:p.type==='fruit'?.9:1.05})),
+  {x:-6.25,z:-8.08,w:4.3,d:.13},{x:5.7,z:-7.99,w:4.3,d:.13},
+  {x:6.6,z:7.65,w:5.65,d:.14}];
+ const arena=BATTLE.obstacles?.(now);
+ if(arena){circles.push(...arena.circles);boxes.push(...arena.boxes)}
+ const life=window.KomorebiIslandLife;
+ if(life)for(const a of life.residents){const p=life.pose(a,now);circles.push({x:p.x,z:p.z,r:a.kind==='person'?.67:.85})}
+ return {circles,boxes};
+}
+function canPlayerWalk(x,z,obstacles){
+ if(!Number.isFinite(x)||!Number.isFinite(z))return false;
+ if(indoor.room)return roomWalkable(x,z);
+ if(SEA.isCommercial(x,z))return SEA.walkable(x,z);
+ if(!EXPANSION.canWalk(x,z)||REDEVELOPMENT.within(x,z))return false;
+ // The pond is an ellipse, not the smaller circle formerly used for collision.
+ if(((x+7)/3.25)**2+((z-6)/2.55)**2<1)return false;
+ for(const c of obstacles.circles)if(dist(x,z,c.x,c.z)<c.r+PLAYER_RADIUS)return false;
+ for(const b of obstacles.boxes){
+  const dx=Math.max(0,Math.abs(x-b.x)-b.w/2),dz=Math.max(0,Math.abs(z-b.z)-b.d/2);
+  if(dx*dx+dz*dz<PLAYER_RADIUS*PLAYER_RADIUS)return false;
+ }
+ return true;
+}
+function movePlayer(dx,dz,now){
+ const obstacles=walkingObstacles(now),canWalk=(x,z)=>canPlayerWalk(x,z,obstacles);
+ // Saves from older versions can start inside a newly solid object. Find the
+ // nearest clear position; the same recovery separates a passing NPC from us.
+ if(!canWalk(state.x,state.z)){
+  const origin={x:state.x,z:state.z};
+  let found=false;
+  for(let r=.12;r<=6&&!found;r+=.12)for(let i=0;i<32;i++){
+   const x=origin.x+Math.cos(i*Math.PI/16)*r,z=origin.z+Math.sin(i*Math.PI/16)*r;
+   if(canWalk(x,z)){state.x=x;state.z=z;found=true;break}
+  }
+  if(!found)return;
+ }
+ // Sample the whole travel path, including low-FPS frames, so a thin sign or
+ // fence cannot be skipped. Resolve axes independently to slide along edges.
+ const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.10));
+ dx/=steps;dz/=steps;
+ for(let i=0;i<steps;i++){
+  if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}
+  else {if(canWalk(state.x+dx,state.z))state.x+=dx;if(canWalk(state.x,state.z+dz))state.z+=dz}
+ }
+}
 let lastQualityRevision=-1;
 function render(now){if(!gameReady)return;renderQuality?.observe(now);
  // Apply adaptive DPR only when its quality tier actually changes.
@@ -634,7 +687,8 @@ function render(now){if(!gameReady)return;renderQuality?.observe(now);
  if(!indoor.room)updateMoko(now);
  const spacePhase=SPACE.phase(now),spaceHud=$('spaceHud');if(rocketCameraActive&&!spacePhase.active)restoreRocketCamera();const launchView=rocketCameraActive&&spacePhase.active&&!indoor.room;if(spaceHud){spaceHud.hidden=!!indoor.room||!spacePhase.active;if(!spaceHud.hidden&&spaceHud.textContent!=='🚀 '+spacePhase.label)spaceHud.textContent='🚀 '+spacePhase.label;}
   if(railRide.active)updateSeaRide(now);
- const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&!railRide.active&&!rocketCameraActive&&!KART.active()&&!battleSession?.active&&(sx||sy)){if(!indoor.room){leaveOverviewForMovement();cameraPan.x=0;cameraPan.z=0;}const move=screenMoveVector(sx,sy,indoor.room?0:viewHeading());let dx=move.x*speed*dt,dz=move.z*speed*dt;const canWalk=(x,z)=>{if(indoor.room)return roomWalkable(x,z);if(SEA.isCommercial(x,z))return SEA.walkable(x,z);if(!EXPANSION.canWalk(x,z)||REDEVELOPMENT.within(x,z))return false;if(dist(x,z,-6,-5)<2.35||dist(x,z,6,-5)<2.55)return false;if(dist(x,z,-7,6)<2.24)return false;return true};if(canWalk(state.x+dx,state.z+dz)){state.x+=dx;state.z+=dz}else if(canWalk(state.x+dx,state.z))state.x+=dx;else if(canWalk(state.x,state.z+dz))state.z+=dz;playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
+ const speed=4.1;let sx=Number(input.right)-Number(input.left),sy=Number(input.down)-Number(input.up);if(!paused&&!railRide.active&&!rocketCameraActive&&!KART.active()&&!battleSession?.active&&(sx||sy)){if(!indoor.room){leaveOverviewForMovement();cameraPan.x=0;cameraPan.z=0;}const move=screenMoveVector(sx,sy,indoor.room?0:viewHeading());let dx=move.x*speed*dt,dz=move.z*speed*dt;movePlayer(dx,dz,now);playerFacing=Math.atan2(dx,dz);if(tick-lastAutoSave>3){save();lastAutoSave=tick}}
+ if(!paused&&!indoor.walkIn&&!railRide.active&&!rocketCameraActive&&!KART.active()&&!battleSession?.active&&!(sx||sy))movePlayer(0,0,now);
  const fishingActive=fishing.stage!=='idle',roomActive=!!indoor.room;
  const airshowStatus=AIRSHOW?.phase(now);
  const airshowDemo=typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='airshow';
@@ -1384,7 +1438,7 @@ function start(){try{initializeGL();bindControls();syncRealClock();updateHud();s
  if(state.welcomeSeen&&typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='airshow'){
   AIRSHOW?.start(performance.now(),12*60,{preview:true,previewElapsed:5200});
  }
- requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),getIslandBounds:()=>({grass:EXPANSION.grass,sand:EXPANSION.sand}),getRedevelopment:()=>({progress:state.redevelopmentProgress,stage:REDEVELOPMENT.stage(state.redevelopmentProgress),overview:overviewMode}),getSeaLine:()=>({island:state.currentIsland,rides:state.seaLineRides,riding:railRide.active,progress:railRide.progress,from:railRide.from,to:railRide.to,panorama:seaLineOverview}),boardTrain:beginSeaJourney,updateTrain:updateSeaRide,moveTo:(x,z)=>{state.x=x;state.z=z;nearest=findNearby();setContext()},interact,saveNow,openPanel,price,vertices:worldVerts,getFestival:()=>({active:festivalShow,pitch:cameraPitch,zoom:cameraZoom}),getAirshow:()=>AIRSHOW?.phase(performance.now()),startAirshow,getCameraMovement:(x,y)=>screenMoveVector(x,y,indoor.room?0:viewHeading()),getCameraHeading:()=>viewHeading(),exitOverviewForMovement:leaveOverviewForMovement,getSpaceport:()=>({bounds:SPACE.bounds,pad:SPACE.pad,phase:SPACE.phase(performance.now()),camera:rocketCameraActive,view:rocketCameraMode,origin:rocketViewOrigin&&{...rocketViewOrigin}}),getDistantRocketPose:(lift,aspect=.5,origin)=>distantRocketSpectatorPose(lift,aspect,origin),getLaunchAudio:()=>({available:!!LAUNCH_AUDIO,enabled:LAUNCH_AUDIO?.enabled?.()??false}),getKart:()=>KART.getState(),startKartRace,stopKartRace,getBattle:()=>battleSession?JSON.parse(JSON.stringify(battleSession)):null,startIslandBattle,finishIslandBattle,battleAction,getIndustry:()=>({factory:INDUSTRY.factory,ship:INDUSTRY.ship,overview:industrialOverview,metrics:INDUSTRY.metrics(performance.now())}),getRenderQuality:()=>renderQuality?.current?.(),getTouchCamera:()=>({yaw:cameraYaw,pitch:cameraPitch,zoom:cameraZoom,pan:{...cameraPan},active:gestures?.isActive?.()||false}),getRocketSpectatorPose:(lift,aspect=.5)=>rocketSpectatorPose(lift,aspect),launchRocket:beginRocketLaunch,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getMokoPose:()=>({...mokoPose}),updateMoko,getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,dateKey:state.realDateKey,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),syncClock:syncRealClock,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
+ requestAnimationFrame(render);window.__komorebiTest={getState:()=>JSON.parse(JSON.stringify(state)),walkBy:(dx,dz,now=performance.now())=>movePlayer(dx,dz,now),canWalkAt:(x,z,now=performance.now())=>canPlayerWalk(x,z,walkingObstacles(now)),getIslandBounds:()=>({grass:EXPANSION.grass,sand:EXPANSION.sand}),getRedevelopment:()=>({progress:state.redevelopmentProgress,stage:REDEVELOPMENT.stage(state.redevelopmentProgress),overview:overviewMode}),getSeaLine:()=>({island:state.currentIsland,rides:state.seaLineRides,riding:railRide.active,progress:railRide.progress,from:railRide.from,to:railRide.to,panorama:seaLineOverview}),boardTrain:beginSeaJourney,updateTrain:updateSeaRide,moveTo:(x,z)=>{state.x=x;state.z=z;nearest=findNearby();setContext()},interact,saveNow,openPanel,price,vertices:worldVerts,getFestival:()=>({active:festivalShow,pitch:cameraPitch,zoom:cameraZoom}),getAirshow:()=>AIRSHOW?.phase(performance.now()),startAirshow,getCameraMovement:(x,y)=>screenMoveVector(x,y,indoor.room?0:viewHeading()),getCameraHeading:()=>viewHeading(),exitOverviewForMovement:leaveOverviewForMovement,getSpaceport:()=>({bounds:SPACE.bounds,pad:SPACE.pad,phase:SPACE.phase(performance.now()),camera:rocketCameraActive,view:rocketCameraMode,origin:rocketViewOrigin&&{...rocketViewOrigin}}),getDistantRocketPose:(lift,aspect=.5,origin)=>distantRocketSpectatorPose(lift,aspect,origin),getLaunchAudio:()=>({available:!!LAUNCH_AUDIO,enabled:LAUNCH_AUDIO?.enabled?.()??false}),getKart:()=>KART.getState(),startKartRace,stopKartRace,getBattle:()=>battleSession?JSON.parse(JSON.stringify(battleSession)):null,startIslandBattle,finishIslandBattle,battleAction,getIndustry:()=>({factory:INDUSTRY.factory,ship:INDUSTRY.ship,overview:industrialOverview,metrics:INDUSTRY.metrics(performance.now())}),getRenderQuality:()=>renderQuality?.current?.(),getTouchCamera:()=>({yaw:cameraYaw,pitch:cameraPitch,zoom:cameraZoom,pan:{...cameraPan},active:gestures?.isActive?.()||false}),getRocketSpectatorPose:(lift,aspect=.5)=>rocketSpectatorPose(lift,aspect),launchRocket:beginRocketLaunch,getFishingStage:()=>fishing.stage,fishAction,stopFishing,getRoom:()=>indoor.room,enterRoom,leaveRoom,openRoomDialogue,closeRoomDialogue,getNear:()=>findNearby(),getMokoPose:()=>({...mokoPose}),updateMoko,getSpeechActor:()=>speech.actor,updateSpeechPosition,getClock:()=>({day:state.day,dateKey:state.realDateKey,minutes:state.timeMinutes,phase:DAYLIGHT.phaseOf(state.timeMinutes).id}),syncClock:syncRealClock,getWatering:()=>({active:watering.active,index:watering.index}),cropGrowth,plotActionLabel,previewWaterMesh:()=>{const b=new MeshBuilder();window.KomorebiWatering?.draw(b,performance.now()+500,watering,state,farmPlots[watering.index]);return b.toFloat()}};}catch(err){console.error(err);$('loadingBanner').hidden=true;$('errorMessage').hidden=false;$('errorMessage').textContent='⚠️ 3D表示を開始できませんでした。SafariでWeb公開したURLを開いてください。詳細: '+String(err.message||err)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 

@@ -10,7 +10,7 @@ for(const [label,path,night] of [['race-day','kart-next.html?preview=1',false],[
  await page.clock.setFixedTime(new Date(night?'2026-11-26T12:00:00Z':'2026-11-26T03:00:00Z'));
  await page.goto('http://127.0.0.1:8765/'+path,{waitUntil:'load',timeout:60000});
  if(label.startsWith('island'))await page.waitForFunction(()=>!!window.__komorebiTest,{timeout:30000});
- else await page.waitForFunction(()=>document.documentElement.dataset.kart3d==='ready',{timeout:30000});
+ else await page.waitForFunction(()=>document.documentElement.dataset.kart3d==='running',{timeout:30000});
  await page.waitForTimeout(2500);
  const canvas=await page.locator(label.startsWith('island')?'canvas':'#raceCanvas').first().boundingBox();
  if(!canvas||canvas.width<100||canvas.height<100)throw Error('Canvas not visible');

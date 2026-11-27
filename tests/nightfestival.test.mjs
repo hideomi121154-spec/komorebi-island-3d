@@ -223,3 +223,13 @@ test('Original round, bunny and cat fireworks have recognizable facial features'
  assert.match(s,/spec\.kind==='face'\?spec\.faceType:spec\.kind/);
  assert.match(s,/gl\.drawArrays\(gl\.TRIANGLE_STRIP,0,4\)/);
 });
+
+test('Retina default uses native 3x and high mode holds its quality',()=>{
+ const q=quality.create();assert.equal(q.ratio(390,844,3),3);
+ const high=quality.create({mode:'high'});
+ for(let i=1;i<500;i++)high.observe(i*40);
+ assert.equal(high.ratio(390,844,3),3);
+ assert.equal(quality.modeFromSearch('?quality=high'),'high');
+ const large=high.ratio(1920,1080,3);
+ assert.ok(1920*1080*large*large<=high.current().pixelBudget+1);
+});

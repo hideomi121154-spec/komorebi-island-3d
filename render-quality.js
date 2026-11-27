@@ -6,9 +6,9 @@
 'use strict';
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 function create(options={}){
- const mode=['auto','ultra','balanced','battery'].includes(options.mode)?options.mode:'auto';
+ const mode=['auto','high','ultra','balanced','battery'].includes(options.mode)?options.mode:'auto';
  const budget=Number.isFinite(options.pixelBudget)?options.pixelBudget:4200000;
- let limit=mode==='ultra'?3.6:mode==='balanced'?1.65:mode==='battery'?1:2.15;
+ let limit=mode==='ultra'?3.6:mode==='balanced'?1.65:mode==='battery'?1:3;
  let last=0,frames=0,sum=0,lastChange=0,interactive=false;
  let revision=0;
  function observe(now){
@@ -20,8 +20,8 @@ function create(options={}){
    if(frames>=120&&now-lastChange>=4500){
     const avg=sum/frames;
     const before=limit;
-    if(avg>28)limit=clamp(limit-.18,1.2,2.4);
-    else if(avg<18.7)limit=clamp(limit+.12,1.2,2.4);
+    if(avg>28)limit=clamp(limit-.18,1.65,3);
+    else if(avg<18.7)limit=clamp(limit+.12,1.65,3);
     if(limit!==before)revision++;
     lastChange=now;frames=0;sum=0;
    }
@@ -43,7 +43,7 @@ function create(options={}){
 function modeFromSearch(search=''){
  try {
   const mode=new URLSearchParams(search).get('quality')||'auto';
-  return ['auto','ultra','balanced','battery'].includes(mode)?mode:'auto';
+  return ['auto','high','ultra','balanced','battery'].includes(mode)?mode:'auto';
  } catch{return 'auto';}
 }
 window.KomorebiRenderQuality={create,modeFromSearch};
