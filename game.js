@@ -372,7 +372,13 @@ function buildStatic(){const b=new MeshBuilder();if(battleSession?.active){softw
 function buildAvatar(b,x,z,yaw,bob=0,npc=false){
  b.setTransform(x,-.035+bob,z,yaw);
  const tunic=npc?'#e77889':(['#168c70','#d76c48','#8064ba'][state.outfit||0]||'#168c70'),hair=npc?'#99542e':'#392821',face='#ffdbb8',ink='#352b31';
- const ell=(x,y,z,rx,ry,rz,c)=>b.sphere(x,y,z,rx,ry,rz,c,10,16);
+ // Smooth, outward-facing avatar normals; negative red encodes the avatar-only toon material.
+ const ell=(x,y,z,rx,ry,rz,c)=>{
+  const rgb=color(c),lat=10,lon=16,t=b.transform;
+  const p=(j,i)=>{const f=-Math.PI/2+j*Math.PI/lat,a=i*2*Math.PI/lon;return [Math.cos(f)*Math.cos(a),Math.sin(f),Math.cos(f)*Math.sin(a)]};
+  const vertex=q=>{const pos=b.point([x+q[0]*rx,y+q[1]*ry,z+q[2]*rz]);let nx=q[0]/rx,ny=q[1]/ry,nz=q[2]/rz;const len=Math.hypot(nx,ny,nz)||1;nx/=len;ny/=len;nz/=len;b.vertices.push(...pos,nx*t.c+nz*t.s,ny,-nx*t.s+nz*t.c,-1-rgb[0],rgb[1],rgb[2]);};
+  for(let j=0;j<lat;j++)for(let i=0;i<lon;i++){const a=p(j,i),d=p(j,i+1),e=p(j+1,i+1),f=p(j+1,i);vertex(a);vertex(d);vertex(e);vertex(a);vertex(e);vertex(f);}
+ };
  const lock=(a,c,d,e,col)=>{b.tri(a,c,d,col);b.tri(a,d,c,col);b.tri(a,d,e,col);b.tri(a,e,d,col)};
  for(const side of [-1,1]){
   const swing=Math.max(-.08,Math.min(.08,bob*1.5))*side;
@@ -393,23 +399,23 @@ function buildAvatar(b,x,z,yaw,bob=0,npc=false){
  }
  if(!npc)ell(0,.99,-.30,.35,.36,.19,'#9b5132');
  ell(0,1.39,0,.16,.16,.15,face);
- ell(0,1.84,-.055,.53,.56,.48,hair);
- ell(0,1.75,.095,.48,.46,.43,face);
+ ell(0,1.84,-.105,.53,.56,.43,hair);
+ ell(0,1.75,.13,.48,.46,.43,face);
  for(const side of [-1,1]){
   ell(side*.47,1.73,.08,.10,.15,.11,face);
-  ell(side*.19,1.81,.463,.132,.171,.064,ink);
-  ell(side*.19,1.79,.501,.108,.133,.044,'#fffdf5');
-  ell(side*.19,1.79,.535,.079,.115,.033,npc?'#87502d':'#67432c');
-  ell(side*.19,1.80,.558,.049,.079,.019,'#231e27');
-  ell(side*.19-.026,1.85,.575,.032,.037,.012,'#ffffff');
-  ell(side*.19+.025,1.75,.57,.015,.018,.01,'#fff4dc');
+  ell(side*.19,1.81,.505,.132,.171,.064,ink);
+  ell(side*.19,1.79,.543,.108,.133,.044,'#fffdf5');
+  ell(side*.19,1.79,.577,.079,.115,.033,npc?'#87502d':'#67432c');
+  ell(side*.19,1.80,.600,.049,.079,.019,'#231e27');
+  ell(side*.19-.026,1.85,.617,.032,.037,.012,'#ffffff');
+  ell(side*.19+.025,1.75,.612,.015,.018,.01,'#fff4dc');
   ell(side*.19,2.025,.45,.116,.028,.035,hair);
   ell(side*.32,1.60,.432,.087,.043,.026,'#ef9c91');
   ell(side*.43,1.98,.16,.13,.31,.29,hair);
  }
- ell(0,1.68,.526,.047,.048,.035,'#edb48e');
- ell(0,1.55,.484,.080,.037,.022,'#9b4e49');
- ell(0,1.565,.501,.057,.013,.012,'#fff0df');
+ ell(0,1.68,.568,.047,.048,.035,'#edb48e');
+ ell(0,1.55,.526,.080,.037,.022,'#9b4e49');
+ ell(0,1.565,.543,.057,.013,.012,'#fff0df');
  for(let i=0;i<5;i++){
   const p=(i-2)*.17, tip=2.00-(i%2)*.075;
   lock([p-.14,2.24,.26],[p+.12,2.26,.27],[p+.10,2.12,.46],[p-.07,tip,.50],i%2?'#52362a':hair);
@@ -553,7 +559,7 @@ function drawCityNightLights(now,shade){
 function buildRocketDynamic(now){const b=new MeshBuilder();SPACE.drawRocket(b,now);return b.toFloat()}
 let ctx2d=null, softwareWorld=null, lastSoftwareDraw=0,viewFov=48;
 let gl=null,prog=null,positionLoc=-1,normalLoc=-1,colorLoc=-1,uView=null,uProj=null,uFog=null,uLight=null,uFestivalTint=null,uFestivalGlow=null,uOpacity=null,festivalRenderer=null,worldFestivalRenderer=null,skyRenderer=null,worldBuffer=null,dynamicBuffer=null,rocketBuffer=null,worldVerts=0,camFocus={x:state.x,z:state.z},overviewMode=true,seaLineOverview=(typeof location!=='undefined'&&new URLSearchParams(location.search).get('view')==='sealine'),cameraZoom=1,cameraPitch=0,cameraYaw=0,festivalShow=false,festivalStartedAt=0,lastRareBurstKey=null,fireworksAudio=null,airshowLookAmount=0,airshowTarget={x:0,y:38,z:-15},airshowAutoDay=null,rocketCameraActive=false,rocketCameraMode='pad',rocketViewOrigin=null,rocketPriorView=null,industrialOverview=false;
-const vShader=`attribute vec3 aPos;attribute vec3 aNormal;attribute vec3 aColor;uniform mat4 uProjection;uniform mat4 uView;varying vec3 vColor;varying float vDepth;void main(){vec4 p=uView*vec4(aPos,1.0);gl_Position=uProjection*p;vec3 n=normalize(aNormal);vec3 sunDir=normalize(vec3(0.5,0.92,0.45));float sun=max(0.0,dot(n,sunDir));float skyFill=0.5+0.5*n.y;float ambient=mix(0.64,0.81,skyFill);float diffuse=0.31*sun;float bounce=0.045*max(0.0,-n.y);vColor=aColor*(ambient+diffuse+bounce);vDepth=length(p.xyz);}`;
+const vShader=`attribute vec3 aPos;attribute vec3 aNormal;attribute vec3 aColor;uniform mat4 uProjection;uniform mat4 uView;varying vec3 vColor;varying float vDepth;void main(){vec4 p=uView*vec4(aPos,1.0);gl_Position=uProjection*p;vec3 n=normalize(aNormal);vec3 sunDir=normalize(vec3(0.5,0.92,0.45));float sun=max(0.0,dot(n,sunDir));float skyFill=0.5+0.5*n.y;float ambient=mix(0.64,0.81,skyFill);float diffuse=0.31*sun;float bounce=0.045*max(0.0,-n.y);if(aColor.r<0.0){vec3 base=vec3(-aColor.r-1.0,aColor.gb);float band=mix(0.76,1.04,smoothstep(0.18,0.38,sun));vec3 eyeDir=normalize(-p.xyz);vec3 viewNormal=normalize(mat3(uView)*n);float rim=1.0-smoothstep(0.08,0.28,abs(dot(viewNormal,eyeDir)));vColor=mix(base*band,base*0.34,rim*0.72);}else{vColor=aColor*(ambient+diffuse+bounce);}vDepth=length(p.xyz);}`;
 const fShader=`precision mediump float;varying vec3 vColor;varying float vDepth;uniform vec3 uFog;uniform float uBrightness;uniform vec3 uFestivalTint;uniform float uFestivalGlow;uniform float uOpacity;void main(){float distanceFog=smoothstep(42.0,145.0,vDepth);float fogAmount=distanceFog*0.22;vec3 c=mix(vColor,uFog,fogAmount);vec3 night=mix(c,c*vec3(0.22,0.34,0.58),clamp(uBrightness,0.0,1.0));gl_FragColor=vec4(clamp(night+uFestivalTint*uFestivalGlow,0.0,1.0),uOpacity);}`;
 function makeShader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error('Shader error: '+gl.getShaderInfoLog(s));return s}
 function initializeGL(){gl=canvas.getContext('webgl',{alpha:false,antialias:true,preserveDrawingBuffer:false})||canvas.getContext('experimental-webgl',{alpha:false,antialias:true});if(!gl){ctx2d=canvas.getContext('2d',{alpha:false});if(!ctx2d)throw Error('描画機能が利用できません');softwareWorld=buildStatic();return;}prog=gl.createProgram();gl.attachShader(prog,makeShader(gl.VERTEX_SHADER,vShader));gl.attachShader(prog,makeShader(gl.FRAGMENT_SHADER,fShader));gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw Error('WebGL setup failed');gl.useProgram(prog);positionLoc=gl.getAttribLocation(prog,'aPos');normalLoc=gl.getAttribLocation(prog,'aNormal');colorLoc=gl.getAttribLocation(prog,'aColor');uView=gl.getUniformLocation(prog,'uView');uProj=gl.getUniformLocation(prog,'uProjection');uFog=gl.getUniformLocation(prog,'uFog');uLight=gl.getUniformLocation(prog,'uBrightness');uFestivalTint=gl.getUniformLocation(prog,'uFestivalTint');uFestivalGlow=gl.getUniformLocation(prog,'uFestivalGlow');uOpacity=gl.getUniformLocation(prog,'uOpacity');worldBuffer=gl.createBuffer();dynamicBuffer=gl.createBuffer();rocketBuffer=gl.createBuffer();gl.uniform1f(uOpacity,1);const world=buildStatic();gl.bindBuffer(gl.ARRAY_BUFFER,worldBuffer);gl.bufferData(gl.ARRAY_BUFFER,world,gl.STATIC_DRAW);worldVerts=world.length/9;gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);gl.clearColor(.70,.87,.90,1);if(FESTIVAL){try{festivalRenderer=FESTIVAL.createRenderer(gl);worldFestivalRenderer=FESTIVAL.createWorldRenderer(gl)}catch(error){console.warn('Night festival graphics unavailable:',error);festivalRenderer=null}}if(SKY){try{skyRenderer=SKY.createRenderer(gl)}catch(error){console.warn('Sky gradient unavailable:',error);skyRenderer=null}}}
