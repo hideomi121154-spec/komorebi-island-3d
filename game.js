@@ -369,19 +369,63 @@ function buildStatic(){const b=new MeshBuilder();if(battleSession?.active){softw
  SEA.drawStatic(b);
  BATTLE.drawStatic(b);
  return b.toFloat()}
-function buildAvatar(b,x,z,yaw,bob=0,npc=false){b.setTransform(x,-.035+bob,z,yaw);
- const tunic=npc?'#e9a5a2':(['#66b8a3','#df987d','#a694ca'][state.outfit||0]||'#66b8a3'),hair=npc?'#d7a17b':'#63483f',face=npc?'#fbdfc6':'#f6d8ba';
- for(let side of[-1,1]){b.box(side*.19,.34,0,.26,.63,.31,npc?'#f3d5b4':'#a9b7d6');b.sphere(side*.19,.09,.085,.22,.16,.25,'#f4e9ca',4,7)}
- b.sphere(0,.94,0,.53,.66,.37,tunic,9,14);
- b.sphere(0,1.68,.075,.48,.48,.45,face,10,16);
- b.sphere(0,1.96,-.055,.49,.27,.46,hair,8,14);
- for(let s of[-1,1]){b.sphere(s*.17,1.70,.48,.048,.065,.025,'#3b3e36',4,5);b.sphere(s*.34,1.56,.435,.12,.06,.035,'#e9aaa5',4,5);b.sphere(s*.6,.94,.06,.18,.42,.23,face,8,11)}
- b.sphere(0,1.57,.51,.09,.055,.03,npc?'#b98377':'#d5a18a',4,5);
- // Tiny eye highlights add expression without changing face proportions.
- for(const side of [-1,1])b.sphere(side*.17-.014,1.725,.506,.018,.021,.009,'#fffaf0',4,5);
- if(npc){for(let s of[-1,1]){const a=[s*.39,2.11,-.02],c=[s*.56,2.59,.0],d=[s*.11,2.20,.0];b.tri(a,c,d,hair);b.tri(a,d,c,hair)}b.sphere(0,1.28,.42,.23,.20,.08,'#fce6b0',5,7)}
- else{b.sphere(0,2.18,-.05,.48,.18,.47,'#f9d384',8,14);b.cylinder(0,2.2,.2,.46,.08,14,'#e2b574');b.box(0,.93,-.42,.74,.70,.22,'#a68b62')}
- b.clearTransform()}
+function buildAvatar(b,x,z,yaw,bob=0,npc=false){
+ b.setTransform(x,-.035+bob,z,yaw);
+ const tunic=npc?'#e77889':(['#168c70','#d76c48','#8064ba'][state.outfit||0]||'#168c70'),hair=npc?'#99542e':'#392821',face='#ffdbb8',ink='#352b31';
+ const ell=(x,y,z,rx,ry,rz,c)=>b.sphere(x,y,z,rx,ry,rz,c,10,16);
+ const lock=(a,c,d,e,col)=>{b.tri(a,c,d,col);b.tri(a,d,c,col);b.tri(a,d,e,col);b.tri(a,e,d,col)};
+ for(const side of [-1,1]){
+  const swing=Math.max(-.08,Math.min(.08,bob*1.5))*side;
+  ell(side*.17,.36,swing,.145,.29,.15,face);
+  ell(side*.17,.14,swing,.155,.13,.16,'#fff5e3');
+  ell(side*.17,.065,.075+swing,.20,.10,.25,ink);
+  ell(side*.17,.12,.10+swing,.18,.095,.22,'#476579');
+  ell(side*.17,.64,0,.21,.23,.24,npc?'#6b638d':'#c49b63');
+ }
+ ell(0,.99,0,.39,.43,.30,tunic);
+ ell(0,1.17,.19,.24,.23,.13,'#fff3dc');
+ ell(0,.97,.29,.025,.31,.025,'#e7d4a7');
+ for(const side of [-1,1]){
+  ell(side*.38,1.12,0,.15,.21,.16,'#fff4df');
+  ell(side*.45,.92,.035,.12,.20,.13,face);
+  ell(side*.45,.77,.08,.13,.12,.13,face);
+  ell(side*.24,.99,.26,.045,.27,.045,npc?'#9c445d':'#855435');
+ }
+ if(!npc)ell(0,.99,-.30,.35,.36,.19,'#9b5132');
+ ell(0,1.39,0,.16,.16,.15,face);
+ ell(0,1.84,-.055,.53,.56,.48,hair);
+ ell(0,1.75,.095,.48,.46,.43,face);
+ for(const side of [-1,1]){
+  ell(side*.47,1.73,.08,.10,.15,.11,face);
+  ell(side*.19,1.81,.463,.132,.171,.064,ink);
+  ell(side*.19,1.79,.501,.108,.133,.044,'#fffdf5');
+  ell(side*.19,1.79,.535,.079,.115,.033,npc?'#87502d':'#67432c');
+  ell(side*.19,1.80,.558,.049,.079,.019,'#231e27');
+  ell(side*.19-.026,1.85,.575,.032,.037,.012,'#ffffff');
+  ell(side*.19+.025,1.75,.57,.015,.018,.01,'#fff4dc');
+  ell(side*.19,2.025,.45,.116,.028,.035,hair);
+  ell(side*.32,1.60,.432,.087,.043,.026,'#ef9c91');
+  ell(side*.43,1.98,.16,.13,.31,.29,hair);
+ }
+ ell(0,1.68,.526,.047,.048,.035,'#edb48e');
+ ell(0,1.55,.484,.080,.037,.022,'#9b4e49');
+ ell(0,1.565,.501,.057,.013,.012,'#fff0df');
+ for(let i=0;i<5;i++){
+  const p=(i-2)*.17, tip=2.00-(i%2)*.075;
+  lock([p-.14,2.24,.26],[p+.12,2.26,.27],[p+.10,2.12,.46],[p-.07,tip,.50],i%2?'#52362a':hair);
+ }
+ if(npc){
+  ell(-.36,2.20,-.02,.23,.24,.23,hair);
+  ell(.36,2.20,-.02,.23,.24,.23,hair);
+  ell(0,1.26,.31,.12,.07,.04,'#ffe3a2');
+ }else{
+  b.cylinder(0,2.23,-.035,.61,.065,24,'#b87a36');
+  b.cylinder(0,2.27,-.035,.60,.065,24,'#f4c46e');
+  ell(0,2.35,-.035,.43,.19,.40,'#f6cc7d');
+  b.cylinder(0,2.31,-.035,.425,.065,24,'#895334');
+ }
+ b.clearTransform();
+}
 
 function fishingSegment(b,a,c,r,col){
   const vx=c[0]-a[0],vz=c[2]-a[2],length=Math.hypot(vx,vz)||1;
